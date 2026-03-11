@@ -1,6 +1,6 @@
 <?php
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../includes/db.php');
 requireLogin();
 
 $user = $_SESSION['user'];
@@ -84,7 +84,7 @@ $stmt->execute($params);
 $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
-<?php include "../includes/header.php"; ?>
+<?php include __DIR__ . '/../includes/header.php'; ?>
 
 <div class="container mt-4">
 
@@ -221,7 +221,7 @@ if (!empty($req['access_type'])) {
 </div>
 </div>
 
-<?php include "../includes/footer.php"; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

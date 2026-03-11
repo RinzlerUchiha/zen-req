@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 function requireLogin() {
 
     if (!isset($_SESSION['user'])) {
-        header('Location: /reqHub/public/login.php');
+        header('Location: /zen/reqHub/public/login.php');
         exit;
     }
 

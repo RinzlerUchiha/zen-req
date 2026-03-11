@@ -111,7 +111,7 @@ $totalCount = count($derivedNotifications) + count($eventNotifications);
 </select>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="/reqhub/public/dashboard.php">Access Portal</a>
+    <a class="navbar-brand" href="/zen/reqhub/public/dashboard.php">Access Portal</a>
 
     <div class="ms-auto dropdown">
         <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
