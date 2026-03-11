@@ -1,63 +1,83 @@
 <?php
 require_once '../includes/auth.php';
-requireLogin();
+require_once '../includes/db.php';
+
+header('Content-Type: application/json');
 
 if ($_SESSION['user']['role'] !== 'admin') {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
-require_once '../includes/db.php';
-header('Content-Type: application/json');
+$action = $_POST['action'] ?? '';
+$id = $_POST['id'] ?? null;
+$name = $_POST['name'] ?? '';
 
 try {
-    $action = $_POST['action'] ?? '';
-    $name   = trim($_POST['name'] ?? '');
-    $id     = $_POST['id'] ?? null;
+    if ($action === 'addAction') {
+        if (!$name) {
+            echo json_encode(['success' => false, 'message' => 'Name cannot be empty']);
+            exit;
+        }
 
-    if ($action === 'deleteAction') {
-        if (!$id) throw new Exception("Invalid action ID.");
-
-        $pdo->prepare("DELETE FROM actions WHERE id = ?")->execute([$id]);
+        // Insert into actions table only
+        $stmt = $pdo->prepare("INSERT INTO actions (name) VALUES (?)");
+        $stmt->execute([$name]);
+        $actionId = $pdo->lastInsertId();
 
         echo json_encode([
             'success' => true,
-            'id' => $id
+            'id' => $actionId,
+            'name' => $name,
+            'message' => 'Action added successfully'
         ]);
-        exit;
     }
 
-    if (empty($name)) throw new Exception("Action name required.");
+    elseif ($action === 'editAction') {
+        if (!$name || !$id) {
+            echo json_encode(['success' => false, 'message' => 'Invalid data']);
+            exit;
+        }
 
-    if ($action === 'editAction' && $id) {
-
-        $pdo->prepare("UPDATE actions SET name = ? WHERE id = ?")
-            ->execute([$name, $id]);
+        // Update actions table
+        $stmt = $pdo->prepare("UPDATE actions SET name = ? WHERE id = ?");
+        $stmt->execute([$name, $id]);
 
         echo json_encode([
             'success' => true,
             'id' => $id,
-            'name' => $name
-        ]);
-
-    } else {
-
-        $stmt = $pdo->prepare("INSERT INTO actions (name) VALUES (?)");
-        $stmt->execute([$name]);
-
-        $lastId = $pdo->lastInsertId();
-
-        echo json_encode([
-            'success' => true,
-            'id' => $lastId,
-            'name' => $name
+            'name' => $name,
+            'message' => 'Action updated successfully'
         ]);
     }
 
-} catch (Exception $e) {
+    elseif ($action === 'deleteAction') {
+        if (!$id && !$name) {
+            echo json_encode(['success' => false, 'message' => 'Invalid data']);
+            exit;
+        }
 
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
+        // If only name provided, get ID
+        if ($name && !$id) {
+            $stmt = $pdo->prepare("SELECT id FROM actions WHERE name = ?");
+            $stmt->execute([$name]);
+            $result = $stmt->fetch();
+            $id = $result['id'] ?? null;
+        }
+
+        // Delete from actions
+        if ($id) {
+            $stmt = $pdo->prepare("DELETE FROM actions WHERE id = ?");
+            $stmt->execute([$id]);
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Action deleted successfully']);
+    }
+
+    else {
+        echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+?>

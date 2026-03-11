@@ -1,6 +1,6 @@
 <?php
-require_once ($reqhub_root . "/includes/auth.php");
-require_once ($reqhub_root . "/database/db.php");
+require_once '../includes/auth.php';
+require_once '../includes/db.php';
 
 requireRole(['requestor', 'approver']);
 

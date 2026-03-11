@@ -1,42 +1,141 @@
 <?php
 require_once '../includes/auth.php';
-requireLogin();
-
-if ($_SESSION['user']['role'] !== 'admin') {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit;
-}
-
 require_once '../includes/db.php';
+
+if ($_SESSION['user']['role'] !== 'admin') die(json_encode(['success' => false, 'message' => 'Access denied']));
+
 header('Content-Type: application/json');
 
+$action = $_POST['action'] ?? null;
+
 try {
-    $action  = $_POST['action'] ?? '';
-    $user_id = $_POST['user_id'] ?? null;
-    $name    = trim($_POST['name'] ?? '');
-    $role_id = $_POST['role_id'] ?? null;
+    if ($action === 'addUser') {
+        $name = trim($_POST['name'] ?? '');
+        $userType = $_POST['user_type'] ?? 'Requestor';
+        
+        if (!$name) {
+            die(json_encode(['success' => false, 'message' => 'Name required']));
+        }
 
-    if ($action === 'deleteUser') {
-        if (!$user_id) throw new Exception("Invalid user ID.");
-        $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$user_id]);
-        echo json_encode(['success' => true]);
-        exit;
+        $stmt = $pdo->prepare("INSERT INTO users (name, user_type) VALUES (?, ?)");
+        $stmt->execute([$name, $userType]);
+        $userId = $pdo->lastInsertId();
+
+        // Store assignments and fetch them for response
+        $assignments = [];
+        if ($userType === 'Approver') {
+            $systemIds = $_POST['system_ids'] ?? [];
+            $departmentIds = $_POST['department_ids'] ?? [];
+
+            if (!empty($systemIds) && !empty($departmentIds)) {
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+                    VALUES (?, ?, ?)
+                    ON DUPLICATE KEY UPDATE id = id
+                ");
+
+                foreach ($systemIds as $sysId) {
+                    foreach ($departmentIds as $deptId) {
+                        $insertStmt->execute([$userId, $sysId, $deptId]);
+                        $assignments[] = [
+                            'system_id' => (int)$sysId,
+                            'department_id' => (int)$deptId
+                        ];
+                    }
+                }
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'id' => $userId,
+            'name' => $name,
+            'user_type' => $userType,
+            'assignments' => $assignments
+        ]);
     }
 
-    if (empty($name)) throw new Exception("User name is required.");
-    if (empty($role_id)) throw new Exception("Role must be selected.");
+    else if ($action === 'editUser') {
+        $userId = $_POST['user_id'] ?? null;
+        $name = trim($_POST['name'] ?? '');
+        $userType = $_POST['user_type'] ?? 'Requestor';
 
-    if ($action === 'editUser' && $user_id) {
-        $pdo->prepare("UPDATE users SET name = ?, role_id = ? WHERE id = ?")->execute([$name, $role_id, $user_id]);
-        $lastId = $user_id;
-    } else {
-        $stmt = $pdo->prepare("INSERT INTO users (name, role_id) VALUES (?, ?)");
-        $stmt->execute([$name, $role_id]);
-        $lastId = $pdo->lastInsertId();
+        if (!$userId || !$name) {
+            die(json_encode(['success' => false, 'message' => 'Missing required fields']));
+        }
+
+        $stmt = $pdo->prepare("UPDATE users SET name = ?, user_type = ? WHERE id = ?");
+        $stmt->execute([$name, $userType, $userId]);
+
+        // Handle approver assignments
+        $assignments = [];
+        if ($userType === 'Approver') {
+            // Delete old assignments
+            $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
+            $delStmt->execute([$userId]);
+
+            // Add new assignments
+            $systemIds = $_POST['system_ids'] ?? [];
+            $departmentIds = $_POST['department_ids'] ?? [];
+
+            if (!empty($systemIds) && !empty($departmentIds)) {
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+                    VALUES (?, ?, ?)
+                ");
+
+                foreach ($systemIds as $sysId) {
+                    foreach ($departmentIds as $deptId) {
+                        $insertStmt->execute([$userId, $sysId, $deptId]);
+                    }
+                }
+            }
+            
+            // Fetch the saved assignments
+            $fetchStmt = $pdo->prepare("
+                SELECT system_id, department_id 
+                FROM user_approver_assignments 
+                WHERE user_id = ?
+            ");
+            $fetchStmt->execute([$userId]);
+            $assignments = $fetchStmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            // Clear approver assignments if not approver
+            $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
+            $delStmt->execute([$userId]);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'id' => $userId,
+            'name' => $name,
+            'user_type' => $userType,
+            'assignments' => $assignments
+        ]);
     }
 
-    echo json_encode(['success' => true, 'id' => $lastId]);
+    else if ($action === 'deleteUser') {
+        $userId = $_POST['user_id'] ?? null;
+
+        if (!$userId) {
+            die(json_encode(['success' => false, 'message' => 'User ID required']));
+        }
+
+        // Cascade delete via foreign keys, but just in case:
+        $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
+        $delStmt->execute([$userId]);
+
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+
+        echo json_encode(['success' => true, 'id' => $userId]);
+    }
+
+    else {
+        die(json_encode(['success' => false, 'message' => 'Unknown action']));
+    }
 
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+?>

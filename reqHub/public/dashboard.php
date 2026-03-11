@@ -1,7 +1,6 @@
 <?php
-require_once ($reqhub_root . "/includes/auth.php");
-require_once ($reqhub_root . "/database/db.php");
-$pdo = SampleDatabase::getConnection('reqhub');
+require_once '../includes/auth.php';
+require_once '../includes/db.php';
 requireLogin();
 
 $user = $_SESSION['user'];
@@ -22,7 +21,7 @@ SELECT
     u2.name AS denied_by_name,
     u3.name AS served_by_name,
     GROUP_CONCAT(
-        CONCAT(at.role, '||', at.module, '||', at.name)
+        CONCAT(at.role, '||', at.module, '||', at.actions)
         SEPARATOR '##'
     ) AS access_type
 FROM requests r

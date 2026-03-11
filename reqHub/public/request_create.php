@@ -1,6 +1,6 @@
 <?php
-require_once ($reqhub_root . "/includes/auth.php");
-require_once ($reqhub_root . "/database/db.php");
+require_once '../includes/auth.php';
+require_once '../includes/db.php';
 
 requireRole(['requestor', 'approver']);
 
@@ -11,9 +11,9 @@ $users = $pdo->query("SELECT id, name FROM users ORDER BY name")->fetchAll();
 
 // Fetch access types grouped by Role → Module → Actions
 $accessTypes = $pdo->query("
-    SELECT id, system, role, module, name
+    SELECT id, system, role, module, actions
     FROM access_types
-    ORDER BY role, module, name
+    ORDER BY role, module, actions
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Group them: System → Role → Module → Actions
@@ -39,6 +39,9 @@ foreach ($accessTypes as $type) {
 
 <?php include "../includes/header.php"; ?>
 
+<!-- Choices.js CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+
 <div class="container mt-4">
     <h2>Create New Request</h2>
 
@@ -59,7 +62,7 @@ foreach ($accessTypes as $type) {
         <!-- Request For -->
         <div class="mb-3">
             <label class="form-label">Request For</label>
-            <select name="request_for" class="form-select" required>
+            <select name="request_for" id="requestForSelect" class="form-select" required>
                 <option value="">Select User</option>
                 <?php foreach ($users as $u): ?>
                     <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['name']) ?></option>
@@ -70,7 +73,7 @@ foreach ($accessTypes as $type) {
         <!-- Department -->
         <div class="mb-3">
             <label class="form-label">Department</label>
-            <select name="department_id" class="form-select" required>
+            <select name="department_id" id="departmentSelect" class="form-select" required>
                 <option value="">Select Department</option>
                 <?php foreach ($departments as $dept): ?>
                     <option value="<?= $dept['id'] ?>"><?= htmlspecialchars($dept['name']) ?></option>
@@ -130,12 +133,12 @@ foreach ($accessTypes as $type) {
                                                                 data-system="<?= htmlspecialchars($action['system']) ?>"
                                                                 data-role="<?= htmlspecialchars($action['role']) ?>"
                                                                 data-module="<?= htmlspecialchars($action['module']) ?>"
-                                                                data-name="<?= htmlspecialchars($action['name']) ?>"
+                                                                data-name="<?= htmlspecialchars($action['actions']) ?>"
                                                                 id="access<?= $action['id'] ?>">
 
                                                             <label class="form-check-label"
                                                                 for="access<?= $action['id'] ?>">
-                                                                <?= htmlspecialchars($action['name']) ?>
+                                                                <?= htmlspecialchars($action['actions']) ?>
                                                             </label>
                                                         </div>
                                                     <?php endforeach; ?>
@@ -177,8 +180,33 @@ foreach ($accessTypes as $type) {
     </form>
 </div>
 
+<!-- Select2 JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<!-- Choices.js JS -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+
+    // Initialize Choices.js on the three dropdowns
+    const systemChoices = new Choices('#systemSelect', {
+        searchEnabled: true,
+        itemSelectText: 'Press to select',
+        removeItemButton: true
+    });
+
+    const requestForChoices = new Choices('#requestForSelect', {
+        searchEnabled: true,
+        itemSelectText: 'Press to select',
+        removeItemButton: true
+    });
+
+    const departmentChoices = new Choices('#departmentSelect', {
+        searchEnabled: true,
+        itemSelectText: 'Press to select',
+        removeItemButton: true
+    });
 
     const systemSelect = document.getElementById("systemSelect");
     const roleList = document.getElementById("roleList");

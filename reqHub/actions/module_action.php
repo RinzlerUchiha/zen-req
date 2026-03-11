@@ -1,71 +1,110 @@
 <?php
 require_once '../includes/auth.php';
-requireLogin();
+require_once '../includes/db.php';
 
-// Only admin can manage modules
+header('Content-Type: application/json');
+
 if ($_SESSION['user']['role'] !== 'admin') {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
-require_once '../includes/db.php';
-header('Content-Type: application/json');
-
 $action = $_POST['action'] ?? '';
 $module_id = $_POST['module_id'] ?? null;
-$name = trim($_POST['name'] ?? '');
+$name = $_POST['name'] ?? '';
 $selected_actions = $_POST['selected_actions'] ?? [];
 
 try {
-    if ($action === 'deleteModule' && $module_id) {
-        $stmt = $pdo->prepare("DELETE FROM module_actions WHERE module_id=?");
-        $stmt->execute([$module_id]);
-        $stmt = $pdo->prepare("DELETE FROM modules WHERE id=?");
-        $stmt->execute([$module_id]);
-        echo json_encode(['success'=>true, 'id'=>$module_id]);
-        exit;
-    }
-
-    if (empty($name)) throw new Exception("Module name required.");
-
-    if ($action === 'editModule' && $module_id) {
-        $stmt = $pdo->prepare("UPDATE modules SET name=? WHERE id=?");
-        $stmt->execute([$name, $module_id]);
-
-        // Clear old actions
-        $stmt = $pdo->prepare("DELETE FROM module_actions WHERE module_id=?");
-        $stmt->execute([$module_id]);
-
-        // Insert new actions
-        if (!empty($selected_actions)) {
-            $stmt = $pdo->prepare("INSERT INTO module_actions (module_id, action_id) VALUES (?,?)");
-            foreach($selected_actions as $a){
-                $stmt->execute([$module_id, $a]);
-            }
+    if ($action === 'addModule') {
+        if (!$name) {
+            echo json_encode(['success' => false, 'message' => 'Name cannot be empty']);
+            exit;
         }
 
-        echo json_encode(['success'=>true, 'id'=>$module_id, 'name'=>$name]);
-        exit;
-    }
-
-    if ($action === 'addModule') {
+        // Insert into modules table
         $stmt = $pdo->prepare("INSERT INTO modules (name) VALUES (?)");
         $stmt->execute([$name]);
-        $module_id = $pdo->lastInsertId();
+        $newModuleId = $pdo->lastInsertId();
 
-        // Save selected actions
+        // Insert into module_actions
         if (!empty($selected_actions)) {
-            $stmt = $pdo->prepare("INSERT INTO module_actions (module_id,action_id) VALUES (?,?)");
-            foreach($selected_actions as $a){
-                $stmt->execute([$module_id, $a]);
+            $stmt = $pdo->prepare("INSERT INTO module_actions (module_id, action_id) VALUES (?, ?)");
+            foreach ($selected_actions as $actionId) {
+                $stmt->execute([$newModuleId, $actionId]);
             }
         }
 
-        echo json_encode(['success'=>true, 'id'=>$module_id, 'name'=>$name]);
-        exit;
+        echo json_encode([
+            'success' => true,
+            'id' => $newModuleId,
+            'name' => $name,
+            'message' => 'Module added successfully'
+        ]);
     }
 
-    echo json_encode(['success'=>false,'message'=>'Invalid action']);
-} catch(PDOException $e){
-    echo json_encode(['success'=>false,'message'=>$e->getMessage()]);
+    elseif ($action === 'editModule') {
+        if (!$name || !$module_id) {
+            echo json_encode(['success' => false, 'message' => 'Invalid data']);
+            exit;
+        }
+
+        // Delete existing module_actions
+        $stmt = $pdo->prepare("DELETE FROM module_actions WHERE module_id = ?");
+        $stmt->execute([$module_id]);
+
+        // Update in modules table
+        $stmt = $pdo->prepare("UPDATE modules SET name = ? WHERE id = ?");
+        $stmt->execute([$name, $module_id]);
+
+        // Insert new module_actions
+        if (!empty($selected_actions)) {
+            $stmt = $pdo->prepare("INSERT INTO module_actions (module_id, action_id) VALUES (?, ?)");
+            foreach ($selected_actions as $actionId) {
+                $stmt->execute([$module_id, $actionId]);
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'id' => $module_id,
+            'name' => $name,
+            'message' => 'Module updated successfully'
+        ]);
+    }
+
+    elseif ($action === 'deleteModule') {
+        if (!$module_id && !$name) {
+            echo json_encode(['success' => false, 'message' => 'Invalid data']);
+            exit;
+        }
+
+        // If only name provided, get ID
+        if ($name && !$module_id) {
+            $stmt = $pdo->prepare("SELECT id FROM modules WHERE name = ?");
+            $stmt->execute([$name]);
+            $result = $stmt->fetch();
+            $module_id = $result['id'] ?? null;
+        }
+
+        // Delete from module_actions
+        if ($module_id) {
+            $stmt = $pdo->prepare("DELETE FROM module_actions WHERE module_id = ?");
+            $stmt->execute([$module_id]);
+        }
+
+        // Delete from modules
+        if ($module_id) {
+            $stmt = $pdo->prepare("DELETE FROM modules WHERE id = ?");
+            $stmt->execute([$module_id]);
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Module deleted successfully']);
+    }
+
+    else {
+        echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+?>
