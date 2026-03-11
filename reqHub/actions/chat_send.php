@@ -1,6 +1,6 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT'] . '/reqHub/includes/auth.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/reqHub/includes/db.php';
+require_once __DIR__ . '/reqHub/includes/auth.php';
+require_once __DIR__ . '/reqHub/includes/db.php';
 requireLogin();
 
 $request_id = $_POST['request_id'] ?? null;
