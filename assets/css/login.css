@@ -1,0 +1,192 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
+@font-face {
+    font-family: 'Facebook Letter Faces';
+    src: url('assets/fonts/Fonts/Facebook_Letter_Faces/FACEBOLF.OTF') format('opentype');
+    font-weight: 500;
+    font-style: normal;
+}
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Facebook Letter Faces', sans-serif;
+}
+body{
+  background: #fff;
+  overflow: hidden;
+}
+::selection{
+  background: rgba(26,188,156,0.3);
+}
+.container{
+  max-width: 440px;
+  padding: 0 20px;
+  margin: 50px auto;
+}
+.wrapper{
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0px 8px 20px 2px rgba(0,0,0,0.1);
+}
+.wrapper .title{
+  height: 50px;
+  background: #b48c78;
+  border-radius: 5px 5px 0 0;
+  color: white;
+  font-size: 16px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.login{
+  background: #b48c78;
+  color: white;
+}
+#logo{
+  margin-bottom: 10px;
+}
+.wrapper form{
+  padding-left: 25px;
+  padding-right: 25px;
+  padding-bottom: 25px;
+}
+.wrapper form .row{
+  height: 45px;
+  margin-bottom: 15px;
+  position: relative;
+}
+.wrapper form .row input{
+  height: 100%;
+  width: 100%;
+  outline: none;
+  padding-left: 60px;
+  border-radius: 5px;
+  border: 1px solid lightgrey;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+form .row input:focus{
+  border-color: #16a085;
+  box-shadow: inset 0px 0px 2px 2px rgba(26,188,156,0.25);
+}
+form .row input::placeholder{
+  color: #999;
+}
+.btn-outline-warning{
+  color: #F9E076;
+  outline-color: #F9E076;
+}
+.wrapper form .row i{
+  position: absolute;
+  width: 47px;
+  height: 100%;
+  color: #fff;
+  font-size: 18px;
+  background: #123a69;
+  border: 1px solid #123a69;
+  border-radius: 5px 0 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wrapper form .pass{
+  margin: -8px 0 20px 0;
+  float: right;
+}
+.wrapper form .pass a{
+  color: #000;
+  font-size: 12px;
+  text-decoration: none;
+}
+.wrapper form .pass a:hover{
+  text-decoration: underline;
+}
+.wrapper form .button input{
+  color: #000;
+  font-size: 20px;
+  font-weight: 500;
+  padding-left: 0px;
+  background: #fff;
+  border: 1px solid #16a085;
+  cursor: pointer;
+}
+form .button input:hover{
+  background: #123a69;
+}
+.wrapper form .signup-link{
+  text-align: center;
+  margin-top: 20px;
+  font-size: 17px;
+}
+.wrapper form .signup-link a{
+  color: #16a085;
+  text-decoration: none;
+}
+form .signup-link a:hover{
+  text-decoration: underline;
+}
+img{
+  width: 200px;
+  height: 180px;
+}
+/* Style the checkbox container */
+.checkbox-container {
+  display: inline-block;
+  position: relative;
+  padding-left: 30px;
+  margin-right: 25px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* Hide the default checkbox */
+.checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Create a custom checkbox */
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee; /* default checkbox color */
+}
+
+/* On mouse-over, add a grey background color */
+.checkbox-container:hover input ~ .checkmark {
+  background-color: #ccc;
+}
+
+/* When the checkbox is checked, add a blue background */
+.checkbox-container input:checked ~ .checkmark {
+  background-color: #F9E076;
+}
+
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+/* Show the checkmark when checked */
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Style the checkmark/indicator */
+.checkbox-container .checkmark:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}

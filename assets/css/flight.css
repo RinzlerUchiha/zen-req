@@ -1,0 +1,494 @@
+.tab-content{
+	/*padding-left: 20px;*/
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+.table-container {
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #02252a;
+  z-index: 1;
+  border-bottom: 2px solid #ddd;
+}
+
+th, td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #ccc;
+}
+tr{
+	cursor: pointer;
+}
+tr:hover {
+	background-color: #fadcdf;
+}
+
+tr:nth-child(even) {
+	background-color: #f9f9f9;
+}
+
+
+@media (max-width: 768px) {
+	th, td {
+		white-space: nowrap;
+	}
+}
+td p{
+	color: #6a6767;
+	font-size: 12px;
+}
+td span{
+	font-weight: 700;
+}
+	.progress-bars {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		max-width: 600px;
+		margin: 0 auto 30px;
+		position: relative;
+	}
+
+	.progress-bars::before {
+		content: "";
+		position: absolute;
+		top: 50%;
+		left: 10%;
+		width: 80%;
+		height: 2px;
+		background: #ddd;
+		z-index: 0;
+		transform: translateY(-50%);
+	}
+
+	.step {
+		z-index: 1;
+		text-align: center;
+		flex: 1;
+		position: relative;
+	}
+
+	.step .circle {
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background-color: #ddd;
+		margin: 0 auto;
+	}
+
+	.step.active .circle {
+		background-color: #00c67c;
+	}
+
+	.step span {
+		display: block;
+		margin-top: 6px;
+		font-size: 0.9rem;
+		color: #888;
+	}
+
+	.step.active span {
+		color: #00c67c;
+		font-weight: 600;
+	}
+
+	h2 {
+		color: #81304a;
+		font-size: 1.2rem;
+	}
+	hr {
+	  border: none;
+	  border-top: 1px dashed #000;
+	  color: #fff;
+	  background-color: #fff;
+	  height: 1px;
+	  width: 100%;
+	}
+
+	.info-text {
+		font-size: 12px;
+    	font-weight: 700;
+    	color: #dc6d6d;
+	}
+
+	form {
+		max-width: 800px;
+		margin: 0 auto;
+	}
+
+	.form-step {
+		display: none;
+	}
+
+	.form-step.active {
+		display: block;
+	}
+
+	.form-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 15px;
+		/*margin-bottom: 5px;*/
+	}
+
+	.form-group {
+		flex: 1 1 20%;
+		display: flex;
+		flex-direction: column;
+	}
+
+	label {
+		font-weight: 600;
+		margin-bottom: 5px;
+	}
+
+	input, select {
+		padding: 10px;
+		border: 1px solid #ddd;
+		border-radius: 20px;
+		/*font-size: 0.95rem;*/
+	}
+
+	.identity-box {
+		background: #f5f7ff;
+		padding: 15px;
+		border-radius: 10px;
+		margin-top: 20px;
+		color: #000;
+		font-size: 0.9rem;
+	}
+
+	.step-buttons {
+		display: flex;
+		justify-content: space-between;
+		margin-top: 30px;
+	}
+
+	button {
+		padding: 10px 20px;
+		border: none;
+		background-color: #81304a;
+		color: white;
+		border-radius: 20px;
+		cursor: pointer;
+
+	}
+
+	button:disabled {
+		background-color: #ccc;
+		cursor: default;
+	}
+
+	@media (max-width: 600px) {
+		.form-group {
+			flex: 1 1 100%;
+		}
+
+		.progress-bars {
+			flex-direction: column;
+			gap: 10px;
+			
+
+		}
+		#multiStepForm{
+			padding: 10px !important;
+		}
+
+		.progress-bars::before {
+			display: none;
+		}
+	}
+	.tab-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .tab-buttons {
+      background: #e0e7ff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 15px;
+      color: #3b4db1;
+      cursor: pointer;
+    }
+    .tab-buttons.active {
+      background: #3b4db1;
+      color: white;
+    }
+    .tab-button.active {
+      background: #3b4db1;
+      color: white;
+    }
+    .tab-contentflight {
+      display: none;
+      background: #f3f6fd;
+      padding: 10px 15px;
+      border-radius: 10px;
+    }
+    .tab-contentflight.active {
+      display: block;
+    }
+.baggage-options {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.baggage-card {
+  position: relative;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  /*padding: 15px;*/
+  width: 150px;
+  cursor: pointer;
+  background-color: white;
+  transition: border 0.3s, background-color 0.3s;
+}
+
+.baggage-card input[type="radio"] {
+  display: none;
+}
+
+.baggage-card .card-body {
+  text-align: center;
+  height: 100%;
+  align-items: center;
+  align-content: center;
+}
+
+.baggage-card img {
+  width: 40px;
+  margin-bottom: 10px;
+}
+
+.baggage-card p {
+  margin: 0;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.baggage-card input[type="radio"]:checked + .card-body {
+  background-color: #ffe4c4;
+  border-radius: 10px;
+  height: 100%;
+  align-items: center;
+  align-content: center;
+}
+
+.baggage-card input[type="radio"]:checked + .card-body::after {
+  content: "✔";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: black;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  padding: 4px;
+  width: 28px;
+}
+
+
+/*FOR FLIGHT DETAILS*/
+	.flight-card {
+      background-color: #fff;
+      border-radius: 16px;
+      padding: 10px;
+      /*box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);*/
+      flex: 1;
+      height: 74vh;
+      overflow: auto;
+    }
+	.flight-card2 {
+      background-color: #fff;
+      border-radius: 16px;
+      padding: 10px;
+      /*box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);*/
+      flex: 1;
+      height: 90vh;
+    }
+
+    .flight-card h2 {
+      font-size: 14px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .flight-section {
+      margin-bottom: 24px;
+      /*padding-bottom: 16px;*/
+      border-bottom: 1px solid #eee;
+    }
+
+    .flight-section:last-child {
+      border-bottom: none;
+    }
+
+    .flight-section h3 {
+      font-size: 12px;
+      margin-bottom: 14px;
+      color: #444;
+      border-left: 4px solid #4a90e2;
+      padding-left: 10px;
+    }
+
+    .flight-section p {
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #555;
+      padding-left: 14px;
+    }
+    .flight-section .flght-approve{
+	  border-bottom: 1px solid #000;
+	  text-align: center !important;
+	  padding-left: 0px !important;
+	  font-weight: 700;
+	}
+
+    .flight-chat-section {
+      display: flex;
+      flex-direction: column;
+      height: 80vh;
+    }
+
+    .flight-chat-box {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      background: #eef1f5;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: auto;
+    }
+
+    .flight-chat-message {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      margin: 6px 0;
+      line-height: 1.4;
+      font-size: 15px;
+      position: relative;
+    }
+
+    .flight-chat-message.agent {
+      background: #ffffff;
+      align-self: flex-start;
+      border: 1px solid #d1dbe8;
+    }
+
+    .flight-chat-message.user {
+      background: #4a90e2;
+      color: #fff;
+      align-self: flex-end;
+    }
+
+    .timestamp {
+      font-size: 12px;
+      color: #373636;
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .flight-chat-input {
+      display: flex;
+      gap: 10px;
+    }
+
+    .flight-chat-input input {
+      flex: 1;
+      padding: 10px;
+      border-radius: 18px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .flight-chat-input button {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      font-size: 14px;
+      border-radius: 18px;
+      cursor: pointer;
+    }
+
+    .flight-chat-input button:hover {
+      background-color: #357acc;
+    }
+
+/*    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+    }*/
+    .sign-modal {
+	    display: none;
+	    position: fixed;
+	    top: 0;
+	    left: 0;
+	    width: 100%;
+	    height: 100%;
+	    background: rgba(0, 0, 0, 0.5);
+	    justify-content: center;
+	    align-items: center;
+	    z-index: 6;
+	}
+	.modal-content {
+	    background: white;
+	    padding: 10px;
+	    border-radius: 8px;
+	    text-align: center;
+	}
+	.tab-contentflight {
+	  display: none;
+	}
+	.tab-contentflight.active {
+	  display: block;
+	}
+.tab-button-group{
+	gap:10px;
+}
+svg{
+  width: 200px;
+  height: 50px;
+}
+
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.alert-success {
+    color: #3c763d;
+    background-color: #dff0d8;
+    border-color: #d6e9c6;
+}
+
+.alert-error {
+    color: #a94442;
+    background-color: #f2dede;
+    border-color: #ebccd1;
+}

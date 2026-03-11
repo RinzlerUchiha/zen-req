@@ -1,0 +1,110 @@
+.outer {
+    display: flex;
+    justify-content: center; /* Centers horizontally */
+    align-items: center; 
+}
+#main {
+    background-color: #fff;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    padding: 10px 20px;
+    transition: transform 0.2s;
+    width: 500px;
+    text-align: center;
+    margin-top: 10px;
+}
+#req-main {
+    background-color: #fff;
+    border-radius: 15px;
+    padding: 10px 20px;
+    transition: transform 0.2s;
+    width: 100%;
+    text-align: center;
+    margin-top: 10px;
+}
+h1 {
+    color: #4CAF50;
+}
+p{
+    color: black;
+}
+
+label {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    text-align: left;
+    color: #555;
+    font-weight: bold;
+}
+
+.label{
+    display: flex;
+}
+
+
+input {
+    display: block;
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+select {
+    display: block;
+    width: 95%;
+    margin-bottom: 15px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.number {
+    display: block;
+    width: 80%;
+    margin-bottom: 15px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-align: right;
+}
+
+.checkbox {
+    display: block;
+    width: 40%;
+    margin-bottom: 15px;
+    padding: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-align: right;
+}
+
+button {
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    background-color: #4CAF50;
+    width: 100%;
+    font-size: 16px;
+}
+
+.wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.request{
+    display: flex;
+    justify-content: space-between;
+}

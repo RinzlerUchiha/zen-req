@@ -1,0 +1,23 @@
+<?php
+require_once($lv_root."/db/dbcon.php"); 
+$db = new Dbcon;
+$con1 = $db->connect();
+
+$laID   = $_POST['laID'] ?? '';
+$status = $_POST['status'] ?? '';
+
+try {
+    $cancel = $con1->prepare("
+        UPDATE tbl201_leave SET la_status = ? WHERE la_id = ?
+    ");
+
+    $cancel->execute([
+        $status,
+        $laID
+    ]);
+
+    echo "Leave cancelled.";
+} catch (PDOException $e) {
+    echo "Database Error: " . $e->getMessage();
+}
+?>
