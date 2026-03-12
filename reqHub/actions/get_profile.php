@@ -1,12 +1,12 @@
 <?php
-require_once($reqhub_root . "/database/db.php");
+require_once (__DIR__ . '/../database/db.php');
 
 class Profile
 {
     private static function getDatabaseConnection($db)
     {
         try {
-            return SampleDatabase::getConnection($db);
+            return ReqHubDatabase::getConnection($db);
         } catch (Exception $e) {
             return null;
         }

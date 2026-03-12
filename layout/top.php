@@ -141,7 +141,7 @@ $Day = date("d");
 $yearMonth = date("Y-m");
 
 try {
-	$hr_db = SampleDatabase::getConnection('hr');
+	$hr_db = ReqHubDatabase::getConnection('hr');
 } catch (\PDOException $e) {
 	throw new \PDOException($e->getMessage(), (int)$e->getCode());
 }

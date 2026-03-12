@@ -1,5 +1,5 @@
 <?php
-require_once 'config/db.php';
+require_once (__DIR__ . '/../database/db.php');
 
 if (!empty($_POST['action_name'])) {
     $actionName = trim($_POST['action_name']);

@@ -1,12 +1,12 @@
 <?php
-require_once '../includes/auth.php';
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../database/db.php');
 requireLogin();
 
 if ($_SESSION['user']['role'] !== 'admin') {
     die("Access denied");
 }
 
-require_once '../includes/db.php';
 
 // Grab POST data
 $action = $_POST['action'] ?? '';

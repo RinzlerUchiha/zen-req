@@ -3,7 +3,7 @@
 // Covers: Actions, Modules, Roles, Users, Approver, Systems
 // Handles: add, update, delete, rename, duplicate, get_module_actions, get_role_perms
 
-include '../includes/db.php';
+require_once (__DIR__ . '/../database/db.php');
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';

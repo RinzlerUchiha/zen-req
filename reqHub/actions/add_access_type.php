@@ -1,7 +1,7 @@
 <?php
-require_once '../includes/auth.php';
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../database/db.php');
 requireLogin();
-require_once '../includes/db.php';
 
 header("Location: ../pages/admin_settings.php?success=1");
 exit;

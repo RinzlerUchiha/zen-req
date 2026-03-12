@@ -3,7 +3,7 @@
 /**
  * database connections
  */
-class SampleDatabase
+class ReqHubDatabase
 {
     private static $connections = [];
 

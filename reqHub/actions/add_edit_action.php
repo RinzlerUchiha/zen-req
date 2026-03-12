@@ -1,5 +1,5 @@
 <?php
-require_once 'config/db.php';
+require_once (__DIR__ . '/../database/db.php');
 
 $userId = $_POST['user_id'] ?? null;
 $name   = $_POST['name'] ?? null;

@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/db.php';
+require_once (__DIR__ . '/../database/db.php');
 
 // Expect: GET request with system_id
 $system_id = isset($_GET['system_id']) ? (int)$_GET['system_id'] : 0;

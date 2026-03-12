@@ -3,7 +3,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once '../includes/db.php';
+require_once (__DIR__ . '/../database/db.php');
 
 if (!isset($_SESSION['user'])) {
     http_response_code(403);

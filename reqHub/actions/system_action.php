@@ -1,5 +1,5 @@
 <?php
-require_once '../includes/db.php';
+require_once (__DIR__ . '/../database/db.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);

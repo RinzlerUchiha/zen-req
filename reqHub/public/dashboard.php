@@ -1,7 +1,9 @@
 <?php
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../includes/db.php');
-requireLogin();
+require_once (__DIR__ . '/../../database/SampleDatabase.php');
+
+
+$pdo = ReqHubDatabase::getConnection('reqhub');
 
 $user = $_SESSION['user'];
 $userId = $user['id'];

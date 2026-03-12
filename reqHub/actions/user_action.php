@@ -1,6 +1,6 @@
 <?php
-require_once '../includes/auth.php';
-require_once '../includes/db.php';
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../database/db.php');
 
 if ($_SESSION['user']['role'] !== 'admin') die(json_encode(['success' => false, 'message' => 'Access denied']));
 
