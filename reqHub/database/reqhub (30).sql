@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 10, 2026 at 07:14 AM
+-- Generation Time: Mar 12, 2026 at 08:48 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2627,584 +2627,14 @@ INSERT INTO `access_types` (`id`, `system`, `role`, `module`, `actions`, `create
 (7081, 'VMS', 'TL Access', 'Voucher Distribution', 'View per Outlet', '2026-03-03 08:19:24', 0),
 (7082, 'VMS', 'TL Access', 'Voucher Releasing', 'View', '2026-03-03 08:19:24', 0),
 (7083, 'VMS', 'TL Access', 'Voucher Releasing', 'View per Outlet', '2026-03-03 08:19:24', 0),
-(8192, 'Test', 'Administrator', 'Approved', 'View', '2026-03-10 02:55:08', 0),
-(8193, 'Test', 'Administrator', 'Approved', 'View All', '2026-03-10 02:55:08', 0),
-(8194, 'Test', 'Administrator', 'Checked', 'View', '2026-03-10 02:55:08', 0),
-(8195, 'Test', 'Administrator', 'Checked', 'View All', '2026-03-10 02:55:08', 0),
-(8196, 'Test', 'Administrator', 'Dashboard', 'View', '2026-03-10 02:55:08', 0),
-(8197, 'Test', 'Administrator', 'Dashboard', 'Delete', '2026-03-10 02:55:08', 0),
-(8198, 'Test', 'Administrator', 'Dashboard', 'Edit', '2026-03-10 02:55:08', 0),
-(8199, 'Test', 'Administrator', 'Dashboard', 'Add', '2026-03-10 02:55:08', 0),
-(8200, 'Test', 'Administrator', 'Dashboard', 'View All', '2026-03-10 02:55:08', 0),
-(8201, 'Test', 'Administrator', 'Dashboard', 'Close Transaction', '2026-03-10 02:55:08', 0),
-(8202, 'Test', 'Administrator', 'Dashboard', 'Payment', '2026-03-10 02:55:08', 0),
-(8203, 'Test', 'Administrator', 'Dashboard', 'View Menu', '2026-03-10 02:55:08', 0),
-(8204, 'Test', 'Administrator', 'Draft', 'View', '2026-03-10 02:55:08', 0),
-(8205, 'Test', 'Administrator', 'Draft', 'View per Company', '2026-03-10 02:55:08', 0),
-(8206, 'Test', 'Administrator', 'Draft', 'Delete', '2026-03-10 02:55:08', 0),
-(8207, 'Test', 'Administrator', 'Draft', 'Edit', '2026-03-10 02:55:08', 0),
-(8208, 'Test', 'Administrator', 'Employee Request', 'View', '2026-03-10 02:55:08', 0),
-(8209, 'Test', 'Administrator', 'Employee Request', 'Delete', '2026-03-10 02:55:08', 0),
-(8210, 'Test', 'Administrator', 'Employee Request', 'Edit', '2026-03-10 02:55:08', 0),
-(8211, 'Test', 'Administrator', 'Employee Request', 'Add', '2026-03-10 02:55:09', 0),
-(8212, 'Test', 'Administrator', 'Employee Request', 'Print', '2026-03-10 02:55:09', 0),
-(8213, 'Test', 'Administrator', 'Pending', 'View', '2026-03-10 02:55:09', 0),
-(8214, 'Test', 'Administrator', 'Pending', 'View per Company', '2026-03-10 02:55:09', 0),
-(8215, 'Test', 'Administrator', 'Request', 'View', '2026-03-10 02:55:09', 0),
-(8216, 'Test', 'Administrator', 'Request Process', 'Check ATD request', '2026-03-10 02:55:09', 0),
-(8217, 'Test', 'Administrator', 'Reviewed', 'View', '2026-03-10 02:55:09', 0),
-(8218, 'Test', 'Administrator', 'Reviewed', 'View All', '2026-03-10 02:55:09', 0),
-(8219, 'Test', 'Administrator', 'Accounting Request', 'View', '2026-03-10 02:55:09', 0),
-(8220, 'Test', 'Administrator', 'Accounting Request', 'Delete', '2026-03-10 02:55:09', 0),
-(8221, 'Test', 'Administrator', 'Accounting Request', 'Edit', '2026-03-10 02:55:09', 0),
-(8222, 'Test', 'Administrator', 'Accounting Request', 'Add', '2026-03-10 02:55:09', 0),
-(8223, 'Test', 'Administrator', 'Assignatory', 'View', '2026-03-10 02:55:09', 0),
-(8224, 'Test', 'Administrator', 'Assignatory', 'Delete', '2026-03-10 02:55:09', 0),
-(8225, 'Test', 'Administrator', 'Assignatory', 'Edit', '2026-03-10 02:55:09', 0),
-(8226, 'Test', 'Administrator', 'Assignatory', 'Add', '2026-03-10 02:55:09', 0),
-(8227, 'Test', 'Administrator', 'Assignatory', 'Activate', '2026-03-10 02:55:09', 0),
-(8228, 'Test', 'Administrator', 'Assignatory', 'Deactivate', '2026-03-10 02:55:09', 0),
-(8229, 'Test', 'Administrator', 'ATD Type', 'View', '2026-03-10 02:55:09', 0),
-(8230, 'Test', 'Administrator', 'ATD Type', 'Delete', '2026-03-10 02:55:09', 0),
-(8231, 'Test', 'Administrator', 'ATD Type', 'Edit', '2026-03-10 02:55:09', 0),
-(8232, 'Test', 'Administrator', 'ATD Type', 'Add', '2026-03-10 02:55:09', 0),
-(8233, 'Test', 'Administrator', 'Attachment', 'View', '2026-03-10 02:55:09', 0),
-(8234, 'Test', 'Administrator', 'Attachment', 'Delete', '2026-03-10 02:55:09', 0),
-(8235, 'Test', 'Administrator', 'Attachment', 'Edit', '2026-03-10 02:55:09', 0),
-(8236, 'Test', 'Administrator', 'Attachment', 'Add', '2026-03-10 02:55:09', 0),
-(8237, 'Test', 'Administrator', 'Attachment', 'Activate', '2026-03-10 02:55:09', 0),
-(8238, 'Test', 'Administrator', 'Attachment', 'Deactivate', '2026-03-10 02:55:09', 0),
-(8239, 'Test', 'Administrator', 'Category', 'View', '2026-03-10 02:55:09', 0),
-(8240, 'Test', 'Administrator', 'Category', 'Delete', '2026-03-10 02:55:09', 0),
-(8241, 'Test', 'Administrator', 'Category', 'Edit', '2026-03-10 02:55:10', 0),
-(8242, 'Test', 'Administrator', 'Category', 'Add', '2026-03-10 02:55:10', 0),
-(8243, 'Test', 'Administrator', 'Category', 'Activate', '2026-03-10 02:55:10', 0),
-(8244, 'Test', 'Administrator', 'Category', 'Deactivate', '2026-03-10 02:55:10', 0),
-(8245, 'Test', 'Administrator', 'Clarify', 'View', '2026-03-10 02:55:10', 0),
-(8246, 'Test', 'Administrator', 'Clarify', 'View All', '2026-03-10 02:55:10', 0),
-(8247, 'Test', 'Administrator', 'Company', 'View', '2026-03-10 02:55:10', 0),
-(8248, 'Test', 'Administrator', 'Company', 'Edit', '2026-03-10 02:55:10', 0),
-(8249, 'Test', 'Administrator', 'Confirmed', 'View', '2026-03-10 02:55:10', 0),
-(8250, 'Test', 'Administrator', 'Confirmed', 'View All', '2026-03-10 02:55:10', 0),
-(8251, 'Test', 'Administrator', 'Fully Paid', 'View', '2026-03-10 02:55:10', 0),
-(8252, 'Test', 'Administrator', 'Fully Paid', 'Delete', '2026-03-10 02:55:10', 0),
-(8253, 'Test', 'Administrator', 'Fully Paid', 'Edit', '2026-03-10 02:55:10', 0),
-(8254, 'Test', 'Administrator', 'Fully Paid', 'Add', '2026-03-10 02:55:10', 0),
-(8255, 'Test', 'Administrator', 'Fully Paid', 'View All', '2026-03-10 02:55:10', 0),
-(8256, 'Test', 'Administrator', 'Fully Paid', 'View Menu', '2026-03-10 02:55:10', 0),
-(8257, 'Test', 'Administrator', 'Fully Paid', 'Release', '2026-03-10 02:55:10', 0),
-(8258, 'Test', 'Administrator', 'Human Resource Request', 'View', '2026-03-10 02:55:10', 0),
-(8259, 'Test', 'Administrator', 'Human Resource Request', 'Delete', '2026-03-10 02:55:10', 0),
-(8260, 'Test', 'Administrator', 'Human Resource Request', 'Edit', '2026-03-10 02:55:10', 0),
-(8261, 'Test', 'Administrator', 'Human Resource Request', 'Add', '2026-03-10 02:55:10', 0),
-(8262, 'Test', 'Administrator', 'Human Resource Request', 'Print', '2026-03-10 02:55:10', 0),
-(8263, 'Test', 'Administrator', 'Item', 'View', '2026-03-10 02:55:10', 0),
-(8264, 'Test', 'Administrator', 'Item', 'Delete', '2026-03-10 02:55:10', 0),
-(8265, 'Test', 'Administrator', 'Item', 'Edit', '2026-03-10 02:55:10', 0),
-(8266, 'Test', 'Administrator', 'Item', 'Add', '2026-03-10 02:55:10', 0),
-(8267, 'Test', 'Administrator', 'Item', 'Activate', '2026-03-10 02:55:10', 0),
-(8268, 'Test', 'Administrator', 'Item', 'Deactivate', '2026-03-10 02:55:10', 0),
-(8269, 'Test', 'Administrator', 'Maintenance', 'View', '2026-03-10 02:55:10', 0),
-(8270, 'Test', 'Administrator', 'Maintenance', 'View Menu', '2026-03-10 02:55:10', 0),
-(8271, 'Test', 'Administrator', 'Request ATD', 'View', '2026-03-10 02:55:10', 0),
-(8272, 'Test', 'Administrator', 'Request ATD', 'Delete', '2026-03-10 02:55:10', 0),
-(8273, 'Test', 'Administrator', 'Request ATD', 'Edit', '2026-03-10 02:55:10', 0),
-(8274, 'Test', 'Administrator', 'Request ATD', 'Add', '2026-03-10 02:55:11', 0),
-(8275, 'Test', 'Administrator', 'Request ATD', 'Print', '2026-03-10 02:55:11', 0),
-(8276, 'Test', 'Administrator', 'System Logs', 'View', '2026-03-10 02:55:11', 0),
-(8277, 'Test', 'Administrator', 'Unprocessed', 'View', '2026-03-10 02:55:11', 0),
-(8278, 'Test', 'Administrator', 'Unprocessed', 'View All', '2026-03-10 02:55:11', 0),
-(8279, 'Test', 'Administrator', 'User', 'View', '2026-03-10 02:55:11', 0),
-(8280, 'Test', 'Administrator', 'User', 'Delete', '2026-03-10 02:55:11', 0),
-(8281, 'Test', 'Administrator', 'User', 'Edit', '2026-03-10 02:55:11', 0),
-(8282, 'Test', 'Administrator', 'User', 'Add', '2026-03-10 02:55:11', 0),
-(8283, 'Test', 'Administrator', 'Verified', 'View', '2026-03-10 02:55:11', 0),
-(8284, 'Test', 'Administrator', 'Verified', 'View All', '2026-03-10 02:55:11', 0),
-(8285, 'Test', 'Administrator', 'CAP Details', 'View', '2026-03-10 02:55:11', 0),
-(8286, 'Test', 'Administrator', 'CAP Details', 'Reprint CAP', '2026-03-10 02:55:11', 0),
-(8287, 'Test', 'Administrator', 'CAP Details', 'Reprint Transaction', '2026-03-10 02:55:11', 0),
-(8288, 'Test', 'Administrator', 'Forfeited', 'View', '2026-03-10 02:55:11', 0),
-(8289, 'Test', 'Administrator', 'Forfeited', 'Delete', '2026-03-10 02:55:11', 0),
-(8290, 'Test', 'Administrator', 'Forfeited', 'Edit', '2026-03-10 02:55:11', 0),
-(8291, 'Test', 'Administrator', 'Forfeited', 'Add', '2026-03-10 02:55:11', 0),
-(8292, 'Test', 'Administrator', 'Forfeited', 'View Menu', '2026-03-10 02:55:11', 0),
-(8293, 'Test', 'Administrator', 'Forfeited', 'Transfer In', '2026-03-10 02:55:11', 0),
-(8294, 'Test', 'Administrator', 'Forfeited', 'Transfer Out', '2026-03-10 02:55:11', 0),
-(8295, 'Test', 'Administrator', 'Interest Rate Mn', 'View', '2026-03-10 02:55:11', 0),
-(8296, 'Test', 'Administrator', 'Interest Rate Mn', 'Delete', '2026-03-10 02:55:11', 0),
-(8297, 'Test', 'Administrator', 'Interest Rate Mn', 'Edit', '2026-03-10 02:55:12', 0),
-(8298, 'Test', 'Administrator', 'Interest Rate Mn', 'Add', '2026-03-10 02:55:12', 0),
-(8299, 'Test', 'Administrator', 'Interest Rate Mn', 'View Menu', '2026-03-10 02:55:12', 0),
-(8300, 'Test', 'Administrator', 'Payment', 'View', '2026-03-10 02:55:12', 0),
-(8301, 'Test', 'Administrator', 'Payment', 'Edit', '2026-03-10 02:55:12', 0),
-(8302, 'Test', 'Administrator', 'Payment', 'Add', '2026-03-10 02:55:12', 0),
-(8303, 'Test', 'Administrator', 'Payment', 'Payment', '2026-03-10 02:55:12', 0),
-(8304, 'Test', 'Administrator', 'Payment', 'View Menu', '2026-03-10 02:55:12', 0),
-(8305, 'Test', 'Administrator', 'Payment Term Mn', 'View', '2026-03-10 02:55:12', 0),
-(8306, 'Test', 'Administrator', 'Payment Term Mn', 'Delete', '2026-03-10 02:55:12', 0),
-(8307, 'Test', 'Administrator', 'Payment Term Mn', 'Edit', '2026-03-10 02:55:12', 0),
-(8308, 'Test', 'Administrator', 'Payment Term Mn', 'Add', '2026-03-10 02:55:12', 0),
-(8309, 'Test', 'Administrator', 'Payment Term Mn', 'View Menu', '2026-03-10 02:55:12', 0),
-(8310, 'Test', 'Administrator', 'View Menu', 'View', '2026-03-10 02:55:12', 0),
-(8311, 'Test', 'Administrator', 'Batch Gatepass', 'Batch Add', '2026-03-10 02:55:12', 0),
-(8312, 'Test', 'Administrator', 'Batch Gatepass', 'Batch Delete', '2026-03-10 02:55:12', 0),
-(8313, 'Test', 'Administrator', 'Batch Gatepass', 'Batch Edit', '2026-03-10 02:55:12', 0),
-(8314, 'Test', 'Administrator', 'Batch Gatepass', 'Batch View', '2026-03-10 02:55:12', 0),
-(8315, 'Test', 'Administrator', 'eDTR Breakdown', 'Print', '2026-03-10 02:55:12', 0),
-(8316, 'Test', 'Administrator', 'eDTR Breakdown', 'View All', '2026-03-10 02:55:12', 0),
-(8317, 'Test', 'Administrator', 'eDTR Breakdown', 'Export Reports', '2026-03-10 02:55:12', 0),
-(8318, 'Test', 'Administrator', 'eDTR Cut-Off Reports', 'Print', '2026-03-10 02:55:12', 0),
-(8319, 'Test', 'Administrator', 'eDTR Cut-Off Reports', 'Export Reports', '2026-03-10 02:55:12', 0),
-(8320, 'Test', 'Administrator', 'eDTR Cut-Off Reports', 'Generate Reports All', '2026-03-10 02:55:12', 0),
-(8321, 'Test', 'Administrator', 'eDTR Cut-Off Reports', 'Generate Reports by Dept', '2026-03-10 02:55:12', 0),
-(8322, 'Test', 'Administrator', 'eDTR Information', 'Delete', '2026-03-10 02:55:12', 0),
-(8323, 'Test', 'Administrator', 'eDTR Information', 'Edit', '2026-03-10 02:55:12', 0),
-(8324, 'Test', 'Administrator', 'eDTR Information', 'Add', '2026-03-10 02:55:12', 0),
-(8325, 'Test', 'Administrator', 'eDTR Inputs', 'Delete', '2026-03-10 02:55:12', 0),
-(8326, 'Test', 'Administrator', 'eDTR Inputs', 'Edit', '2026-03-10 02:55:12', 0),
-(8327, 'Test', 'Administrator', 'eDTR Inputs', 'Add', '2026-03-10 02:55:12', 0),
-(8328, 'Test', 'Administrator', 'eDTR Inputs', 'View All', '2026-03-10 02:55:12', 0),
-(8329, 'Test', 'Administrator', 'eDTR Inputs', 'Generate Reports All', '2026-03-10 02:55:13', 0),
-(8330, 'Test', 'Administrator', 'Facetime', 'View All', '2026-03-10 02:55:13', 0),
-(8331, 'Test', 'Administrator', 'Fingerprint Details', 'View All', '2026-03-10 02:55:13', 0),
-(8332, 'Test', 'Administrator', 'Gatepass', 'Delete', '2026-03-10 02:55:13', 0),
-(8333, 'Test', 'Administrator', 'Gatepass', 'Edit', '2026-03-10 02:55:13', 0),
-(8334, 'Test', 'Administrator', 'Gatepass', 'Add', '2026-03-10 02:55:13', 0),
-(8335, 'Test', 'Administrator', 'Gatepass', 'View All', '2026-03-10 02:55:13', 0),
-(8336, 'Test', 'Administrator', 'Gatepass', 'Export Reports', '2026-03-10 02:55:13', 0),
-(8337, 'Test', 'Administrator', 'Overtime', 'Delete', '2026-03-10 02:55:13', 0),
-(8338, 'Test', 'Administrator', 'Overtime', 'Edit', '2026-03-10 02:55:13', 0),
-(8339, 'Test', 'Administrator', 'Overtime', 'Add', '2026-03-10 02:55:13', 0),
-(8340, 'Test', 'Administrator', 'Overtime', 'Print', '2026-03-10 02:55:13', 0),
-(8341, 'Test', 'Administrator', 'Overtime', 'View All', '2026-03-10 02:55:13', 0),
-(8342, 'Test', 'Administrator', 'Overtime', 'Approve', '2026-03-10 02:55:13', 0),
-(8343, 'Test', 'Administrator', 'Overtime', 'Export Reports', '2026-03-10 02:55:13', 0),
-(8344, 'Test', 'Administrator', 'Overtime', 'Disapprove', '2026-03-10 02:55:13', 0),
-(8345, 'Test', 'Administrator', 'Reports', 'View', '2026-03-10 02:55:13', 0),
-(8346, 'Test', 'Administrator', 'Announcement', 'View', '2026-03-10 02:55:13', 0),
-(8347, 'Test', 'Administrator', 'Compensation & Benefits', 'View', '2026-03-10 02:55:13', 0),
-(8348, 'Test', 'Administrator', 'Compensation & Benefits', 'Benefits', '2026-03-10 02:55:13', 0),
-(8349, 'Test', 'Administrator', 'Compensation & Benefits', 'HDMF', '2026-03-10 02:55:13', 0),
-(8350, 'Test', 'Administrator', 'Compensation & Benefits', 'PHIC', '2026-03-10 02:55:13', 0),
-(8351, 'Test', 'Administrator', 'Compensation & Benefits', 'Salary', '2026-03-10 02:55:13', 0),
-(8352, 'Test', 'Administrator', 'Compensation & Benefits', 'SSS', '2026-03-10 02:55:13', 0),
-(8353, 'Test', 'Administrator', 'Compensation & Benefits', 'Withholding Tax', '2026-03-10 02:55:13', 0),
-(8354, 'Test', 'Administrator', 'Education & Background', 'View', '2026-03-10 02:55:13', 0),
-(8355, 'Test', 'Administrator', 'Education & Background', 'Direct Add', '2026-03-10 02:55:13', 0),
-(8356, 'Test', 'Administrator', 'Education & Background', 'Direct Delete', '2026-03-10 02:55:13', 0),
-(8357, 'Test', 'Administrator', 'Education & Background', 'Direct Edit', '2026-03-10 02:55:13', 0),
-(8358, 'Test', 'Administrator', 'Employee Application Profile', 'View', '2026-03-10 02:55:13', 0),
-(8359, 'Test', 'Administrator', 'Employee Application Profile', 'Direct Add', '2026-03-10 02:55:13', 0),
-(8360, 'Test', 'Administrator', 'Employee Application Profile', 'Direct Delete', '2026-03-10 02:55:13', 0),
-(8361, 'Test', 'Administrator', 'Employee Application Profile', 'Direct Edit', '2026-03-10 02:55:13', 0),
-(8362, 'Test', 'Administrator', 'Employee Education & Background', 'View', '2026-03-10 02:55:13', 0),
-(8363, 'Test', 'Administrator', 'Employee Education & Background', 'Direct Add', '2026-03-10 02:55:14', 0),
-(8364, 'Test', 'Administrator', 'Employee Education & Background', 'Direct Delete', '2026-03-10 02:55:14', 0),
-(8365, 'Test', 'Administrator', 'Employee Education & Background', 'Direct Edit', '2026-03-10 02:55:14', 0),
-(8366, 'Test', 'Administrator', 'Employee Engagement Index', 'Review', '2026-03-10 02:55:14', 0),
-(8367, 'Test', 'Administrator', 'Employee Job Information', 'View', '2026-03-10 02:55:14', 0),
-(8368, 'Test', 'Administrator', 'Employee Job Information', 'Direct Add', '2026-03-10 02:55:14', 0),
-(8369, 'Test', 'Administrator', 'Employee Job Information', 'Direct Delete', '2026-03-10 02:55:14', 0),
-(8370, 'Test', 'Administrator', 'Employee Job Information', 'Direct Edit', '2026-03-10 02:55:14', 0),
-(8371, 'Test', 'Administrator', 'Employee List', 'View', '2026-03-10 02:55:14', 0),
-(8372, 'Test', 'Administrator', 'Employee Personal Information', 'View', '2026-03-10 02:55:14', 0),
-(8373, 'Test', 'Administrator', 'Employee Personal Information', 'Direct Add', '2026-03-10 02:55:14', 0),
-(8374, 'Test', 'Administrator', 'Employee Personal Information', 'Direct Edit', '2026-03-10 02:55:14', 0),
-(8375, 'Test', 'Administrator', 'Exit Interview', 'View', '2026-03-10 02:55:14', 0),
-(8376, 'Test', 'Administrator', 'Exit Interview', 'Edit', '2026-03-10 02:55:14', 0),
-(8377, 'Test', 'Administrator', 'Exit Interview', 'Add', '2026-03-10 02:55:14', 0),
-(8378, 'Test', 'Administrator', 'Feedback', 'Review', '2026-03-10 02:55:14', 0),
-(8379, 'Test', 'Administrator', 'Grievance', 'Review', '2026-03-10 02:55:14', 0),
-(8380, 'Test', 'Administrator', 'Holiday', 'View', '2026-03-10 02:55:14', 0),
-(8381, 'Test', 'Administrator', 'Holiday', 'Delete', '2026-03-10 02:55:14', 0),
-(8382, 'Test', 'Administrator', 'Holiday', 'Edit', '2026-03-10 02:55:14', 0),
-(8383, 'Test', 'Administrator', 'Holiday', 'Add', '2026-03-10 02:55:14', 0),
-(8384, 'Test', 'Administrator', 'Info Update Request', 'View', '2026-03-10 02:55:14', 0),
-(8385, 'Test', 'Administrator', 'Info Update Request', 'Approve', '2026-03-10 02:55:14', 0),
-(8386, 'Test', 'Administrator', 'Job Information', 'View', '2026-03-10 02:55:14', 0),
-(8387, 'Test', 'Administrator', 'Job Information', 'Direct Add', '2026-03-10 02:55:14', 0),
-(8388, 'Test', 'Administrator', 'Job Information', 'Direct Delete', '2026-03-10 02:55:14', 0),
-(8389, 'Test', 'Administrator', 'Job Information', 'Direct Edit', '2026-03-10 02:55:15', 0),
-(8390, 'Test', 'Administrator', 'Job Opening', 'View', '2026-03-10 02:55:15', 0),
-(8391, 'Test', 'Administrator', 'Kamustahan', 'View', '2026-03-10 02:55:15', 0),
-(8392, 'Test', 'Administrator', 'Kamustahan', 'Edit', '2026-03-10 02:55:15', 0),
-(8393, 'Test', 'Administrator', 'Kamustahan', 'Add', '2026-03-10 02:55:15', 0),
-(8394, 'Test', 'Administrator', 'Kamustahan', 'View All', '2026-03-10 02:55:15', 0),
-(8395, 'Test', 'Administrator', 'Organization Chart', 'View', '2026-03-10 02:55:15', 0),
-(8396, 'Test', 'Administrator', 'Payroll', 'View', '2026-03-10 02:55:15', 0),
-(8397, 'Test', 'Administrator', 'Payroll', 'Add', '2026-03-10 02:55:15', 0),
-(8398, 'Test', 'Administrator', 'Performance Appraisal', 'View All', '2026-03-10 02:55:15', 0),
-(8399, 'Test', 'Administrator', 'Personal Information', 'View', '2026-03-10 02:55:15', 0),
-(8400, 'Test', 'Administrator', 'Personal Information', 'Direct Edit', '2026-03-10 02:55:15', 0),
-(8401, 'Test', 'Administrator', 'Personality Test', 'View', '2026-03-10 02:55:15', 0),
-(8402, 'Test', 'Administrator', 'Personality Test', 'Delete', '2026-03-10 02:55:15', 0),
-(8403, 'Test', 'Administrator', 'Personality Test', 'Edit', '2026-03-10 02:55:15', 0),
-(8404, 'Test', 'Administrator', 'Personality Test', 'Add', '2026-03-10 02:55:15', 0),
-(8405, 'Test', 'Administrator', 'Personality Test', 'Review', '2026-03-10 02:55:15', 0),
-(8406, 'Test', 'Administrator', 'Personnel Request', 'View', '2026-03-10 02:55:15', 0),
-(8407, 'Test', 'Administrator', 'Personnel Request', 'Edit', '2026-03-10 02:55:15', 0),
-(8408, 'Test', 'Administrator', 'Personnel Request', 'Add', '2026-03-10 02:55:15', 0),
-(8409, 'Test', 'Administrator', 'Personnel Request', 'Viewer', '2026-03-10 02:55:15', 0),
-(8410, 'Test', 'Administrator', 'Phone Contract', 'Edit', '2026-03-10 02:55:15', 0),
-(8411, 'Test', 'Administrator', 'Phone Contract', 'Add', '2026-03-10 02:55:16', 0),
-(8412, 'Test', 'Administrator', 'Phone Contract', 'View All', '2026-03-10 02:55:16', 0),
-(8413, 'Test', 'Administrator', 'Post', 'View', '2026-03-10 02:55:16', 0),
-(8414, 'Test', 'Administrator', 'Post', 'Direct Add', '2026-03-10 02:55:16', 0),
-(8415, 'Test', 'Administrator', 'Post', 'Direct Delete', '2026-03-10 02:55:16', 0),
-(8416, 'Test', 'Administrator', 'Post', 'Direct Edit', '2026-03-10 02:55:16', 0),
-(8417, 'Test', 'Administrator', 'Reminder', 'View', '2026-03-10 02:55:16', 0),
-(8418, 'Test', 'Administrator', 'Settings', 'Company Settings', '2026-03-10 02:55:16', 0),
-(8419, 'Test', 'Administrator', 'Settings', 'Demo Teaching Settings', '2026-03-10 02:55:16', 0),
-(8420, 'Test', 'Administrator', 'Settings', 'Department Settings', '2026-03-10 02:55:16', 0),
-(8421, 'Test', 'Administrator', 'Settings', 'Education Settings', '2026-03-10 02:55:16', 0),
-(8422, 'Test', 'Administrator', 'Settings', 'Employment Settings', '2026-03-10 02:55:16', 0),
-(8423, 'Test', 'Administrator', 'Settings', 'Group Role Settings', '2026-03-10 02:55:16', 0),
-(8424, 'Test', 'Administrator', 'Settings', 'Individual Role Settings', '2026-03-10 02:55:16', 0),
-(8425, 'Test', 'Administrator', 'Settings', 'Job Settings', '2026-03-10 02:55:16', 0),
-(8426, 'Test', 'Administrator', 'Settings', 'Modules Settings', '2026-03-10 02:55:16', 0),
-(8427, 'Test', 'Administrator', 'Settings', 'Outlet Settings', '2026-03-10 02:55:16', 0),
-(8428, 'Test', 'Administrator', 'Settings', 'Section Settings', '2026-03-10 02:55:16', 0),
-(8429, 'Test', 'Administrator', 'Settings', 'Time Off Settings', '2026-03-10 02:55:16', 0),
-(8430, 'Test', 'Administrator', 'Settings', 'User Settings', '2026-03-10 02:55:16', 0),
-(8431, 'Test', 'Administrator', 'Time Off', 'View', '2026-03-10 02:55:16', 0),
-(8432, 'Test', 'Administrator', 'Time Off', 'View All', '2026-03-10 02:55:16', 0),
-(8433, 'Test', 'Administrator', 'Training', 'View', '2026-03-10 02:55:17', 0),
-(8434, 'Test', 'Administrator', 'Adjustments Mn', 'View', '2026-03-10 02:55:17', 0),
-(8435, 'Test', 'Administrator', 'Adjustments Mn', 'Delete', '2026-03-10 02:55:17', 0),
-(8436, 'Test', 'Administrator', 'Adjustments Mn', 'Edit', '2026-03-10 02:55:17', 0),
-(8437, 'Test', 'Administrator', 'Adjustments Mn', 'Add', '2026-03-10 02:55:17', 0),
-(8438, 'Test', 'Administrator', 'Adjustments Mn', 'View Menu', '2026-03-10 02:55:17', 0),
-(8439, 'Test', 'Administrator', 'Collection Rate', 'View', '2026-03-10 02:55:17', 0),
-(8440, 'Test', 'Administrator', 'Collection Rate', 'Delete', '2026-03-10 02:55:17', 0),
-(8441, 'Test', 'Administrator', 'Collection Rate', 'Edit', '2026-03-10 02:55:17', 0),
-(8442, 'Test', 'Administrator', 'Collection Rate', 'Add', '2026-03-10 02:55:17', 0),
-(8443, 'Test', 'Administrator', 'Collection Rate', 'View Menu', '2026-03-10 02:55:17', 0),
-(8444, 'Test', 'Administrator', 'Collection Rate', 'Generate', '2026-03-10 02:55:17', 0),
-(8445, 'Test', 'Administrator', 'Distribution', 'View', '2026-03-10 02:55:17', 0),
-(8446, 'Test', 'Administrator', 'Distribution', 'Delete', '2026-03-10 02:55:17', 0),
-(8447, 'Test', 'Administrator', 'Distribution', 'Edit', '2026-03-10 02:55:17', 0),
-(8448, 'Test', 'Administrator', 'Distribution', 'Add', '2026-03-10 02:55:17', 0),
-(8449, 'Test', 'Administrator', 'Distribution', 'View Menu', '2026-03-10 02:55:17', 0),
-(8450, 'Test', 'Administrator', 'EC Breakdown', 'View', '2026-03-10 02:55:17', 0),
-(8451, 'Test', 'Administrator', 'EC Breakdown', 'Delete', '2026-03-10 02:55:17', 0),
-(8452, 'Test', 'Administrator', 'EC Breakdown', 'Edit', '2026-03-10 02:55:17', 0),
-(8453, 'Test', 'Administrator', 'EC Breakdown', 'Add', '2026-03-10 02:55:17', 0),
-(8454, 'Test', 'Administrator', 'EC Breakdown', 'View Menu', '2026-03-10 02:55:17', 0),
-(8455, 'Test', 'Administrator', 'Employee Information', 'View', '2026-03-10 02:55:18', 0),
-(8456, 'Test', 'Administrator', 'Employee Information', 'View Menu', '2026-03-10 02:55:18', 0),
-(8457, 'Test', 'Administrator', 'Generate Menu', 'View Menu', '2026-03-10 02:55:18', 0),
-(8458, 'Test', 'Administrator', 'Guidelines', 'View', '2026-03-10 02:55:18', 0),
-(8459, 'Test', 'Administrator', 'Guidelines', 'Delete', '2026-03-10 02:55:18', 0),
-(8460, 'Test', 'Administrator', 'Guidelines', 'Edit', '2026-03-10 02:55:18', 0),
-(8461, 'Test', 'Administrator', 'Guidelines', 'Add', '2026-03-10 02:55:18', 0),
-(8462, 'Test', 'Administrator', 'Guidelines', 'View Menu', '2026-03-10 02:55:18', 0),
-(8463, 'Test', 'Administrator', 'Import Menu', 'View Menu', '2026-03-10 02:55:18', 0),
-(8464, 'Test', 'Administrator', 'Input Menu', 'View Menu', '2026-03-10 02:55:18', 0),
-(8465, 'Test', 'Administrator', 'Manpower Movement', 'View', '2026-03-10 02:55:18', 0),
-(8466, 'Test', 'Administrator', 'Manpower Movement', 'Delete', '2026-03-10 02:55:18', 0),
-(8467, 'Test', 'Administrator', 'Manpower Movement', 'Edit', '2026-03-10 02:55:18', 0),
-(8468, 'Test', 'Administrator', 'Manpower Movement', 'Add', '2026-03-10 02:55:18', 0),
-(8469, 'Test', 'Administrator', 'Manpower Movement', 'View Menu', '2026-03-10 02:55:18', 0),
-(8470, 'Test', 'Administrator', 'Manpower Movement', 'Generate', '2026-03-10 02:55:18', 0),
-(8471, 'Test', 'Administrator', 'MBTC', 'View', '2026-03-10 02:55:18', 0),
-(8472, 'Test', 'Administrator', 'MBTC', 'Delete', '2026-03-10 02:55:18', 0),
-(8473, 'Test', 'Administrator', 'MBTC', 'Edit', '2026-03-10 02:55:18', 0),
-(8474, 'Test', 'Administrator', 'MBTC', 'Add', '2026-03-10 02:55:18', 0),
-(8475, 'Test', 'Administrator', 'MBTC', 'View Menu', '2026-03-10 02:55:18', 0),
-(8476, 'Test', 'Administrator', 'MBTC Maintenance', 'View', '2026-03-10 02:55:18', 0),
-(8477, 'Test', 'Administrator', 'MBTC Maintenance', 'Delete', '2026-03-10 02:55:18', 0),
-(8478, 'Test', 'Administrator', 'MBTC Maintenance', 'Edit', '2026-03-10 02:55:18', 0),
-(8479, 'Test', 'Administrator', 'MBTC Maintenance', 'Add', '2026-03-10 02:55:18', 0),
-(8480, 'Test', 'Administrator', 'MBTC Maintenance', 'View Menu', '2026-03-10 02:55:19', 0),
-(8481, 'Test', 'Administrator', 'Needs Explanation', 'View', '2026-03-10 02:55:19', 0),
-(8482, 'Test', 'Administrator', 'Needs Explanation', 'Delete', '2026-03-10 02:55:19', 0),
-(8483, 'Test', 'Administrator', 'Needs Explanation', 'Edit', '2026-03-10 02:55:19', 0),
-(8484, 'Test', 'Administrator', 'Needs Explanation', 'Add', '2026-03-10 02:55:19', 0),
-(8485, 'Test', 'Administrator', 'Needs Explanation', 'View Menu', '2026-03-10 02:55:19', 0),
-(8486, 'Test', 'Administrator', 'Paymaster', 'View', '2026-03-10 02:55:19', 0),
-(8487, 'Test', 'Administrator', 'Paymaster', 'Delete', '2026-03-10 02:55:19', 0),
-(8488, 'Test', 'Administrator', 'Paymaster', 'Edit', '2026-03-10 02:55:19', 0),
-(8489, 'Test', 'Administrator', 'Paymaster', 'Add', '2026-03-10 02:55:19', 0),
-(8490, 'Test', 'Administrator', 'Paymaster', 'View Menu', '2026-03-10 02:55:19', 0),
-(8491, 'Test', 'Administrator', 'Paymaster', 'Generate', '2026-03-10 02:55:19', 0),
-(8492, 'Test', 'Administrator', 'PI Creation', 'View', '2026-03-10 02:55:19', 0),
-(8493, 'Test', 'Administrator', 'PI Creation', 'Delete', '2026-03-10 02:55:19', 0),
-(8494, 'Test', 'Administrator', 'PI Creation', 'Edit', '2026-03-10 02:55:19', 0),
-(8495, 'Test', 'Administrator', 'PI Creation', 'Add', '2026-03-10 02:55:20', 0),
-(8496, 'Test', 'Administrator', 'PI Creation', 'View Menu', '2026-03-10 02:55:20', 0),
-(8497, 'Test', 'Administrator', 'PI Credit Card', 'View', '2026-03-10 02:55:20', 0),
-(8498, 'Test', 'Administrator', 'PI Credit Card', 'Delete', '2026-03-10 02:55:20', 0),
-(8499, 'Test', 'Administrator', 'PI Credit Card', 'Edit', '2026-03-10 02:55:20', 0),
-(8500, 'Test', 'Administrator', 'PI Credit Card', 'Add', '2026-03-10 02:55:20', 0),
-(8501, 'Test', 'Administrator', 'PI Credit Card', 'View Menu', '2026-03-10 02:55:20', 0),
-(8502, 'Test', 'Administrator', 'PI Entry', 'View', '2026-03-10 02:55:20', 0),
-(8503, 'Test', 'Administrator', 'PI Entry', 'Delete', '2026-03-10 02:55:20', 0),
-(8504, 'Test', 'Administrator', 'PI Entry', 'Edit', '2026-03-10 02:55:20', 0),
-(8505, 'Test', 'Administrator', 'PI Entry', 'Add', '2026-03-10 02:55:20', 0),
-(8506, 'Test', 'Administrator', 'PI Entry', 'View Menu', '2026-03-10 02:55:20', 0),
-(8507, 'Test', 'Administrator', 'PI Entry Maintenance', 'View', '2026-03-10 02:55:20', 0),
-(8508, 'Test', 'Administrator', 'PI Entry Maintenance', 'Delete', '2026-03-10 02:55:20', 0),
-(8509, 'Test', 'Administrator', 'PI Entry Maintenance', 'Edit', '2026-03-10 02:55:20', 0),
-(8510, 'Test', 'Administrator', 'PI Entry Maintenance', 'Add', '2026-03-10 02:55:20', 0),
-(8511, 'Test', 'Administrator', 'PI Entry Maintenance', 'View Menu', '2026-03-10 02:55:20', 0),
-(8512, 'Test', 'Administrator', 'PI Incentives Import', 'View', '2026-03-10 02:55:20', 0),
-(8513, 'Test', 'Administrator', 'PI Incentives Import', 'Delete', '2026-03-10 02:55:20', 0),
-(8514, 'Test', 'Administrator', 'PI Incentives Import', 'Edit', '2026-03-10 02:55:20', 0),
-(8515, 'Test', 'Administrator', 'PI Incentives Import', 'Add', '2026-03-10 02:55:20', 0),
-(8516, 'Test', 'Administrator', 'PI Incentives Import', 'View Menu', '2026-03-10 02:55:21', 0),
-(8517, 'Test', 'Administrator', 'PI SO Maintenance', 'View', '2026-03-10 02:55:21', 0),
-(8518, 'Test', 'Administrator', 'PI SO Maintenance', 'Delete', '2026-03-10 02:55:21', 0),
-(8519, 'Test', 'Administrator', 'PI SO Maintenance', 'Edit', '2026-03-10 02:55:21', 0),
-(8520, 'Test', 'Administrator', 'PI SO Maintenance', 'Add', '2026-03-10 02:55:21', 0),
-(8521, 'Test', 'Administrator', 'PI SO Maintenance', 'View Menu', '2026-03-10 02:55:21', 0),
-(8522, 'Test', 'Administrator', 'PI TL & ASH KPI', 'View', '2026-03-10 02:55:21', 0),
-(8523, 'Test', 'Administrator', 'PI TL & ASH KPI', 'Delete', '2026-03-10 02:55:21', 0),
-(8524, 'Test', 'Administrator', 'PI TL & ASH KPI', 'Edit', '2026-03-10 02:55:21', 0),
-(8525, 'Test', 'Administrator', 'PI TL & ASH KPI', 'Add', '2026-03-10 02:55:21', 0),
-(8526, 'Test', 'Administrator', 'PI TL & ASH KPI', 'View Menu', '2026-03-10 02:55:21', 0),
-(8527, 'Test', 'Administrator', 'PI TL&ASH Assigned Area', 'View', '2026-03-10 02:55:21', 0);
-INSERT INTO `access_types` (`id`, `system`, `role`, `module`, `actions`, `created_at`, `is_default`) VALUES
-(8528, 'Test', 'Administrator', 'PI TL&ASH Assigned Area', 'Delete', '2026-03-10 02:55:21', 0),
-(8529, 'Test', 'Administrator', 'PI TL&ASH Assigned Area', 'Edit', '2026-03-10 02:55:21', 0),
-(8530, 'Test', 'Administrator', 'PI TL&ASH Assigned Area', 'Add', '2026-03-10 02:55:21', 0),
-(8531, 'Test', 'Administrator', 'PI TL&ASH Assigned Area', 'View Menu', '2026-03-10 02:55:21', 0),
-(8532, 'Test', 'Administrator', 'Report', 'View', '2026-03-10 02:55:21', 0),
-(8533, 'Test', 'Administrator', 'Report', 'View Menu', '2026-03-10 02:55:21', 0),
-(8534, 'Test', 'Administrator', 'Tardiness', 'View', '2026-03-10 02:55:21', 0),
-(8535, 'Test', 'Administrator', 'Tardiness', 'Delete', '2026-03-10 02:55:21', 0),
-(8536, 'Test', 'Administrator', 'Tardiness', 'Edit', '2026-03-10 02:55:21', 0),
-(8537, 'Test', 'Administrator', 'Tardiness', 'Add', '2026-03-10 02:55:21', 0),
-(8538, 'Test', 'Administrator', 'Tardiness', 'View Menu', '2026-03-10 02:55:21', 0),
-(8539, 'Test', 'Administrator', 'Target', 'View', '2026-03-10 02:55:21', 0),
-(8540, 'Test', 'Administrator', 'Target', 'Delete', '2026-03-10 02:55:22', 0),
-(8541, 'Test', 'Administrator', 'Target', 'Edit', '2026-03-10 02:55:22', 0),
-(8542, 'Test', 'Administrator', 'Target', 'Add', '2026-03-10 02:55:22', 0),
-(8543, 'Test', 'Administrator', 'Target', 'View Menu', '2026-03-10 02:55:22', 0),
-(8544, 'Test', 'Administrator', 'TL Trainee Maintenance', 'View', '2026-03-10 02:55:22', 0),
-(8545, 'Test', 'Administrator', 'TL Trainee Maintenance', 'Delete', '2026-03-10 02:55:22', 0),
-(8546, 'Test', 'Administrator', 'TL Trainee Maintenance', 'Edit', '2026-03-10 02:55:22', 0),
-(8547, 'Test', 'Administrator', 'TL Trainee Maintenance', 'Add', '2026-03-10 02:55:22', 0),
-(8548, 'Test', 'Administrator', 'TL Trainee Maintenance', 'View Menu', '2026-03-10 02:55:22', 0),
-(8549, 'Test', 'Administrator', 'View Approved', 'View', '2026-03-10 02:55:22', 0),
-(8550, 'Test', 'Administrator', 'View Approved', 'Delete', '2026-03-10 02:55:22', 0),
-(8551, 'Test', 'Administrator', 'View Approved', 'Edit', '2026-03-10 02:55:22', 0),
-(8552, 'Test', 'Administrator', 'View Approved', 'Add', '2026-03-10 02:55:22', 0),
-(8553, 'Test', 'Administrator', 'View Approved', 'View Menu', '2026-03-10 02:55:22', 0),
-(8554, 'Test', 'Administrator', 'View Approved', 'Generate', '2026-03-10 02:55:23', 0),
-(8555, 'Test', 'Administrator', 'View Audited', 'View', '2026-03-10 02:55:23', 0),
-(8556, 'Test', 'Administrator', 'View Audited', 'Delete', '2026-03-10 02:55:23', 0),
-(8557, 'Test', 'Administrator', 'View Audited', 'Edit', '2026-03-10 02:55:23', 0),
-(8558, 'Test', 'Administrator', 'View Audited', 'Add', '2026-03-10 02:55:23', 0),
-(8559, 'Test', 'Administrator', 'View Audited', 'View Menu', '2026-03-10 02:55:23', 0),
-(8560, 'Test', 'Administrator', 'View Checked', 'View', '2026-03-10 02:55:23', 0),
-(8561, 'Test', 'Administrator', 'View Checked', 'Delete', '2026-03-10 02:55:23', 0),
-(8562, 'Test', 'Administrator', 'View Checked', 'Edit', '2026-03-10 02:55:23', 0),
-(8563, 'Test', 'Administrator', 'View Checked', 'Add', '2026-03-10 02:55:23', 0),
-(8564, 'Test', 'Administrator', 'View Checked', 'View Menu', '2026-03-10 02:55:23', 0),
-(8565, 'Test', 'Administrator', 'View Draft', 'View', '2026-03-10 02:55:23', 0),
-(8566, 'Test', 'Administrator', 'View Draft', 'Delete', '2026-03-10 02:55:23', 0),
-(8567, 'Test', 'Administrator', 'View Draft', 'Edit', '2026-03-10 02:55:23', 0),
-(8568, 'Test', 'Administrator', 'View Draft', 'Add', '2026-03-10 02:55:23', 0),
-(8569, 'Test', 'Administrator', 'View Draft', 'View Menu', '2026-03-10 02:55:23', 0),
-(8570, 'Test', 'Administrator', 'View Noted', 'View', '2026-03-10 02:55:23', 0),
-(8571, 'Test', 'Administrator', 'View Noted', 'Delete', '2026-03-10 02:55:23', 0),
-(8572, 'Test', 'Administrator', 'View Noted', 'Edit', '2026-03-10 02:55:23', 0),
-(8573, 'Test', 'Administrator', 'View Noted', 'Add', '2026-03-10 02:55:23', 0),
-(8574, 'Test', 'Administrator', 'View Noted', 'View Menu', '2026-03-10 02:55:23', 0),
-(8575, 'Test', 'Administrator', 'View Request', 'View', '2026-03-10 02:55:23', 0),
-(8576, 'Test', 'Administrator', 'View Request', 'Delete', '2026-03-10 02:55:23', 0),
-(8577, 'Test', 'Administrator', 'View Request', 'Edit', '2026-03-10 02:55:23', 0),
-(8578, 'Test', 'Administrator', 'View Request', 'Add', '2026-03-10 02:55:23', 0),
-(8579, 'Test', 'Administrator', 'View Request', 'View Menu', '2026-03-10 02:55:23', 0),
-(8580, 'Test', 'Administrator', 'Viewing menu', 'View Menu', '2026-03-10 02:55:23', 0),
-(8581, 'Test', 'Administrator', 'Class', 'View', '2026-03-10 02:55:24', 0),
-(8582, 'Test', 'Administrator', 'Class', 'Delete', '2026-03-10 02:55:24', 0),
-(8583, 'Test', 'Administrator', 'Class', 'Edit', '2026-03-10 02:55:24', 0),
-(8584, 'Test', 'Administrator', 'Class', 'Add', '2026-03-10 02:55:24', 0),
-(8585, 'Test', 'Administrator', 'Class', 'View Menu', '2026-03-10 02:55:24', 0),
-(8586, 'Test', 'Administrator', 'Class', 'Back', '2026-03-10 02:55:24', 0),
-(8587, 'Test', 'Administrator', 'Class', 'Create Class', '2026-03-10 02:55:24', 0),
-(8588, 'Test', 'Administrator', 'Class', 'Enroll Students', '2026-03-10 02:55:24', 0),
-(8589, 'Test', 'Administrator', 'Department', 'View', '2026-03-10 02:55:24', 0),
-(8590, 'Test', 'Administrator', 'Department', 'Delete', '2026-03-10 02:55:24', 0),
-(8591, 'Test', 'Administrator', 'Department', 'Edit', '2026-03-10 02:55:24', 0),
-(8592, 'Test', 'Administrator', 'Department', 'Add', '2026-03-10 02:55:24', 0),
-(8593, 'Test', 'Administrator', 'Department', 'View Menu', '2026-03-10 02:55:24', 0),
-(8594, 'Test', 'Administrator', 'Department', 'Back', '2026-03-10 02:55:24', 0),
-(8595, 'Test', 'Administrator', 'Instructor', 'View', '2026-03-10 02:55:24', 0),
-(8596, 'Test', 'Administrator', 'Instructor', 'Delete', '2026-03-10 02:55:24', 0),
-(8597, 'Test', 'Administrator', 'Instructor', 'Edit', '2026-03-10 02:55:24', 0),
-(8598, 'Test', 'Administrator', 'Instructor', 'Add', '2026-03-10 02:55:24', 0),
-(8599, 'Test', 'Administrator', 'Instructor', 'View Menu', '2026-03-10 02:55:24', 0),
-(8600, 'Test', 'Administrator', 'Instructor', 'Back', '2026-03-10 02:55:24', 0),
-(8601, 'Test', 'Administrator', 'PH/AH Timesheet Dashboard', 'View', '2026-03-10 02:55:24', 0),
-(8602, 'Test', 'Administrator', 'PH/AH Timesheet Dashboard', 'View Menu', '2026-03-10 02:55:24', 0),
-(8603, 'Test', 'Administrator', 'PH/AH Timesheet Dashboard', 'Back', '2026-03-10 02:55:24', 0),
-(8604, 'Test', 'Administrator', 'Program', 'View', '2026-03-10 02:55:24', 0),
-(8605, 'Test', 'Administrator', 'Program', 'Delete', '2026-03-10 02:55:24', 0),
-(8606, 'Test', 'Administrator', 'Program', 'Edit', '2026-03-10 02:55:25', 0),
-(8607, 'Test', 'Administrator', 'Program', 'Add', '2026-03-10 02:55:25', 0),
-(8608, 'Test', 'Administrator', 'Program', 'View Menu', '2026-03-10 02:55:25', 0),
-(8609, 'Test', 'Administrator', 'Program', 'Back', '2026-03-10 02:55:25', 0),
-(8610, 'Test', 'Administrator', 'Schedules', 'View', '2026-03-10 02:55:25', 0),
-(8611, 'Test', 'Administrator', 'Schedules', 'Delete', '2026-03-10 02:55:25', 0),
-(8612, 'Test', 'Administrator', 'Schedules', 'Edit', '2026-03-10 02:55:25', 0),
-(8613, 'Test', 'Administrator', 'Schedules', 'Add', '2026-03-10 02:55:25', 0),
-(8614, 'Test', 'Administrator', 'Schedules', 'View Menu', '2026-03-10 02:55:25', 0),
-(8615, 'Test', 'Administrator', 'Schedules', 'Back', '2026-03-10 02:55:25', 0),
-(8616, 'Test', 'Administrator', 'Section', 'View', '2026-03-10 02:55:25', 0),
-(8617, 'Test', 'Administrator', 'Section', 'Delete', '2026-03-10 02:55:25', 0),
-(8618, 'Test', 'Administrator', 'Section', 'Edit', '2026-03-10 02:55:25', 0),
-(8619, 'Test', 'Administrator', 'Section', 'Add', '2026-03-10 02:55:25', 0),
-(8620, 'Test', 'Administrator', 'Section', 'View Menu', '2026-03-10 02:55:25', 0),
-(8621, 'Test', 'Administrator', 'Section', 'Back', '2026-03-10 02:55:25', 0),
-(8622, 'Test', 'Administrator', 'Student', 'View', '2026-03-10 02:55:25', 0),
-(8623, 'Test', 'Administrator', 'Student', 'Delete', '2026-03-10 02:55:25', 0),
-(8624, 'Test', 'Administrator', 'Student', 'Edit', '2026-03-10 02:55:25', 0),
-(8625, 'Test', 'Administrator', 'Student', 'Add', '2026-03-10 02:55:25', 0),
-(8626, 'Test', 'Administrator', 'Student', 'View Menu', '2026-03-10 02:55:25', 0),
-(8627, 'Test', 'Administrator', 'Student', 'Back', '2026-03-10 02:55:25', 0),
-(8628, 'Test', 'Administrator', 'Student', 'Enroll Students', '2026-03-10 02:55:25', 0),
-(8629, 'Test', 'Administrator', 'Student Schedules', 'View', '2026-03-10 02:55:25', 0),
-(8630, 'Test', 'Administrator', 'Student Schedules', 'Delete', '2026-03-10 02:55:25', 0),
-(8631, 'Test', 'Administrator', 'Student Schedules', 'Edit', '2026-03-10 02:55:25', 0),
-(8632, 'Test', 'Administrator', 'Student Schedules', 'Add', '2026-03-10 02:55:25', 0),
-(8633, 'Test', 'Administrator', 'Student Schedules', 'View Menu', '2026-03-10 02:55:25', 0),
-(8634, 'Test', 'Administrator', 'Student Schedules', 'Back', '2026-03-10 02:55:25', 0),
-(8635, 'Test', 'Administrator', 'Subject', 'View', '2026-03-10 02:55:26', 0),
-(8636, 'Test', 'Administrator', 'Subject', 'Delete', '2026-03-10 02:55:26', 0),
-(8637, 'Test', 'Administrator', 'Subject', 'Edit', '2026-03-10 02:55:26', 0),
-(8638, 'Test', 'Administrator', 'Subject', 'Add', '2026-03-10 02:55:26', 0),
-(8639, 'Test', 'Administrator', 'Subject', 'View Menu', '2026-03-10 02:55:26', 0),
-(8640, 'Test', 'Administrator', 'Subject', 'Back', '2026-03-10 02:55:26', 0),
-(8641, 'Test', 'Administrator', 'Timesheet', 'View All', '2026-03-10 02:55:26', 0),
-(8642, 'Test', 'Administrator', 'Timesheet', 'View Menu', '2026-03-10 02:55:26', 0),
-(8643, 'Test', 'Administrator', 'Timesheet', 'Disapprove Timesheet', '2026-03-10 02:55:26', 0),
-(8644, 'Test', 'Administrator', 'Timesheet', 'Review Timesheet', '2026-03-10 02:55:26', 0),
-(8645, 'Test', 'Administrator', 'Timesheet', 'View Timesheet', '2026-03-10 02:55:26', 0),
-(8646, 'Test', 'Administrator', 'Timesheet', 'Add Timesheet Remarks', '2026-03-10 02:55:26', 0),
-(8647, 'Test', 'Administrator', 'Timesheet', 'Check Timesheet', '2026-03-10 02:55:26', 0),
-(8648, 'Test', 'Administrator', 'Timesheet', 'Generate Timesheet', '2026-03-10 02:55:26', 0),
-(8649, 'Test', 'Administrator', 'Timesheet', 'Post Timesheet', '2026-03-10 02:55:26', 0),
-(8650, 'Test', 'Administrator', 'Admin Dashboard', 'View', '2026-03-10 02:55:26', 0),
-(8651, 'Test', 'Administrator', 'Admin Dashboard', 'View Menu', '2026-03-10 02:55:26', 0),
-(8652, 'Test', 'Administrator', 'Admin Dashboard', 'Back', '2026-03-10 02:55:26', 0),
-(8653, 'Test', 'Administrator', 'Faculty Tardiness', 'View', '2026-03-10 02:55:26', 0),
-(8654, 'Test', 'Administrator', 'Faculty Tardiness', 'Delete', '2026-03-10 02:55:26', 0),
-(8655, 'Test', 'Administrator', 'Faculty Tardiness', 'Edit', '2026-03-10 02:55:26', 0),
-(8656, 'Test', 'Administrator', 'Faculty Tardiness', 'View Menu', '2026-03-10 02:55:26', 0),
-(8657, 'Test', 'Administrator', 'Faculty Tardiness', 'Sub Teaching', '2026-03-10 02:55:26', 0),
-(8658, 'Test', 'Administrator', 'Faculty Tardiness', 'Time In', '2026-03-10 02:55:27', 0),
-(8659, 'Test', 'Administrator', 'Faculty Tardiness', 'Time Out', '2026-03-10 02:55:27', 0),
-(8660, 'Test', 'Administrator', 'Faculty Timesheet Dashboard', 'View', '2026-03-10 02:55:27', 0),
-(8661, 'Test', 'Administrator', 'Faculty Timesheet Dashboard', 'View Menu', '2026-03-10 02:55:27', 0),
-(8662, 'Test', 'Administrator', 'Faculty Timesheet Dashboard', 'Back', '2026-03-10 02:55:27', 0),
-(8663, 'Test', 'Administrator', 'Timesheet Dashboard', 'View', '2026-03-10 02:55:27', 0),
-(8664, 'Test', 'Administrator', 'Timesheet Dashboard', 'View Menu', '2026-03-10 02:55:27', 0),
-(8665, 'Test', 'Administrator', 'Timesheet Dashboard', 'Back', '2026-03-10 02:55:27', 0),
-(8666, 'Test', 'Administrator', 'Timesheet Tabs', 'Request for Approval Tab', '2026-03-10 02:55:27', 0),
-(8667, 'Test', 'Administrator', 'Timesheet Tabs', 'Timesheet Approved Tab', '2026-03-10 02:55:27', 0),
-(8668, 'Test', 'Administrator', 'Timesheet Tabs', 'Timesheet Draft Tab', '2026-03-10 02:55:27', 0),
-(8669, 'Test', 'Administrator', 'Timesheet Tabs', 'Timesheet Post Tab', '2026-03-10 02:55:27', 0),
-(8670, 'Test', 'Administrator', 'Timesheet Tabs', 'Timesheet Review Tab', '2026-03-10 02:55:27', 0),
-(8671, 'Test', 'Administrator', 'Timesheet Tabs', 'Timesheet Summary Tab', '2026-03-10 02:55:28', 0),
-(8672, 'Test', 'Administrator', 'Utilization', 'View', '2026-03-10 02:55:28', 0),
-(8673, 'Test', 'Administrator', 'Utilization', 'Delete', '2026-03-10 02:55:28', 0),
-(8674, 'Test', 'Administrator', 'Utilization', 'Edit', '2026-03-10 02:55:28', 0),
-(8675, 'Test', 'Administrator', 'Utilization', 'Add', '2026-03-10 02:55:28', 0),
-(8676, 'Test', 'Administrator', 'Utilization', 'View Menu', '2026-03-10 02:55:28', 0),
-(8677, 'Test', 'Administrator', 'Utilization', 'Back', '2026-03-10 02:55:28', 0),
-(8678, 'Test', 'Administrator', 'Utilization', 'Time In', '2026-03-10 02:55:28', 0),
-(8679, 'Test', 'Administrator', 'Utilization', 'Time Out', '2026-03-10 02:55:28', 0),
-(8680, 'Test', 'Administrator', 'Utilization', 'Change PC', '2026-03-10 02:55:28', 0),
-(8681, 'Test', 'Administrator', 'Utilization', 'Utilization', '2026-03-10 02:55:28', 0),
-(8682, 'Test', 'Administrator', 'Generate Paymaster', 'View', '2026-03-10 02:55:28', 0),
-(8683, 'Test', 'Administrator', 'Generate Paymaster', 'Delete', '2026-03-10 02:55:28', 0),
-(8684, 'Test', 'Administrator', 'Generate Paymaster', 'Edit', '2026-03-10 02:55:28', 0),
-(8685, 'Test', 'Administrator', 'Generate Paymaster', 'Add', '2026-03-10 02:55:28', 0),
-(8686, 'Test', 'Administrator', 'Generate Paymaster', 'View Menu', '2026-03-10 02:55:28', 0),
-(8687, 'Test', 'Administrator', 'Targets', 'View', '2026-03-10 02:55:28', 0),
-(8688, 'Test', 'Administrator', 'Targets', 'Delete', '2026-03-10 02:55:28', 0),
-(8689, 'Test', 'Administrator', 'Targets', 'Edit', '2026-03-10 02:55:28', 0),
-(8690, 'Test', 'Administrator', 'Targets', 'Add', '2026-03-10 02:55:28', 0),
-(8691, 'Test', 'Administrator', 'Targets', 'View Menu', '2026-03-10 02:55:28', 0),
-(8692, 'Test', 'Administrator', 'Walk-in', 'View', '2026-03-10 02:55:28', 0),
-(8693, 'Test', 'Administrator', 'Walk-in', 'Delete', '2026-03-10 02:55:28', 0),
-(8694, 'Test', 'Administrator', 'Walk-in', 'Edit', '2026-03-10 02:55:28', 0),
-(8695, 'Test', 'Administrator', 'Walk-in', 'Add', '2026-03-10 02:55:28', 0),
-(8696, 'Test', 'Administrator', 'Walk-in', 'View Menu', '2026-03-10 02:55:29', 0),
-(8697, 'Test', 'Administrator', 'Event', 'Edit', '2026-03-10 02:55:29', 0),
-(8698, 'Test', 'Administrator', 'Event', 'Add', '2026-03-10 02:55:29', 0),
-(8699, 'Test', 'Administrator', 'Event', 'View All', '2026-03-10 02:55:29', 0),
-(8700, 'Test', 'Administrator', 'Participant', 'Edit', '2026-03-10 02:55:29', 0),
-(8701, 'Test', 'Administrator', 'Participant', 'Add', '2026-03-10 02:55:29', 0),
-(8702, 'Test', 'Administrator', 'Participant', 'View All', '2026-03-10 02:55:29', 0),
-(8703, 'Test', 'Administrator', 'Unlisted Participant', 'Edit', '2026-03-10 02:55:29', 0),
-(8704, 'Test', 'Administrator', 'Unlisted Participant', 'Add', '2026-03-10 02:55:29', 0),
-(8705, 'Test', 'Administrator', 'Unlisted Participant', 'View All', '2026-03-10 02:55:29', 0),
-(8706, 'Test', 'Administrator', 'Charts', 'View', '2026-03-10 02:55:29', 0),
-(8707, 'Test', 'Administrator', 'Charts', 'View All', '2026-03-10 02:55:29', 0),
-(8708, 'Test', 'Administrator', 'Charts', 'Extract', '2026-03-10 02:55:29', 0),
-(8709, 'Test', 'Administrator', 'Critical Level', 'View', '2026-03-10 02:55:29', 0),
-(8710, 'Test', 'Administrator', 'Critical Level', 'Delete', '2026-03-10 02:55:29', 0),
-(8711, 'Test', 'Administrator', 'Critical Level', 'Edit', '2026-03-10 02:55:29', 0),
-(8712, 'Test', 'Administrator', 'Critical Level', 'Add', '2026-03-10 02:55:29', 0),
-(8713, 'Test', 'Administrator', 'Deactivate GC', 'View', '2026-03-10 02:55:29', 0),
-(8714, 'Test', 'Administrator', 'Deactivate GC', 'View All', '2026-03-10 02:55:29', 0),
-(8715, 'Test', 'Administrator', 'Deactivate GC', 'Approve', '2026-03-10 02:55:29', 0),
-(8716, 'Test', 'Administrator', 'Deactivation Maintenance', 'View', '2026-03-10 02:55:29', 0),
-(8717, 'Test', 'Administrator', 'Deactivation Maintenance', 'Delete', '2026-03-10 02:55:29', 0),
-(8718, 'Test', 'Administrator', 'Deactivation Maintenance', 'Edit', '2026-03-10 02:55:29', 0),
-(8719, 'Test', 'Administrator', 'Deactivation Maintenance', 'Add', '2026-03-10 02:55:29', 0),
-(8720, 'Test', 'Administrator', 'Deactivation Maintenance', 'Deactivate', '2026-03-10 02:55:29', 0),
-(8721, 'Test', 'Administrator', 'Prospect Clients Mktg', 'View', '2026-03-10 02:55:29', 0),
-(8722, 'Test', 'Administrator', 'Prospect Clients Mktg', 'Delete', '2026-03-10 02:55:29', 0),
-(8723, 'Test', 'Administrator', 'Prospect Clients Mktg', 'Edit', '2026-03-10 02:55:30', 0),
-(8724, 'Test', 'Administrator', 'Prospect Clients Mktg', 'Add', '2026-03-10 02:55:30', 0),
-(8725, 'Test', 'Administrator', 'Prospect Clients Mktg', 'View All', '2026-03-10 02:55:30', 0),
-(8726, 'Test', 'Administrator', 'Prospect Clients Mktg', 'Extract', '2026-03-10 02:55:30', 0),
-(8727, 'Test', 'Administrator', 'Redemption Template', 'View', '2026-03-10 02:55:30', 0),
-(8728, 'Test', 'Administrator', 'Redemption Template', 'Delete', '2026-03-10 02:55:30', 0),
-(8729, 'Test', 'Administrator', 'Redemption Template', 'Edit', '2026-03-10 02:55:30', 0),
-(8730, 'Test', 'Administrator', 'Redemption Template', 'Add', '2026-03-10 02:55:30', 0),
-(8731, 'Test', 'Administrator', 'Redemption Template', 'View All', '2026-03-10 02:55:30', 0),
-(8732, 'Test', 'Administrator', 'Redemption Template', 'View per Outlet', '2026-03-10 02:55:30', 0),
-(8733, 'Test', 'Administrator', 'Released Voucher', 'View', '2026-03-10 02:55:30', 0),
-(8734, 'Test', 'Administrator', 'Released Voucher', 'View All', '2026-03-10 02:55:30', 0),
-(8735, 'Test', 'Administrator', 'Supermarket', 'View', '2026-03-10 02:55:30', 0),
-(8736, 'Test', 'Administrator', 'Supermarket', 'Delete', '2026-03-10 02:55:30', 0),
-(8737, 'Test', 'Administrator', 'Supermarket', 'Edit', '2026-03-10 02:55:30', 0),
-(8738, 'Test', 'Administrator', 'Supermarket', 'Add', '2026-03-10 02:55:30', 0),
-(8739, 'Test', 'Administrator', 'Supermarket', 'Activate', '2026-03-10 02:55:30', 0),
-(8740, 'Test', 'Administrator', 'Supermarket', 'Deactivate', '2026-03-10 02:55:30', 0),
-(8741, 'Test', 'Administrator', 'Transfer In', 'View', '2026-03-10 02:55:30', 0),
-(8742, 'Test', 'Administrator', 'Transfer In', 'Add', '2026-03-10 02:55:30', 0),
-(8743, 'Test', 'Administrator', 'Transfer In', 'View All', '2026-03-10 02:55:30', 0),
-(8744, 'Test', 'Administrator', 'Transfer Out', 'View', '2026-03-10 02:55:30', 0),
-(8745, 'Test', 'Administrator', 'Transfer Out', 'Add', '2026-03-10 02:55:30', 0),
-(8746, 'Test', 'Administrator', 'Transfer Out', 'View All', '2026-03-10 02:55:30', 0),
-(8747, 'Test', 'Administrator', 'Voucher', 'View', '2026-03-10 02:55:30', 0),
-(8748, 'Test', 'Administrator', 'Voucher', 'Delete', '2026-03-10 02:55:30', 0),
-(8749, 'Test', 'Administrator', 'Voucher', 'Edit', '2026-03-10 02:55:31', 0),
-(8750, 'Test', 'Administrator', 'Voucher', 'Add', '2026-03-10 02:55:31', 0),
-(8751, 'Test', 'Administrator', 'Voucher Deactivation', 'View', '2026-03-10 02:55:31', 0),
-(8752, 'Test', 'Administrator', 'Voucher Deactivation', 'View All', '2026-03-10 02:55:31', 0),
-(8753, 'Test', 'Administrator', 'Voucher Deactivation', 'Approve', '2026-03-10 02:55:31', 0),
-(8754, 'Test', 'Administrator', 'Voucher Details', 'View', '2026-03-10 02:55:31', 0),
-(8755, 'Test', 'Administrator', 'Voucher Details', 'Delete', '2026-03-10 02:55:31', 0),
-(8756, 'Test', 'Administrator', 'Voucher Details', 'Edit', '2026-03-10 02:55:31', 0),
-(8757, 'Test', 'Administrator', 'Voucher Details', 'Add', '2026-03-10 02:55:31', 0),
-(8758, 'Test', 'Administrator', 'Voucher Distribution', 'View', '2026-03-10 02:55:31', 0),
-(8759, 'Test', 'Administrator', 'Voucher Distribution', 'Delete', '2026-03-10 02:55:31', 0),
-(8760, 'Test', 'Administrator', 'Voucher Distribution', 'Add', '2026-03-10 02:55:31', 0),
-(8761, 'Test', 'Administrator', 'Voucher Distribution', 'View All', '2026-03-10 02:55:31', 0),
-(8762, 'Test', 'Administrator', 'Voucher Inventory', 'View', '2026-03-10 02:55:31', 0),
-(8763, 'Test', 'Administrator', 'Voucher Inventory', 'View All', '2026-03-10 02:55:31', 0),
-(8764, 'Test', 'Administrator', 'Voucher Releasing', 'View', '2026-03-10 02:55:31', 0),
-(8765, 'Test', 'Administrator', 'Voucher Releasing', 'Delete', '2026-03-10 02:55:31', 0),
-(8766, 'Test', 'Administrator', 'Voucher Releasing', 'Edit', '2026-03-10 02:55:31', 0),
-(8767, 'Test', 'Administrator', 'Voucher Releasing', 'Add', '2026-03-10 02:55:31', 0),
-(8768, 'Test', 'Administrator', 'Voucher Releasing', 'View All', '2026-03-10 02:55:31', 0);
+(8849, '1', '2', 'About the company', 'Direct Add', '2026-03-10 06:25:29', 0),
+(8850, '1', '2', 'About the company', 'Direct Edit', '2026-03-10 06:25:29', 0),
+(8851, '1', '2', 'Academic Head Dashboard', 'View', '2026-03-10 06:25:30', 0),
+(8852, '1', '2', 'Academic Head Dashboard', 'View Menu', '2026-03-10 06:25:30', 0),
+(8853, '1', '2', 'Academic Head Dashboard', 'Back', '2026-03-10 06:25:30', 0),
+(8854, '1', '2', 'Academic Head Dashboard', 'Export Report', '2026-03-10 06:25:30', 0),
+(8855, '1', 'Viewer', 'Request', 'View All', '2026-03-10 06:25:30', 0),
+(8856, '1', 'Viewer', 'Archive', 'View All', '2026-03-10 06:25:30', 0);
 
 -- --------------------------------------------------------
 
@@ -3344,7 +2774,8 @@ INSERT INTO `actions` (`id`, `name`, `created_at`) VALUES
 (177, 'Change PC', '2026-03-09 23:01:59'),
 (178, 'Utilization', '2026-03-09 23:01:59'),
 (179, 'Extract', '2026-03-09 23:01:59'),
-(180, 'View per Outlet', '2026-03-09 23:01:59');
+(180, 'View per Outlet', '2026-03-09 23:01:59'),
+(191, '2', '2026-03-10 06:21:41');
 
 -- --------------------------------------------------------
 
@@ -3643,7 +3074,8 @@ INSERT INTO `modules` (`id`, `name`, `created_at`) VALUES
 (241, 'Alert', '2026-03-09 23:04:58'),
 (242, 'Menu', '2026-03-09 23:04:58'),
 (243, 'Partial Releasing', '2026-03-09 23:04:58'),
-(244, 'Voucher Monitoring', '2026-03-09 23:04:58');
+(244, 'Voucher Monitoring', '2026-03-09 23:04:58'),
+(295, '2', '2026-03-10 06:22:17');
 
 -- --------------------------------------------------------
 
@@ -4604,7 +4036,11 @@ INSERT INTO `module_actions` (`id`, `module_id`, `action_id`) VALUES
 (916, 244, 81),
 (917, 244, 78),
 (918, 244, 180),
-(919, 240, 180);
+(919, 240, 180),
+(1027, 295, 89),
+(1028, 295, 83),
+(1029, 295, 68),
+(1030, 295, 191);
 
 -- --------------------------------------------------------
 
@@ -4822,7 +4258,8 @@ INSERT INTO `roles` (`id`, `name`, `created_at`) VALUES
 (70, 'Outlet', '2026-03-09 23:05:22'),
 (71, 'EC Access', '2026-03-09 23:05:22'),
 (72, 'Finance Access', '2026-03-09 23:05:22'),
-(73, 'Marketing Admin', '2026-03-09 23:05:22');
+(73, 'Marketing Admin', '2026-03-09 23:05:22'),
+(90, '2', '2026-03-10 06:22:54');
 
 -- --------------------------------------------------------
 
@@ -7133,7 +6570,13 @@ INSERT INTO `role_permissions` (`id`, `role_id`, `module_id`, `action_id`, `crea
 (2293, 36, 240, 78, '2026-03-10 04:59:38'),
 (2294, 36, 240, 180, '2026-03-10 04:59:38'),
 (2295, 28, 221, 78, '2026-03-10 04:59:38'),
-(2296, 28, 221, 99, '2026-03-10 04:59:38');
+(2296, 28, 221, 99, '2026-03-10 04:59:38'),
+(2328, 90, 118, 131, '2026-03-10 06:22:54'),
+(2329, 90, 118, 133, '2026-03-10 06:22:55'),
+(2330, 90, 176, 157, '2026-03-10 06:22:55'),
+(2331, 90, 176, 158, '2026-03-10 06:22:55'),
+(2332, 90, 176, 78, '2026-03-10 06:22:55'),
+(2333, 90, 176, 99, '2026-03-10 06:22:55');
 
 -- --------------------------------------------------------
 
@@ -7166,7 +6609,7 @@ INSERT INTO `systems` (`id`, `name`, `created_at`) VALUES
 (21, 'SJIIS', '2026-03-04 02:40:09'),
 (22, 'SophiaEvents', '2026-03-04 02:40:09'),
 (23, 'VMS', '2026-03-04 02:40:09'),
-(54, 'Test', '2026-03-10 02:55:08');
+(55, '1', '2026-03-10 06:23:36');
 
 -- --------------------------------------------------------
 
@@ -7271,7 +6714,8 @@ INSERT INTO `system_roles` (`id`, `system_id`, `role_id`, `created_at`) VALUES
 (64, 23, 72, '2026-03-10 05:20:26'),
 (65, 23, 73, '2026-03-10 05:20:26'),
 (66, 23, 36, '2026-03-10 05:20:26'),
-(67, 54, 28, '2026-03-10 05:20:26');
+(139, 55, 90, '2026-03-10 06:25:29'),
+(140, 55, 40, '2026-03-10 06:25:29');
 
 -- --------------------------------------------------------
 
@@ -7281,28 +6725,30 @@ INSERT INTO `system_roles` (`id`, `system_id`, `role_id`, `created_at`) VALUES
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
-  `employee_id` varchar(50) DEFAULT NULL,
-  `name` varchar(100) DEFAULT NULL,
-  `role` enum('requestor','approver','admin') DEFAULT NULL,
-  `email` varchar(100) DEFAULT NULL,
+  `employee_id` varchar(50) NOT NULL,
+  `reqhub_role` enum('Requestor','Approver','Admin','Reviewer') DEFAULT 'Requestor',
   `system_id` int(11) DEFAULT NULL,
   `department_id` int(11) DEFAULT NULL,
   `access_type_id` int(11) DEFAULT NULL,
   `system_assigned` varchar(255) NOT NULL DEFAULT '',
   `role_id` int(11) DEFAULT NULL,
-  `user_type` enum('Requestor','Approver','Admin','Reviewer') DEFAULT 'Requestor'
+  `user_type` enum('Requestor','Approver','Admin','Reviewer') DEFAULT 'Requestor',
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `employee_id`, `name`, `role`, `email`, `system_id`, `department_id`, `access_type_id`, `system_assigned`, `role_id`, `user_type`) VALUES
-(1, 'EMP001', 'Requestor User', 'requestor', 'req@test.com', NULL, NULL, NULL, 'HRIS', NULL, 'Requestor'),
-(2, 'EMP002', 'Approver User', 'approver', 'app@test.com', 10, 5, NULL, 'HRIS', NULL, 'Requestor'),
-(3, 'EMP003', 'Admin User', 'admin', 'admin@test.com', NULL, NULL, NULL, 'HRIS', NULL, 'Requestor'),
-(11, 'EMP004', 'Reviewer User', NULL, NULL, NULL, NULL, NULL, '', NULL, 'Approver'),
-(12, NULL, 'asd', NULL, NULL, NULL, NULL, NULL, '', NULL, 'Approver');
+INSERT INTO `users` (`id`, `employee_id`, `reqhub_role`, `system_id`, `department_id`, `access_type_id`, `system_assigned`, `role_id`, `user_type`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'EMP001', 'Requestor', NULL, NULL, NULL, 'HRIS', NULL, 'Requestor', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
+(2, 'EMP002', 'Approver', 10, 5, NULL, 'HRIS', NULL, 'Approver', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
+(3, 'EMP003', 'Admin', NULL, NULL, NULL, 'HRIS', NULL, 'Requestor', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
+(11, 'EMP004', NULL, NULL, NULL, NULL, '', NULL, 'Approver', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
+(14, '', NULL, NULL, NULL, NULL, '', NULL, 'Approver', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
+(15, '045-2017-068', 'Admin', NULL, NULL, NULL, '', NULL, 'Requestor', 1, '2026-03-12 06:33:01', '2026-03-12 06:33:01');
 
 -- --------------------------------------------------------
 
@@ -7326,8 +6772,7 @@ INSERT INTO `user_approver_assignments` (`id`, `user_id`, `system_id`, `departme
 (19, 11, 11, 5, '2026-03-08 20:20:25'),
 (20, 11, 12, 5, '2026-03-08 20:20:25'),
 (21, 11, 13, 5, '2026-03-08 20:20:25'),
-(22, 12, 11, 5, '2026-03-08 20:22:02'),
-(23, 12, 12, 5, '2026-03-08 20:22:02');
+(25, 14, 10, 5, '2026-03-10 08:44:08');
 
 -- --------------------------------------------------------
 
@@ -7468,10 +6913,13 @@ ALTER TABLE `system_roles`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_employee_id` (`employee_id`),
   ADD KEY `fk_system` (`system_id`),
   ADD KEY `fk_department` (`department_id`),
   ADD KEY `fk_access_type` (`access_type_id`),
-  ADD KEY `fk_users_role` (`role_id`);
+  ADD KEY `fk_users_role` (`role_id`),
+  ADD KEY `idx_employee_id` (`employee_id`),
+  ADD KEY `idx_reqhub_role` (`reqhub_role`);
 
 --
 -- Indexes for table `user_approver_assignments`
@@ -7499,13 +6947,13 @@ ALTER TABLE `user_modules_actions`
 -- AUTO_INCREMENT for table `access_types`
 --
 ALTER TABLE `access_types`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8769;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8921;
 
 --
 -- AUTO_INCREMENT for table `actions`
 --
 ALTER TABLE `actions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=191;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=192;
 
 --
 -- AUTO_INCREMENT for table `approver_assignments`
@@ -7523,13 +6971,13 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT for table `modules`
 --
 ALTER TABLE `modules`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=295;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=296;
 
 --
 -- AUTO_INCREMENT for table `module_actions`
 --
 ALTER TABLE `module_actions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1027;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1031;
 
 --
 -- AUTO_INCREMENT for table `portal_roles`
@@ -7559,37 +7007,37 @@ ALTER TABLE `request_chats`
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=90;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
 
 --
 -- AUTO_INCREMENT for table `role_permissions`
 --
 ALTER TABLE `role_permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2328;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2334;
 
 --
 -- AUTO_INCREMENT for table `systems`
 --
 ALTER TABLE `systems`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `system_roles`
 --
 ALTER TABLE `system_roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=128;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=147;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `user_approver_assignments`
 --
 ALTER TABLE `user_approver_assignments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `user_modules_actions`

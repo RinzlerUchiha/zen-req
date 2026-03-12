@@ -17,13 +17,13 @@ class ZenHubIntegration {
      * Session key where ZenHub stores the logged-in user
      * Change this if your ZenHub uses a different key
      */
-    private $zenHubSessionKey = 'zenHub_user'; // or 'user', 'logged_in_user', etc.
+    private $zenHubSessionKey = 'user_id'; // or 'user', 'logged_in_user', etc.
     
     /**
      * ZenHub database table and column names
      * Adjust these based on your actual ZenHub schema
      */
-    private $zenHubUserTable = 'tbl_user';
+    private $zenHubUserTable = 'tbl_user2';
     private $zenHubUserIdColumn = 'U_ID';
     private $zenHubEmpNoColumn = 'Emp_No';
     private $zenHubNameColumn = 'U_Name';
