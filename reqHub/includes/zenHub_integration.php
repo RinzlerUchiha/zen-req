@@ -48,30 +48,21 @@ class ZenHubIntegration {
      * @return array|null User array with keys: emp_no, name, email, user_id, is_active
      */
     public function getCurrentZenHubUser() {
-        // Check if ZenHub session exists
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        if (!isset($_SESSION[$this->zenHubSessionKey])) {
+        // Match your actual ZenHub session structure
+        if (empty($_SESSION['user_id'])) {
             return null;
         }
 
-        $zenHubUser = $_SESSION[$this->zenHubSessionKey];
-
-        // Session should contain either user ID or employee number
-        if (empty($zenHubUser[$this->zenHubUserIdColumn]) && 
-            empty($zenHubUser[$this->zenHubEmpNoColumn])) {
-            return null;
-        }
-
-        // Return standardized format
         return [
-            'user_id' => $zenHubUser[$this->zenHubUserIdColumn] ?? null,
-            'emp_no' => $zenHubUser[$this->zenHubEmpNoColumn] ?? null,
-            'name' => $zenHubUser[$this->zenHubNameColumn] ?? null,
-            'email' => $zenHubUser[$this->zenHubEmailColumn] ?? null,
-            'is_active' => ($zenHubUser[$this->zenHubStatusColumn] ?? 0) == 1
+            'user_id'   => $_SESSION['HR_UID']  ?? null,
+            'emp_no'    => $_SESSION['user_id'] ?? null,  // "045-2026-001"
+            'name'      => $_SESSION['name']    ?? null,
+            'email'     => $_SESSION['email']   ?? null,
+            'is_active' => true
         ];
     }
 

@@ -1,8 +1,11 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 /**
  * ReqHub Authentication Middleware
  * 
- * File: reqhub/includes/auth-middleware.php
+ * File: reqHub/includes/auth.php
  * 
  * Purpose: Central authentication checkpoint for all ReqHub pages.
  * Include this at the top of every page that needs authentication.
@@ -14,7 +17,7 @@
  * - Provides global $currentUser and helper functions
  * 
  * Installation:
- * 1. Copy this file to: reqhub/includes/auth-middleware.php
+ * 1. Copy this file to: reqHub/includes/auth-middleware.php
  * 2. At the top of every protected page, add: require_once __DIR__ . '/../includes/auth-middleware.php';
  */
 
@@ -23,10 +26,10 @@
 // ============================================================================
 
 // ZenHub login page URL - redirect here if not authenticated
-define('ZENHUB_LOGIN_URL', '/login.php');  // Adjust path based on your ZenHub setup
+define('ZENHUB_LOGIN_URL', '/zen/login.php');  // Adjust path based on your ZenHub setup
 
 // ReqHub dashboard - redirect here after successful auth
-define('REQHUB_DASHBOARD_URL', '/reqhub/public/dashboard.php');
+define('REQHUB_DASHBOARD_URL', '/zen/reqHub/public/dashboard.php');
 
 // Auto-provision new users? Set to false if you want manual approval
 define('AUTO_PROVISION_USERS', true);
@@ -68,10 +71,10 @@ if (!$currentUser) {
     $_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
     
     // Destroy any invalid session data
-    session_destroy();
+    // session_destroy();
     
     // Redirect to ZenHub login
-    header('Location: ' . ZENHUB_LOGIN_URL . '?return=' . urlencode($_SERVER['REQUEST_URI']));
+    header('Location:' . ZENHUB_LOGIN_URL);
     exit;
 }
 
@@ -285,7 +288,7 @@ function isAuthenticated() {
  * Logout user from ZenHub
  * 
  * Redirects to ZenHub logout page.
- * Don't call this directly - link to /reqhub/public/logout.php instead
+ * Don't call this directly - link to /reqHub/public/logout.php instead
  * 
  * @return void
  */

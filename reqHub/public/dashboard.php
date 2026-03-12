@@ -2,12 +2,12 @@
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 
-
 $pdo = ReqHubDatabase::getConnection('reqhub');
 
-$user = $_SESSION['user'];
-$userId = $user['id'];
-$role = $user['role'];
+// FIXED: correct session keys
+$user   = $_SESSION['reqhub_user'];
+$userId = $user['emp_no'];
+$role   = $user['reqhub_role'];
 $status = $_GET['status'] ?? 'pending';
 
 /* ================================
@@ -18,20 +18,20 @@ $sql = "
 SELECT 
     r.*,
     s.name AS system_name,
-    req_user.name AS requestor_name,
-    u1.name AS approved_by_name,
-    u2.name AS denied_by_name,
-    u3.name AS served_by_name,
+    req_user.U_Name AS requestor_name,
+    u1.U_Name AS approved_by_name,
+    u2.U_Name AS denied_by_name,
+    u3.U_Name AS served_by_name,
     GROUP_CONCAT(
         CONCAT(at.role, '||', at.module, '||', at.actions)
         SEPARATOR '##'
     ) AS access_type
 FROM requests r
 LEFT JOIN systems s ON r.system_id = s.id
-LEFT JOIN users req_user ON r.user_id = req_user.id
-LEFT JOIN users u1 ON r.approved_by = u1.id
-LEFT JOIN users u2 ON r.denied_by = u2.id
-LEFT JOIN users u3 ON r.served_by = u3.id
+LEFT JOIN tngc_hrd2.tbl_user2 req_user ON req_user.Emp_No = r.user_id
+LEFT JOIN tngc_hrd2.tbl_user2 u1 ON u1.Emp_No = r.approved_by
+LEFT JOIN tngc_hrd2.tbl_user2 u2 ON u2.Emp_No = r.denied_by
+LEFT JOIN tngc_hrd2.tbl_user2 u3 ON u3.Emp_No = r.served_by
 LEFT JOIN request_access_types ra ON r.id = ra.request_id
 LEFT JOIN access_types at ON ra.access_type_id = at.id
 WHERE 1=1
@@ -66,7 +66,7 @@ if ($role === 'approver') {
     $stmt2 = $pdo->prepare("
         SELECT system_id, department_id
         FROM users
-        WHERE id = :id
+        WHERE employee_id = :id
     ");
     $stmt2->execute([':id' => $userId]);
     $approverData = $stmt2->fetch(PDO::FETCH_ASSOC);
