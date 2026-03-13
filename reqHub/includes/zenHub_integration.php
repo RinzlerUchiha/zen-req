@@ -2,7 +2,7 @@
 /**
  * ZenHub Integration Layer
  * 
- * File: reqhub/includes/zenHub-integration.php
+ * File: reqhub/includes/zenHub_integration.php
  * 
  * Purpose: Handles all communication between ReqHub and ZenHub's authentication.
  * This is the single point of integration - if ZenHub's session format changes,
@@ -17,7 +17,7 @@ class ZenHubIntegration {
      * Session key where ZenHub stores the logged-in user
      * Change this if your ZenHub uses a different key
      */
-    private $zenHubSessionKey = 'user_id'; // or 'user', 'logged_in_user', etc.
+    private $zenHubSessionKey = 'user_id'; // ZenHub stores employee ID here
     
     /**
      * ZenHub database table and column names
@@ -37,6 +37,7 @@ class ZenHubIntegration {
      */
     public function __construct($zenHubDbConnection) {
         $this->zenHubDb = $zenHubDbConnection;
+        error_log("ZenHubIntegration initialized");
     }
 
     /**
@@ -52,18 +53,32 @@ class ZenHubIntegration {
             session_start();
         }
 
-        // Match your actual ZenHub session structure
+        error_log("getCurrentZenHubUser called");
+        error_log("Checking session['user_id']: " . ($_SESSION['user_id'] ?? 'NOT SET'));
+
+        // FIXED: Check for 'user_id' which contains the employee number
+        // ZenHub stores the employee ID in $_SESSION['user_id']
         if (empty($_SESSION['user_id'])) {
+            error_log("❌ ZenHub session missing user_id - returning NULL");
             return null;
         }
 
-        return [
-            'user_id'   => $_SESSION['HR_UID']  ?? null,
-            'emp_no'    => $_SESSION['user_id'] ?? null,  // "045-2026-001"
-            'name'      => $_SESSION['name']    ?? null,
-            'email'     => $_SESSION['email']   ?? null,
-            'is_active' => true
-        ];
+        $empNo = $_SESSION['user_id'];  // This is the employee number like "045-2026-001"
+        $userIdFromSession = $_SESSION['HR_UID'] ?? null;  // This is the U_ID from database
+
+        error_log("✓ ZenHub session found: user_id=$empNo, HR_UID=$userIdFromSession");
+
+        // Now fetch the full user data from database using the employee number
+        error_log("Fetching user data from database for empNo: $empNo");
+        $userData = $this->getZenHubUserByEmpNo($empNo);
+
+        if (!$userData) {
+            error_log("❌ User $empNo not found in ZenHub database - returning NULL");
+            return null;
+        }
+
+        error_log("✓ User data retrieved: " . json_encode($userData));
+        return $userData;
     }
 
     /**
@@ -76,7 +91,9 @@ class ZenHubIntegration {
      */
     public function isUserAuthenticated() {
         $user = $this->getCurrentZenHubUser();
-        return $user !== null && $user['is_active'] === true;
+        $result = $user !== null && $user['is_active'] === true;
+        error_log("isUserAuthenticated: " . ($result ? "TRUE" : "FALSE"));
+        return $result;
     }
 
     /**
@@ -84,61 +101,89 @@ class ZenHubIntegration {
      * 
      * Useful for admin operations or syncing users.
      * 
-     * @param string $empNo Employee number from ZenHub (e.g., "045-2017-068")
+     * @param string $empNo Employee number from ZenHub (e.g., "045-2026-001")
      * @return array|null User data
      */
     public function getZenHubUserByEmpNo($empNo) {
+        error_log("getZenHubUserByEmpNo called with empNo: $empNo");
+        
         $sql = "SELECT {$this->zenHubUserIdColumn}, {$this->zenHubEmpNoColumn}, 
                        {$this->zenHubNameColumn}, {$this->zenHubEmailColumn}, 
                        {$this->zenHubStatusColumn}
                 FROM {$this->zenHubUserTable} 
                 WHERE {$this->zenHubEmpNoColumn} = ? AND {$this->zenHubStatusColumn} = 1";
         
-        $stmt = $this->zenHubDb->prepare($sql);
-        $stmt->execute([$empNo]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("SQL Query: " . $sql);
+        
+        try {
+            $stmt = $this->zenHubDb->prepare($sql);
+            error_log("Query prepared");
+            
+            $stmt->execute([$empNo]);
+            error_log("Query executed with empNo: $empNo");
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            error_log("Query result: " . ($result ? json_encode($result) : "NULL"));
 
-        if (!$result) {
+            if (!$result) {
+                error_log("❌ getZenHubUserByEmpNo: User $empNo not found in database");
+                return null;
+            }
+
+            $userData = [
+                'user_id' => $result[$this->zenHubUserIdColumn],
+                'emp_no' => $result[$this->zenHubEmpNoColumn],
+                'name' => $result[$this->zenHubNameColumn],
+                'email' => $result[$this->zenHubEmailColumn],
+                'is_active' => true
+            ];
+
+            error_log("✓ getZenHubUserByEmpNo: Found user - emp_no=" . $empNo . ", name=" . $result[$this->zenHubNameColumn]);
+            return $userData;
+        } catch (PDOException $e) {
+            error_log("❌ getZenHubUserByEmpNo error: " . $e->getMessage());
             return null;
         }
-
-        return [
-            'user_id' => $result[$this->zenHubUserIdColumn],
-            'emp_no' => $result[$this->zenHubEmpNoColumn],
-            'name' => $result[$this->zenHubNameColumn],
-            'email' => $result[$this->zenHubEmailColumn],
-            'is_active' => true
-        ];
     }
 
     /**
      * Get ZenHub user by user ID
      * 
-     * @param int $userId ZenHub user ID
+     * @param int $userId ZenHub user ID (U_ID from database)
      * @return array|null User data
      */
     public function getZenHubUserById($userId) {
+        error_log("getZenHubUserById called with userId: $userId");
+        
         $sql = "SELECT {$this->zenHubUserIdColumn}, {$this->zenHubEmpNoColumn}, 
                        {$this->zenHubNameColumn}, {$this->zenHubEmailColumn}, 
                        {$this->zenHubStatusColumn}
                 FROM {$this->zenHubUserTable} 
                 WHERE {$this->zenHubUserIdColumn} = ? AND {$this->zenHubStatusColumn} = 1";
         
-        $stmt = $this->zenHubDb->prepare($sql);
-        $stmt->execute([$userId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->zenHubDb->prepare($sql);
+            $stmt->execute([$userId]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            error_log("Query result for userId $userId: " . ($result ? json_encode($result) : "NULL"));
 
-        if (!$result) {
+            if (!$result) {
+                error_log("❌ getZenHubUserById: User ID $userId not found");
+                return null;
+            }
+
+            return [
+                'user_id' => $result[$this->zenHubUserIdColumn],
+                'emp_no' => $result[$this->zenHubEmpNoColumn],
+                'name' => $result[$this->zenHubNameColumn],
+                'email' => $result[$this->zenHubEmailColumn],
+                'is_active' => true
+            ];
+        } catch (PDOException $e) {
+            error_log("❌ getZenHubUserById error: " . $e->getMessage());
             return null;
         }
-
-        return [
-            'user_id' => $result[$this->zenHubUserIdColumn],
-            'emp_no' => $result[$this->zenHubEmpNoColumn],
-            'name' => $result[$this->zenHubNameColumn],
-            'email' => $result[$this->zenHubEmailColumn],
-            'is_active' => true
-        ];
     }
 
     /**
@@ -160,17 +205,22 @@ class ZenHubIntegration {
             $sql .= " LIMIT " . (int)$limit;
         }
 
-        $results = $this->zenHubDb->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $results = $this->zenHubDb->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 
-        // Standardize results
-        return array_map(function($user) {
-            return [
-                'user_id' => $user[$this->zenHubUserIdColumn],
-                'emp_no' => $user[$this->zenHubEmpNoColumn],
-                'name' => $user[$this->zenHubNameColumn],
-                'email' => $user[$this->zenHubEmailColumn]
-            ];
-        }, $results);
+            // Standardize results
+            return array_map(function($user) {
+                return [
+                    'user_id' => $user[$this->zenHubUserIdColumn],
+                    'emp_no' => $user[$this->zenHubEmpNoColumn],
+                    'name' => $user[$this->zenHubNameColumn],
+                    'email' => $user[$this->zenHubEmailColumn]
+                ];
+            }, $results);
+        } catch (PDOException $e) {
+            error_log("❌ getAllActiveZenHubUsers error: " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -190,10 +240,15 @@ class ZenHubIntegration {
                 ORDER BY {$this->zenHubNameColumn} ASC
                 LIMIT 50";
         
-        $stmt = $this->zenHubDb->prepare($sql);
-        $stmt->execute([$searchTerm, $searchTerm]);
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->zenHubDb->prepare($sql);
+            $stmt->execute([$searchTerm, $searchTerm]);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("❌ searchZenHubUsers error: " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -235,7 +290,13 @@ class ZenHubIntegration {
             session_start();
         }
         
-        return $_SESSION[$this->zenHubSessionKey] ?? null;
+        return [
+            'user_id' => $_SESSION['user_id'] ?? null,
+            'HR_UID' => $_SESSION['HR_UID'] ?? null,
+            'Emp_No' => $_SESSION['Emp_No'] ?? null,
+            'name' => $_SESSION['name'] ?? null,
+            'email' => $_SESSION['email'] ?? null
+        ];
     }
 }
 

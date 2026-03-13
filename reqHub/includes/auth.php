@@ -15,11 +15,10 @@ if (session_status() === PHP_SESSION_NONE) {
  * - Verifies user is authenticated
  * - Auto-provisions new users
  * - Provides global $currentUser and helper functions
- * 
- * Installation:
- * 1. Copy this file to: reqHub/includes/auth-middleware.php
- * 2. At the top of every protected page, add: require_once __DIR__ . '/../includes/auth-middleware.php';
  */
+
+error_log("=== AUTH.PHP LOADED ===");
+error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
 
 // ============================================================================
 // Configuration
@@ -43,22 +42,38 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+error_log("Session started. Session contents: " . json_encode($_SESSION));
+
 // Load required classes
 // Note: Uses ReqHubDatabase from parent ZenHub folder
 require_once __DIR__ . '/../database/db.php';
 require_once __DIR__ . '/zenHub_integration.php';
 require_once __DIR__ . '/user_manager.php';
 
+error_log("Classes loaded");
+
 // Get database connections via ReqHubDatabase (parent system)
-$zenHubDb = ReqHubDatabase::getConnection('hr');      // ZenHub/HR database
-$reqHubDb = ReqHubDatabase::getConnection('reqhub');  // ReqHub database
+try {
+    $zenHubDb = ReqHubDatabase::getConnection('hr');      // ZenHub/HR database
+    $reqHubDb = ReqHubDatabase::getConnection('reqhub');  // ReqHub database
+    error_log("Database connections successful");
+} catch (Exception $e) {
+    error_log("Database connection failed: " . $e->getMessage());
+    header('HTTP/1.0 500 Internal Server Error');
+    die('Database connection failed. Please contact your administrator.');
+}
 
 // Initialize integration layers
 $zenHubIntegration = new ZenHubIntegration($zenHubDb);
 $userManager = new UserManager($reqHubDb, $zenHubIntegration);
 
+error_log("Integration layers initialized");
+
 // Get current user
+error_log("Attempting to get current user...");
 $currentUser = $userManager->getCurrentUser();
+
+error_log("getCurrentUser() result: " . ($currentUser ? "USER FOUND: " . json_encode($currentUser) : "NULL"));
 
 // ============================================================================
 // Authentication Check
@@ -67,6 +82,11 @@ $currentUser = $userManager->getCurrentUser();
 if (!$currentUser) {
     // User not authenticated - redirect to ZenHub login
     
+    error_log("❌ AUTH FAILED - currentUser is NULL");
+    error_log("Session user_id: " . ($_SESSION['user_id'] ?? 'NOT SET'));
+    error_log("Session HR_UID: " . ($_SESSION['HR_UID'] ?? 'NOT SET'));
+    error_log("Full session: " . json_encode($_SESSION));
+    
     // Optional: Store the requested URL to redirect back after login
     $_SESSION['return_to'] = $_SERVER['REQUEST_URI'];
     
@@ -74,9 +94,12 @@ if (!$currentUser) {
     // session_destroy();
     
     // Redirect to ZenHub login
-    header('Location:' . ZENHUB_LOGIN_URL);
+    error_log("Redirecting to: " . ZENHUB_LOGIN_URL);
+    header('Location: ' . ZENHUB_LOGIN_URL);
     exit;
 }
+
+error_log("✓ AUTH PASSED - User authenticated: " . $currentUser['name']);
 
 // ============================================================================
 // User Provisioning
@@ -84,7 +107,9 @@ if (!$currentUser) {
 
 if (AUTO_PROVISION_USERS) {
     try {
+        error_log("Attempting to provision user: " . $currentUser['emp_no']);
         $userManager->provisionNewUser($currentUser['emp_no']);
+        error_log("User provisioned successfully");
     } catch (Exception $e) {
         // Log error but don't block access
         error_log('ReqHub auto-provision failed for ' . $currentUser['emp_no'] . ': ' . $e->getMessage());
@@ -96,9 +121,12 @@ if (AUTO_PROVISION_USERS) {
 // ============================================================================
 
 if (!$currentUser['is_active']) {
+    error_log("❌ AUTH FAILED - User is inactive: " . $currentUser['emp_no']);
     header('HTTP/1.0 403 Forbidden');
     die('Your ReqHub account is inactive. Please contact an administrator.');
 }
+
+error_log("✓ User is active");
 
 // ============================================================================
 // Session Storage
@@ -111,12 +139,16 @@ $_SESSION['reqhub_user'] = $currentUser;
 // Refresh user data every 30 minutes to catch role changes
 if (!isset($_SESSION['reqhub_user_last_refresh'])) {
     $_SESSION['reqhub_user_last_refresh'] = time();
+    error_log("Set reqhub_user_last_refresh");
 } else if (time() - $_SESSION['reqhub_user_last_refresh'] > 1800) {
     // Refresh user from DB
+    error_log("Refreshing user data from database");
     $currentUser = $userManager->getCurrentUser();
     $_SESSION['reqhub_user'] = $currentUser;
     $_SESSION['reqhub_user_last_refresh'] = time();
 }
+
+error_log("=== AUTH.PHP COMPLETED SUCCESSFULLY ===");
 
 // ============================================================================
 // Helper Functions
@@ -124,15 +156,6 @@ if (!isset($_SESSION['reqhub_user_last_refresh'])) {
 
 /**
  * Check if current user has at least the specified role
- * 
- * Use this in templates with if/endif:
- * 
- *   <?php if (userHasRole('Approver')): ?>
- *       <button>Approve Request</button>
- *   <?php endif; ?>
- * 
- * @param string $requiredRole Role to check (Requestor, Reviewer, Approver, Admin)
- * @return bool True if user has the role (or higher in hierarchy)
  */
 function userHasRole($requiredRole) {
     global $currentUser, $userManager;
@@ -151,9 +174,6 @@ function userHasRole($requiredRole) {
 
 /**
  * Check if current user has exact role (no hierarchy)
- * 
- * @param string $role Exact role to check
- * @return bool
  */
 function userHasExactRole($role) {
     global $currentUser, $userManager;
@@ -167,16 +187,6 @@ function userHasExactRole($role) {
 
 /**
  * Require user to have a specific role
- * 
- * Call at top of page to restrict access:
- * 
- *   <?php
- *   require_once __DIR__ . '/../includes/auth-middleware.php';
- *   requireRole('Approver'); // Dies if user is not Approver or Admin
- *   ?>
- * 
- * @param string $requiredRole Role to require (Requestor, Reviewer, Approver, Admin)
- * @return void Dies with 403 if user doesn't have role
  */
 function requireRole($requiredRole) {
     global $currentUser, $userManager;
@@ -199,9 +209,6 @@ function requireRole($requiredRole) {
 
 /**
  * Require user to have exact role (no hierarchy)
- * 
- * @param string $role Exact role required
- * @return void Dies with 403 if user doesn't have exact role
  */
 function requireExactRole($role) {
     global $currentUser, $userManager;
@@ -214,11 +221,6 @@ function requireExactRole($role) {
 
 /**
  * Get current user info
- * 
- * Returns null if not authenticated.
- * Array keys: user_id, emp_no, name, email, reqhub_role, is_active
- * 
- * @return array|null
  */
 function getCurrentUser() {
     global $currentUser;
@@ -227,8 +229,6 @@ function getCurrentUser() {
 
 /**
  * Check if user is admin
- * 
- * @return bool
  */
 function isAdmin() {
     return userHasRole('Admin');
@@ -236,8 +236,6 @@ function isAdmin() {
 
 /**
  * Get user's current role
- * 
- * @return string|null
  */
 function getUserRole() {
     global $currentUser;
@@ -246,8 +244,6 @@ function getUserRole() {
 
 /**
  * Get user's employee ID
- * 
- * @return string|null
  */
 function getUserEmpNo() {
     global $currentUser;
@@ -256,8 +252,6 @@ function getUserEmpNo() {
 
 /**
  * Get user's name
- * 
- * @return string|null
  */
 function getUserName() {
     global $currentUser;
@@ -266,8 +260,6 @@ function getUserName() {
 
 /**
  * Get user's email
- * 
- * @return string|null
  */
 function getUserEmail() {
     global $currentUser;
@@ -276,8 +268,6 @@ function getUserEmail() {
 
 /**
  * Check if user is authenticated
- * 
- * @return bool
  */
 function isAuthenticated() {
     global $currentUser;
@@ -286,11 +276,6 @@ function isAuthenticated() {
 
 /**
  * Logout user from ZenHub
- * 
- * Redirects to ZenHub logout page.
- * Don't call this directly - link to /reqHub/public/logout.php instead
- * 
- * @return void
  */
 function logoutUser() {
     session_destroy();

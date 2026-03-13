@@ -1,13 +1,14 @@
 <?php
 /**
- * ReqHub Route Handler
+ * ReqHub Route Handler - FIXED
  * 
  * File: /zen/reqHub/routes/route.php
  * 
  * Purpose: Maps URL routes to pages and handles authentication
- * 
- * FIXED: Auth check happens BEFORE including pages (not inside them)
  */
+
+error_log("=== ROUTE DEBUG START ===");
+error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
 
 // Routes that do NOT require authentication
 $publicRoutes = [
@@ -26,7 +27,9 @@ $routes = [
     '/dashboard' => '/public/dashboard.php',
     '/admin_settings' => '/public/admin_settings.php',
     '/request_create' => '/public/request_create.php',
-    '/test' => '/public/Test.php'
+    '/test' => '/public/Test.php',
+    '/login' => '/public/login.php',
+    '/debug' => '/public/session-debug.php',
 ];
 
 // ============================================================================
@@ -34,36 +37,57 @@ $routes = [
 // ============================================================================
 
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+error_log("URI after parse_url: " . $uri);
+
 $uri = rtrim(str_replace("/zen/reqHub", "", $uri), "#");
+error_log("URI after str_replace: " . $uri);
+
 $uri = strtolower($uri);  // Normalize
+error_log("URI after normalize: '" . $uri . "'");
 
 // ============================================================================
 // AUTHENTICATION CHECK (BEFORE page inclusion)
 // ============================================================================
 
+error_log("Checking if URI in publicRoutes...");
+error_log("publicRoutes: " . json_encode($publicRoutes));
+error_log("Is '" . $uri . "' in publicRoutes? " . (in_array($uri, $publicRoutes) ? 'YES' : 'NO'));
+
 // If this is NOT a public route, require authentication
 if (!in_array($uri, $publicRoutes)) {
+    error_log("Auth required - loading auth.php");
     // Load auth middleware BEFORE including any page
     // This will redirect to login if user is not authenticated
     require_once $reqhub_root . '/includes/auth.php';
     
     // If we get here, user is authenticated
-    // $currentUser and $_SESSION['reqhub_user'] are now available
+    error_log("Auth passed for user: " . ($currentUser['name'] ?? 'unknown'));
+} else {
+    error_log("Public route - skipping auth");
 }
 
 // ============================================================================
 // Route Resolution
 // ============================================================================
 
+error_log("Checking if URI '" . $uri . "' in routes...");
+error_log("Available routes: " . json_encode(array_keys($routes)));
+
 if (array_key_exists($uri, $routes)) {
+    error_log("Route FOUND: '" . $uri . "' => '" . $routes[$uri] . "'");
+    
     // Route found
     $script = $reqhub_root . $routes[$uri];
+    error_log("Script path: " . $script);
     
     // Verify file exists
     if (!file_exists($script)) {
+        error_log("ERROR: Script file does not exist!");
         http_response_code(500);
         die("<h1>500 Error</h1><p>Script not found: " . htmlspecialchars($routes[$uri]) . "</p>");
     }
+    
+    error_log("Script exists - including it...");
     
     // Parse query string
     parse_str($_SERVER['QUERY_STRING'], $queryParams);
@@ -74,13 +98,19 @@ if (array_key_exists($uri, $routes)) {
     }
     
     // Include the page
+    error_log("About to require_once: " . $script);
     require_once $script;
+    error_log("Script included successfully");
     
     // Include footer if needed
     if (isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false) {
         include_once($portal_root . "/layout/bottom.php");
     }
+    
+    error_log("=== ROUTE COMPLETED SUCCESSFULLY ===");
 } else {
+    error_log("ERROR: Route NOT FOUND for '" . $uri . "'");
+    
     // Route not found
     http_response_code(404);
     ?>
@@ -111,4 +141,5 @@ if (array_key_exists($uri, $routes)) {
     <?php
 }
 
+error_log("=== ROUTE DEBUG END ===");
 ?>
