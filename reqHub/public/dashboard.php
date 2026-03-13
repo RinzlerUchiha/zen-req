@@ -1,14 +1,35 @@
 <?php
-// require_once (__DIR__ . '/../includes/auth.php');
+// Auth is checked by router - session is already populated
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Verify session is set
+if (empty($_SESSION['reqhub_user'])) {
+    error_log("ERROR: dashboard.php - reqhub_user not in session");
+    header('Location: /zen/login');
+    exit;
+}
+
 require_once (__DIR__ . '/../database/db.php');
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
+error_log("=== DASHBOARD.PHP LOADED ===");
 
-// FIXED: correct session keys
+try {
+    $pdo = ReqHubDatabase::getConnection('reqhub');
+    error_log("Database connection successful");
+} catch (Exception $e) {
+    error_log("ERROR: Database connection failed - " . $e->getMessage());
+    die("Database connection error: " . htmlspecialchars($e->getMessage()));
+}
+
+// Get user data from session
 $user   = $_SESSION['reqhub_user'];
 $userId = $user['emp_no'];
 $role   = $user['reqhub_role'];
 $status = $_GET['status'] ?? 'pending';
+
+error_log("User: $userId, Role: $role, Status: $status");
 
 /* ================================
    FETCH REQUESTS
@@ -52,45 +73,71 @@ switch ($status) {
     case 'served':
         $sql .= " AND r.admin_status = 'served'";
         break;
+    default:
+        error_log("WARNING: Invalid status filter: $status");
+        $status = 'pending';
+        $sql .= " AND r.status = 'pending'";
 }
 
 /* ROLE FILTER */
 $params = [];
 
-if ($role === 'requestor') {
+if ($role === 'Requestor') {
+    error_log("Filter: Requestor - showing only own requests");
     $sql .= " AND r.user_id = :uid";
     $params[':uid'] = $userId;
 }
 
-if ($role === 'approver') {
-    $stmt2 = $pdo->prepare("
-        SELECT system_id, department_id
-        FROM users
-        WHERE employee_id = :id
-    ");
-    $stmt2->execute([':id' => $userId]);
-    $approverData = $stmt2->fetch(PDO::FETCH_ASSOC);
+if ($role === 'Approver') {
+    error_log("Filter: Approver - fetching assigned systems");
+    try {
+        $stmt2 = $pdo->prepare("
+            SELECT system_id, department_id
+            FROM users
+            WHERE employee_id = :id AND reqhub_role = 'Approver'
+        ");
+        $stmt2->execute([':id' => $userId]);
+        $approverData = $stmt2->fetch(PDO::FETCH_ASSOC);
+        
+        error_log("Approver data: " . json_encode($approverData));
 
-    if (!empty($approverData['system_id']) && !empty($approverData['department_id'])) {
-        $sql .= " AND r.system_id = :system_id 
-                  AND r.department_id = :department_id";
-        $params[':system_id'] = $approverData['system_id'];
-        $params[':department_id'] = $approverData['department_id'];
+        if (!empty($approverData) && !empty($approverData['system_id']) && !empty($approverData['department_id'])) {
+            $sql .= " AND r.system_id = :system_id 
+                      AND r.department_id = :department_id";
+            $params[':system_id'] = $approverData['system_id'];
+            $params[':department_id'] = $approverData['department_id'];
+            error_log("Added approver filters: system_id=" . $approverData['system_id'] . ", dept_id=" . $approverData['department_id']);
+        } else {
+            error_log("WARNING: No approver assignment found for user $userId");
+        }
+    } catch (Exception $e) {
+        error_log("ERROR: Failed to fetch approver data - " . $e->getMessage());
     }
 }
 
 $sql .= " GROUP BY r.id ORDER BY r.id DESC";
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+error_log("Final SQL: " . $sql);
+error_log("SQL Params: " . json_encode($params));
+
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    error_log("Query successful - found " . count($requests) . " requests");
+} catch (PDOException $e) {
+    error_log("ERROR: SQL query failed - " . $e->getMessage());
+    die("<h1>Database Error</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>");
+}
+
+error_log("=== DASHBOARD.PHP DATA LOADED ===");
 ?>
 
 <?php include __DIR__ . '/../includes/header.php'; ?>
 
 <div class="container mt-4">
 
-<?php if (in_array($role, ['requestor','approver'])): ?>
+<?php if (in_array($role, ['Requestor','Approver','Reviewer'])): ?>
 <div class="d-flex justify-content-end mb-3">
     <a href="request_create.php" class="btn btn-lg btn-success">
         + Create Request
@@ -294,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = '';
         const role = "<?= $role ?>";
 
-        if (role==='approver' && data.status==='pending') {
+        if (role==='Approver' && data.status==='pending') {
             container.innerHTML = `
                 <form method="post" action="../actions/request_approve_action.php" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
@@ -306,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </form>`;
         }
 
-        if (role==='admin' && data.status==='approved' && data.adminStatus!=='served') {
+        if (role==='Admin' && data.status==='approved' && data.adminStatus!=='served') {
             container.innerHTML = `
                 <form method="post" action="../actions/request_serve_action.php">
                     <input type="hidden" name="id" value="${data.id}">

@@ -1,16 +1,30 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-if (!isset($_SESSION['user'])) {
-    header("Location: public/login.php");
+// Check for reqhub_user (set by auth.php) OR user (legacy)
+if (!isset($_SESSION['reqhub_user']) && !isset($_SESSION['user'])) {
+    header("Location: /zen/login");
     exit;
 }
 
-require_once (__DIR__ . '/../database/db.php');
+// Use reqhub_user if available, otherwise use user
+$user = $_SESSION['reqhub_user'] ?? $_SESSION['user'];
 
-$user = $_SESSION['user'];
-$userId = $user['id'];
-$role = $user['role'];
+// Build user array for compatibility
+if (!isset($user['id'])) {
+    $user['id'] = $user['user_id'] ?? null;
+}
+if (!isset($user['name'])) {
+    $user['name'] = $user['name'] ?? null;
+}
+if (!isset($user['role'])) {
+    $user['role'] = $user['reqhub_role'] ?? null;
+}
+
+$userId = $user['id'] ?? $user['user_id'] ?? null;
+$role = $user['role'] ?? $user['reqhub_role'] ?? null;
+
+require_once (__DIR__ . '/../database/db.php');
 
 $derivedNotifications = [];
 
@@ -18,14 +32,14 @@ $derivedNotifications = [];
    DERIVED NOTIFICATIONS
 ========================= */
 
-if ($role === 'approver') {
+if ($role === 'Approver' || $role === 'approver') {
 
     $stmt = $pdo->prepare("
         SELECT system_id, department_id
         FROM users
-        WHERE id = :uid
+        WHERE employee_id = :uid OR id = :uid
     ");
-    $stmt->execute([':uid' => $userId]);
+    $stmt->execute([':uid' => $user['emp_no'] ?? $userId]);
     $approverData = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!empty($approverData['system_id']) && !empty($approverData['department_id'])) {
@@ -54,7 +68,7 @@ if ($role === 'approver') {
     }
 }
 
-if ($role === 'admin') {
+if ($role === 'Admin' || $role === 'admin') {
     $stmt = $pdo->prepare("
         SELECT COUNT(*) 
         FROM requests 
@@ -76,14 +90,20 @@ if ($role === 'admin') {
    EVENT NOTIFICATIONS
 ========================= */
 
-$stmt = $pdo->prepare("
-    SELECT message, updated_at 
-    FROM notifications 
-    WHERE user_id = :uid 
-    ORDER BY updated_at DESC
-");
-$stmt->execute([':uid' => $userId]);
-$eventNotifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Try to fetch notifications - table might not exist yet
+try {
+    $stmt = $pdo->prepare("
+        SELECT message, updated_at 
+        FROM notifications 
+        WHERE user_id = :uid
+        ORDER BY updated_at DESC
+    ");
+    $stmt->execute([':uid' => $userId]);
+    $eventNotifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Notifications table doesn't exist or has different schema
+    $eventNotifications = [];
+}
 
 $totalCount = count($derivedNotifications) + count($eventNotifications);
 ?>
@@ -98,20 +118,13 @@ $totalCount = count($derivedNotifications) + count($eventNotifications);
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <!-- Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.js" rel="stylesheet" />
 
 </head>
 <body>
 
-<!-- QUICK ROLE SWITCH (optional testing tool) -->
-<select onchange="window.location='login.php?user_id='+this.value;">
-    <option value="1" <?= ($userId == 1) ? 'selected' : '' ?>>Requestor User</option>
-    <option value="2" <?= ($userId == 2) ? 'selected' : '' ?>>Approver User</option>
-    <option value="3" <?= ($userId == 3) ? 'selected' : '' ?>>Admin User</option>
-</select>
-
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
-    <a class="navbar-brand" href="/zen/reqHub/public/dashboard.php">Access Portal</a>
+    <a class="navbar-brand" href="/zen/reqHub/dashboard">Access Portal</a>
 
     <div class="ms-auto dropdown">
         <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">

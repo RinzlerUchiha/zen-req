@@ -553,6 +553,11 @@ if (isset($_SESSION['user_id'])) {
 											<img src="/zen/assets/img/flight_logo.png" width="40" height="40"><br>FBR
 										</div>
 									</a>
+									<a class="media-left" href="/zen/reqHub/" style="text-align: center;">
+										<div>
+											<img src="/zen/assets/img/flight_logo.png" width="40" height="40"><br>Access Portal
+										</div>
+									</a>
 								</div>
 							</div>
 						</div>

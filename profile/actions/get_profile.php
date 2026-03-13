@@ -1,9 +1,10 @@
 <?php
 require_once($sr_root . "/db/db.php");
 
-class Profile
+class Profiles
 {
-    private static function getDatabaseConnection($db) {
+    private static function getDatabaseConnection($db)
+    {
         try {
             return Database::getConnection($db);
         } catch (Exception $e) {
@@ -11,7 +12,8 @@ class Profile
         }
     }
 
-    public static function GetEmployee() {
+    public static function GetEmployee()
+    {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -30,7 +32,8 @@ class Profile
         }
         return [];
     }
-    public static function GetIR($irID) {
+    public static function GetIR($irID)
+    {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -78,7 +81,8 @@ class Profile
         return [];
     }
 
-    public static function GetProvince() {
+    public static function GetProvince()
+    {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -89,7 +93,8 @@ class Profile
         }
         return [];
     }
-    public static function GetMunicipal() {
+    public static function GetMunicipal()
+    {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -100,7 +105,8 @@ class Profile
         }
         return [];
     }
-    public static function GetBrngy() {
+    public static function GetBrngy()
+    {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -112,7 +118,8 @@ class Profile
         return [];
     }
 
-    public static function GetProfile($empno) {
+    public static function GetProfile($empno)
+    {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -125,7 +132,4 @@ class Profile
         }
         return [];
     }
-    
-
 }
-?>
