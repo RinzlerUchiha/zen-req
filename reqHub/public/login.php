@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // If logged in via Zen, go to ReqHub dashboard
 if (!empty($_SESSION['user_id'])) {
-    header('Location: /zen/reqHub/public/dashboard');
+    header('Location: /zen/reqHub');
     exit;
 }
 
