@@ -26,10 +26,10 @@ if (session_status() === PHP_SESSION_NONE) {
 // ============================================================================
 
 // ZenHub login page URL - redirect here if not authenticated
-define('ZENHUB_LOGIN_URL', '/zen/login.php');  // Adjust path based on your ZenHub setup
+define('ZENHUB_LOGIN_URL', '/zen/login');  // Adjust path based on your ZenHub setup
 
 // ReqHub dashboard - redirect here after successful auth
-define('REQHUB_DASHBOARD_URL', '/zen/reqHub/public/dashboard.php');
+define('REQHUB_DASHBOARD_URL', '/zen/reqHub/public/dashboard');
 
 // Auto-provision new users? Set to false if you want manual approval
 define('AUTO_PROVISION_USERS', true);
