@@ -202,22 +202,22 @@ foreach ($accessTypes as $type) {
                                     <button type="button" class="btn btn-sm btn-secondary unselect-all-btn">Unselect All</button>
                                 </div>
 
-                                <div class="row g-3 mb-4">
+                                <div class="row g-2 mb-4">
                                     <?php foreach ($modules as $module => $actions): ?>
                                         <div class="col-md-6">
-                                            <div class="border rounded p-2 h-100">
-                                                <!-- Module Header (Non-collapsible) -->
-                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                                    <strong><?= htmlspecialchars($module) ?></strong>
-                                                    <span class="badge bg-secondary" style="font-size: 0.8rem;">
-                                                        <?= count($actions) ?> actions
+                                            <div class="border rounded p-2" style="background-color: #f8f9fa;">
+                                                <!-- Module Header (Compact) -->
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                                    <strong style="font-size: 0.9rem;"><?= htmlspecialchars($module) ?></strong>
+                                                    <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                                                        <?= count($actions) ?> action<?= count($actions) !== 1 ? 's' : '' ?>
                                                     </span>
                                                 </div>
 
-                                                <!-- All Actions Visible (No Collapse) -->
-                                                <div>
+                                                <!-- Actions in 3 columns grid -->
+                                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                                                     <?php foreach ($actions as $action): ?>
-                                                        <div class="form-check">
+                                                        <div class="form-check" style="margin-bottom: 0;">
                                                             <input class="form-check-input access-checkbox"
                                                                 type="checkbox"
                                                                 name="access_types[]"
@@ -226,10 +226,12 @@ foreach ($accessTypes as $type) {
                                                                 data-role="<?= htmlspecialchars($action['role']) ?>"
                                                                 data-module="<?= htmlspecialchars($action['module']) ?>"
                                                                 data-name="<?= htmlspecialchars($action['actions']) ?>"
-                                                                id="access<?= $action['id'] ?>">
+                                                                id="access<?= $action['id'] ?>"
+                                                                style="margin-top: 2px;">
 
                                                             <label class="form-check-label"
-                                                                for="access<?= $action['id'] ?>">
+                                                                for="access<?= $action['id'] ?>"
+                                                                style="font-size: 0.8rem; margin-bottom: 0; word-break: break-word;">
                                                                 <?= htmlspecialchars($action['actions']) ?>
                                                             </label>
                                                         </div>
