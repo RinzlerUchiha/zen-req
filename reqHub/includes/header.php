@@ -8,12 +8,14 @@ if (!isset($_SESSION['reqhub_user']) && !isset($_SESSION['user'])) {
 }
 
 // Use reqhub_user if available, otherwise use user
-// The name here comes from zenHub_integration.php which already fetched it from tbl_201_basicinfo
 $user = $_SESSION['reqhub_user'] ?? $_SESSION['user'];
 
 // Build user array for compatibility
 if (!isset($user['id'])) {
     $user['id'] = $user['user_id'] ?? null;
+}
+if (!isset($user['name'])) {
+    $user['name'] = $user['name'] ?? null;
 }
 if (!isset($user['role'])) {
     $user['role'] = $user['reqhub_role'] ?? null;
@@ -32,8 +34,6 @@ $derivedNotifications = [];
 
 if ($role === 'Approver' || $role === 'approver') {
 
-    $pdo = ReqHubDatabase::getConnection('reqhub');
-    
     $stmt = $pdo->prepare("
         SELECT system_id, department_id
         FROM users
@@ -69,8 +69,6 @@ if ($role === 'Approver' || $role === 'approver') {
 }
 
 if ($role === 'Admin' || $role === 'admin') {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
-    
     $stmt = $pdo->prepare("
         SELECT COUNT(*) 
         FROM requests 
@@ -92,9 +90,8 @@ if ($role === 'Admin' || $role === 'admin') {
    EVENT NOTIFICATIONS
 ========================= */
 
+// Try to fetch notifications - table might not exist yet
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
-    
     $stmt = $pdo->prepare("
         SELECT message, updated_at 
         FROM notifications 
@@ -121,7 +118,7 @@ $totalCount = count($derivedNotifications) + count($eventNotifications);
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <!-- Select2 CSS -->
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.js" rel="stylesheet" />
 
 </head>
 <body>

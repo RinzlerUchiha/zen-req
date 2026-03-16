@@ -39,7 +39,11 @@ $sql = "
 SELECT 
     r.*,
     s.name AS system_name,
-    req_user.U_Name AS requestor_name,
+    COALESCE(
+        CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+        req_user.U_Name,
+        req_user.Emp_No
+    ) AS requestor_name,
     u1.U_Name AS approved_by_name,
     u2.U_Name AS denied_by_name,
     u3.U_Name AS served_by_name,
@@ -49,7 +53,9 @@ SELECT
     ) AS access_type
 FROM requests r
 LEFT JOIN systems s ON r.system_id = s.id
-LEFT JOIN tngc_hrd2.tbl_user2 req_user ON req_user.Emp_No = r.user_id
+LEFT JOIN users u ON r.user_id = u.id
+LEFT JOIN tngc_hrd2.tbl_user2 req_user ON u.employee_id = req_user.Emp_No
+LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON req_user.Emp_No = bi.bi_empno AND bi.datastat = 'current'
 LEFT JOIN tngc_hrd2.tbl_user2 u1 ON u1.Emp_No = r.approved_by
 LEFT JOIN tngc_hrd2.tbl_user2 u2 ON u2.Emp_No = r.denied_by
 LEFT JOIN tngc_hrd2.tbl_user2 u3 ON u3.Emp_No = r.served_by
@@ -82,37 +88,50 @@ switch ($status) {
 /* ROLE FILTER */
 $params = [];
 
-if ($role === 'Requestor') {
-    error_log("Filter: Requestor - showing only own requests");
-    $sql .= " AND r.user_id = :uid";
-    $params[':uid'] = $userId;
-}
+// For all roles, we need to get the actual users.id from employee_id
+$stmt_userLookup = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+$stmt_userLookup->execute([$userId]);
+$userRecord = $stmt_userLookup->fetch(PDO::FETCH_ASSOC);
 
-if ($role === 'Approver') {
-    error_log("Filter: Approver - fetching assigned systems");
-    try {
-        $stmt2 = $pdo->prepare("
-            SELECT system_id, department_id
-            FROM users
-            WHERE employee_id = :id AND reqhub_role = 'Approver'
-        ");
-        $stmt2->execute([':id' => $userId]);
-        $approverData = $stmt2->fetch(PDO::FETCH_ASSOC);
-        
-        error_log("Approver data: " . json_encode($approverData));
-
-        if (!empty($approverData) && !empty($approverData['system_id']) && !empty($approverData['department_id'])) {
-            $sql .= " AND r.system_id = :system_id 
-                      AND r.department_id = :department_id";
-            $params[':system_id'] = $approverData['system_id'];
-            $params[':department_id'] = $approverData['department_id'];
-            error_log("Added approver filters: system_id=" . $approverData['system_id'] . ", dept_id=" . $approverData['department_id']);
-        } else {
-            error_log("WARNING: No approver assignment found for user $userId");
-        }
-    } catch (Exception $e) {
-        error_log("ERROR: Failed to fetch approver data - " . $e->getMessage());
+if ($userRecord) {
+    $actual_user_id = $userRecord['id'];
+    error_log("Mapped emp_no=$userId to users.id=$actual_user_id");
+    
+    if ($role === 'Requestor') {
+        error_log("Filter: Requestor - showing only own requests");
+        $sql .= " AND r.user_id = :uid";
+        $params[':uid'] = $actual_user_id;
+        error_log("Added Requestor filter: r.user_id = $actual_user_id");
     }
+    
+    if ($role === 'Approver') {
+        error_log("Filter: Approver - fetching assigned systems");
+        try {
+            $stmt2 = $pdo->prepare("
+                SELECT system_id, department_id
+                FROM users
+                WHERE id = :id AND reqhub_role = 'Approver'
+            ");
+            $stmt2->execute([':id' => $actual_user_id]);
+            $approverData = $stmt2->fetch(PDO::FETCH_ASSOC);
+            
+            error_log("Approver data: " . json_encode($approverData));
+
+            if (!empty($approverData) && !empty($approverData['system_id']) && !empty($approverData['department_id'])) {
+                $sql .= " AND r.system_id = :system_id 
+                          AND r.department_id = :department_id";
+                $params[':system_id'] = $approverData['system_id'];
+                $params[':department_id'] = $approverData['department_id'];
+                error_log("Added approver filters: system_id=" . $approverData['system_id'] . ", dept_id=" . $approverData['department_id']);
+            } else {
+                error_log("WARNING: No approver assignment found for user id=$actual_user_id");
+            }
+        } catch (Exception $e) {
+            error_log("ERROR: Failed to fetch approver data - " . $e->getMessage());
+        }
+    }
+} else {
+    error_log("WARNING: User with emp_no=$userId not found in users table");
 }
 
 $sql .= " GROUP BY r.id ORDER BY r.id DESC";
@@ -139,7 +158,7 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 
 <?php if (in_array($role, ['Requestor','Approver','Reviewer'])): ?>
 <div class="d-flex justify-content-end mb-3">
-    <a href="request_create.php" class="btn btn-lg btn-success">
+    <a href="/zen/reqHub/request" class="btn btn-lg btn-success">
         + Create Request
     </a>
 </div>
@@ -230,11 +249,18 @@ if (!empty($req['access_type'])) {
 <div class="row">
 <div class="col-md-6 d-flex flex-column">
 
-<p><strong>Name:</strong><br><span id="modalName"></span></p>
+<p><strong>Requestor:</strong><br><span id="modalName"></span></p>
 <p><strong>System:</strong><br><span id="modalSystem"></span></p>
 
 <p><strong>Access Type:</strong><br>
-<div id="modalAccess" class="small"></div>
+<div id="modalAccess" class="small" style="
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: #f8f9fa;
+"></div>
 </p>
 
 <p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>
@@ -325,14 +351,40 @@ document.addEventListener('DOMContentLoaded', function () {
             grouped[role][module].push(action);
         });
 
-        let html = '';
+        // Create accordion HTML with collapsible sections
+        let html = '<div class="accordion" id="accessAccordion">';
+        let accordionIndex = 0;
+        
         for (let role in grouped) {
-            html += `<strong>Role: ${role}</strong><br>`;
+            html += `
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#accordion${accordionIndex}">
+                        <strong>Role: ${role}</strong>
+                    </button>
+                </h2>
+                <div id="accordion${accordionIndex}" class="accordion-collapse collapse show" data-bs-parent="#accessAccordion">
+                    <div class="accordion-body p-2">
+            `;
+            
             for (let module in grouped[role]) {
-                html += `&nbsp;&nbsp;<u>Module: ${module}</u><br>`;
-                html += `&nbsp;&nbsp;&nbsp;&nbsp;Actions: ${grouped[role][module].join(', ')}<br><br>`;
+                html += `
+                <div class="ms-3 mb-2">
+                    <strong style="color: #0d6efd;">Module: ${module}</strong><br>
+                    <span class="ms-3">Actions: ${grouped[role][module].join(', ')}</span>
+                </div>
+                `;
             }
+            
+            html += `
+                    </div>
+                </div>
+            </div>
+            `;
+            accordionIndex++;
         }
+        
+        html += '</div>';
         container.innerHTML = html;
     }
 
@@ -340,41 +392,70 @@ document.addEventListener('DOMContentLoaded', function () {
         const container = document.getElementById('modalActions');
         container.innerHTML = '';
         const role = "<?= $role ?>";
+        
+        console.log('renderActions called with data:', data);
+        console.log('role:', role);
+        console.log('data.status:', data.status);
+        console.log('data.adminStatus:', data.adminStatus);
 
-        if (role==='Approver' && data.status==='pending') {
+        if (role === 'Approver' && data.status === 'pending') {
+            console.log('Showing Approver actions');
             container.innerHTML = `
-                <form method="post" action="../actions/request_approve_action.php" class="d-inline">
+                <form method="post" action="/zen/reqHub/request_approve_action" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
-                    <button class="btn btn-success btn-sm">Approve</button>
+                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
                 </form>
-                <form method="post" action="../actions/request_deny_action.php" class="d-inline ms-2">
+                <form method="post" action="/zen/reqHub/request_deny_action" class="d-inline ms-2">
                     <input type="hidden" name="id" value="${data.id}">
-                    <button class="btn btn-danger btn-sm">Deny</button>
+                    <button type="submit" class="btn btn-danger btn-sm">Deny</button>
                 </form>`;
         }
 
-        if (role==='Admin' && data.status==='approved' && data.adminStatus!=='served') {
+        if (role === 'Admin' && data.status === 'approved' && data.adminStatus !== 'served') {
+            console.log('Showing Admin actions');
             container.innerHTML = `
-                <form method="post" action="../actions/request_serve_action.php">
+                <form method="post" action="/zen/reqHub/request_serve_action">
                     <input type="hidden" name="id" value="${data.id}">
-                    <button class="btn btn-primary btn-sm">Mark as Served</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Mark as Served</button>
                 </form>`;
+        }
+        
+        if (container.innerHTML === '') {
+            console.log('No actions available for this user/status combination');
         }
     }
 
     function loadChat(requestId){
-        fetch('../includes/chat_fetch.php?request_id='+requestId)
-        .then(res=>res.text())
+        fetch('/zen/reqHub/chat_fetch?request_id='+requestId)
+        .then(res=> {
+            console.log('chat_fetch response:', res.status, res.statusText);
+            if (!res.ok) {
+                console.error('Chat fetch error:', res.status, res.statusText);
+                document.getElementById('chatBox').innerHTML = '<div class="alert alert-warning">Unable to load chat (' + res.status + ')</div>';
+                throw new Error('Failed to fetch chat: ' + res.status);
+            }
+            return res.text();
+        })
         .then(html=>{
+            console.log('Chat HTML received:', html.substring(0, 100));
             const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML = html;
-            chatBox.scrollTop = chatBox.scrollHeight;
+            if (chatBox) {
+                chatBox.innerHTML = html;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        })
+        .catch(err => {
+            console.error('Chat error:', err);
+            const chatBox = document.getElementById('chatBox');
+            if (chatBox) {
+                chatBox.innerHTML = '<div class="alert alert-danger">Error loading chat: ' + err.message + '</div>';
+            }
         });
     }
 
     document.getElementById('chatForm').addEventListener('submit', function(e){
         e.preventDefault();
-        fetch('../actions/chat_send.php',{
+        fetch('/zen/reqHub/chat_send',{
             method:'POST',
             body:new FormData(this)
         }).then(()=>{

@@ -1,4 +1,6 @@
-<!-- jQuery (LOAD ONCE) -->
+</main>
+
+<!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- Bootstrap JS -->
@@ -7,40 +9,23 @@
 <!-- Select2 JS -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
 
+<!-- Choices.js JS -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
 <script>
 $(document).ready(function() {
 
-    /* =========================
-       Initialize Select2
-    ========================= */
+    // Initialize Select2 for searchable selects
     if ($.fn.select2) {
         $('.searchable').select2({
             width: '100%'
         });
     }
 
-    /* =========================
-       Mark All Notifications Read
-    ========================= */
-    $('#markAllReadBtn').on('click', function() {
-        fetch('../actions/notification_action.php', {
-            method: 'POST'
-        }).then(() => location.reload());
-    });
-
-    /* =========================
-       Category Switcher
-    ========================= */
-    $('#settingCategories button').on('click', function() {
-
-        $('#settingCategories button').removeClass('active');
-        $(this).addClass('active');
-
-        const target = $(this).data('target');
-
-        $('.setting-content').hide();
-        $('#' + target).show();
-    });
+    // Initialize Choices.js if present
+    if (typeof Choices !== 'undefined') {
+        // Choices.js initialization handled in individual pages
+    }
 
 });
 </script>

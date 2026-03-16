@@ -1,11 +1,16 @@
 <?php
 /**
- * ReqHub Route Handler - FIXED
+ * ReqHub Route Handler
  * 
  * File: /zen/reqHub/routes/route.php
  * 
  * Purpose: Maps URL routes to pages and handles authentication
  */
+
+// SET $reqhub_root FIRST - before anything else!
+// This goes up 2 levels: routes → reqHub
+$reqhub_root = dirname(dirname(__FILE__));
+error_log("reqhub_root set to: " . $reqhub_root);
 
 error_log("=== ROUTE DEBUG START ===");
 error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
@@ -26,10 +31,15 @@ $routes = [
     '/' => '/public/dashboard.php',
     '/dashboard' => '/public/dashboard.php',
     '/admin_settings' => '/public/admin_settings.php',
-    '/request_create' => '/public/request_create.php',
+    '/request' => '/public/request_create.php',
+    '/request_create_action' => '/actions/request_create_action.php',
+    '/system_roles_action' => '/actions/system_roles_action.php',
     '/test' => '/public/Test.php',
     '/login' => '/public/login.php',
     '/debug' => '/public/session-debug.php',
+    '/chat_fetch' => '/includes/chat_fetch.php',
+    '/chat_send' => '/actions/chat_send.php',
+    '/getempdept' => '/includes/get_employee_dept.php',
 ];
 
 // ============================================================================
@@ -92,20 +102,10 @@ if (array_key_exists($uri, $routes)) {
     // Parse query string
     parse_str($_SERVER['QUERY_STRING'], $queryParams);
     
-    // Include layout if needed
-    if (isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false) {
-        include_once($portal_root . "/layout/top.php");
-    }
-    
     // Include the page
     error_log("About to require_once: " . $script);
     require_once $script;
     error_log("Script included successfully");
-    
-    // Include footer if needed
-    if (isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false) {
-        include_once($portal_root . "/layout/bottom.php");
-    }
     
     error_log("=== ROUTE COMPLETED SUCCESSFULLY ===");
 } else {

@@ -1,20 +1,76 @@
 <?php
-// require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 
-requireRole(['requestor', 'approver']);
+// Allow both Requestor and Approver roles to create requests
+if (!userHasRoleIn('Requestor', 'Approver')) {
+    http_response_code(403);
+    die('Access denied: Only Requestors and Approvers can create requests');
+}
+
+$pdo = ReqHubDatabase::getConnection('reqhub');
 
 // Fetch dropdown data
-$systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll();
-$departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll();
-$users = $pdo->query("SELECT id, name FROM users ORDER BY name")->fetchAll();
+try {
+    // Systems - has 'name' column ✓
+    $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll();
+    
+    // Departments - Fetch from ZenHub PRIMARY records, join with ReqHub departments table to get IDs
+    $departments = $pdo->query("
+        SELECT DISTINCT 
+            d.id,
+            d.name,
+            d.code
+        FROM tngc_hrd2.tbl201_jobrec jr
+        INNER JOIN departments d ON d.code = jr.jrec_department
+        WHERE jr.jrec_status = 'primary'
+        AND jr.jrec_department IS NOT NULL 
+        AND jr.jrec_department != ''
+        ORDER BY d.name ASC
+    ")->fetchAll();
+    
+    // Users - Show ALL ZenHub users (for selection)
+    // Validation of user existence in ReqHub happens on form submission
+    $users = $pdo->query("
+        SELECT 
+            hu.U_ID as id,
+            hu.Emp_No as employee_id,
+            COALESCE(
+                CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+                hu.U_Name,
+                hu.Emp_No
+            ) as name
+        FROM tngc_hrd2.tbl_user2 hu
+        LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
+        LEFT JOIN tngc_hrd2.tbl201_jobrec jr ON hu.Emp_No = jr.jrec_empno AND jr.jrec_status = 'primary'
+        WHERE hu.U_stat = 1
+        GROUP BY hu.U_ID, hu.Emp_No, hu.U_Name, bi.bi_empfname, bi.bi_emplname
+        ORDER BY COALESCE(
+            CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+            hu.U_Name,
+            hu.Emp_No
+        ) ASC
+    ")->fetchAll();
+    
+    error_log("Loaded " . count($systems) . " systems, " . count($departments) . " departments, " . count($users) . " users");
+} catch (PDOException $e) {
+    error_log("Error fetching dropdown data: " . $e->getMessage());
+    die("Database error: " . htmlspecialchars($e->getMessage()));
+}
 
-// Fetch access types grouped by Role → Module → Actions
-$accessTypes = $pdo->query("
-    SELECT id, system, role, module, actions
-    FROM access_types
-    ORDER BY role, module, actions
-")->fetchAll(PDO::FETCH_ASSOC);
+// Fetch access types - correct column names ✓
+try {
+    $accessTypes = $pdo->query("
+        SELECT id, system, role, module, actions
+        FROM access_types
+        ORDER BY role, module, actions
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    
+    error_log("Fetched " . count($accessTypes) . " access types");
+} catch (PDOException $e) {
+    error_log("Error fetching access types: " . $e->getMessage());
+    die("Database error: " . htmlspecialchars($e->getMessage()));
+}
 
 // Group them: System → Role → Module → Actions
 $groupedBySystem = [];
@@ -37,15 +93,35 @@ foreach ($accessTypes as $type) {
 }
 ?>
 
-<?php include "../includes/header.php"; ?>
+<?php include ($reqhub_root . "/includes/header.php"); ?>
 
 <!-- Choices.js CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
+<style>
+    /* Fix dropdown menu layering/clipping */
+    .choices__list--dropdown {
+        z-index: 1000 !important;
+    }
+    
+    .choices[data-type*="select-one"] .choices__button {
+        z-index: 999 !important;
+    }
+    
+    /* Ensure modals stay on top */
+    .modal {
+        z-index: 1050 !important;
+    }
+    
+    .modal-backdrop {
+        z-index: 1049 !important;
+    }
+</style>
+
 <div class="container mt-4">
     <h2>Create New Request</h2>
 
-    <form action="../actions/request_create_action.php" method="POST" id="requestForm">
+    <form action="/zen/reqHub/request_create_action" method="POST" id="requestForm">
 
         <!-- System (Single Selection Only) -->
         <div class="mb-3">
@@ -65,12 +141,14 @@ foreach ($accessTypes as $type) {
             <select name="request_for" id="requestForSelect" class="form-select" required>
                 <option value="">Select User</option>
                 <?php foreach ($users as $u): ?>
-                    <option value="<?= $u['id'] ?>"><?= htmlspecialchars($u['name']) ?></option>
+                    <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>">
+                        <?= htmlspecialchars($u['name']) ?>
+                    </option>
                 <?php endforeach; ?>
             </select>
         </div>
 
-        <!-- Department -->
+        <!-- Department (Auto-filled) -->
         <div class="mb-3">
             <label class="form-label">Department</label>
             <select name="department_id" id="departmentSelect" class="form-select" required>
@@ -79,6 +157,13 @@ foreach ($accessTypes as $type) {
                     <option value="<?= $dept['id'] ?>"><?= htmlspecialchars($dept['name']) ?></option>
                 <?php endforeach; ?>
             </select>
+            <small class="text-muted">Automatically set based on selected user</small>
+        </div>
+
+        <!-- Store (Conditional) -->
+        <div class="mb-3" id="storeContainer" style="display: none;">
+            <label class="form-label">Store</label>
+            <input type="text" name="store" id="storeInput" class="form-control" placeholder="Enter store name">
         </div>
 
         <!-- Access Types -->
@@ -121,9 +206,16 @@ foreach ($accessTypes as $type) {
                                     <?php foreach ($modules as $module => $actions): ?>
                                         <div class="col-md-6">
                                             <div class="border rounded p-2 h-100">
-                                                <strong><?= htmlspecialchars($module) ?></strong>
+                                                <!-- Module Header (Non-collapsible) -->
+                                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                                    <strong><?= htmlspecialchars($module) ?></strong>
+                                                    <span class="badge bg-secondary" style="font-size: 0.8rem;">
+                                                        <?= count($actions) ?> actions
+                                                    </span>
+                                                </div>
 
-                                                <div class="mt-2">
+                                                <!-- All Actions Visible (No Collapse) -->
+                                                <div>
                                                     <?php foreach ($actions as $action): ?>
                                                         <div class="form-check">
                                                             <input class="form-check-input access-checkbox"
@@ -156,7 +248,14 @@ foreach ($accessTypes as $type) {
                 <!-- COLUMN 3 — SUMMARY -->
                 <div class="col-md-3 border-start">
                     <h6>Selected Access</h6>
-                    <div id="selectedSummary" class="small">
+                    <div id="selectedSummary" class="small" style="
+                        max-height: 400px;
+                        overflow-y: auto;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                        padding: 10px;
+                        background-color: #f8f9fa;
+                    ">
                         <em>No access selected</em>
                     </div>
                 </div>
@@ -188,6 +287,18 @@ foreach ($accessTypes as $type) {
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+
+    // Add form submit handler to enable disabled fields before submission
+    const requestForm = document.getElementById('requestForm');
+    if (requestForm) {
+        requestForm.addEventListener('submit', function(e) {
+            // Temporarily enable disabled fields so their values get submitted
+            const disabledSelects = this.querySelectorAll('select:disabled');
+            disabledSelects.forEach(select => {
+                select.disabled = false;
+            });
+        });
+    }
 
     // Initialize Choices.js on the three dropdowns
     const systemChoices = new Choices('#systemSelect', {
@@ -240,8 +351,8 @@ document.addEventListener("DOMContentLoaded", function() {
         // Get system name
         const systemName = systemNameMap[systemId];
 
-        // Fetch roles for this system
-        fetch(`../actions/system_roles_action.php?system_id=${systemId}`)
+        // Fetch roles for this system - use router URL (no .php)
+        fetch(`/zen/reqHub/system_roles_action?system_id=${systemId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.roles.length > 0) {
@@ -371,7 +482,101 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
+    // ===== REQUEST FOR AUTO-DEPARTMENT LOGIC =====
+    const requestForSelect = document.getElementById('requestForSelect');
+    const departmentSelect = document.getElementById('departmentSelect');
+    const storeContainer = document.getElementById('storeContainer');
+    const storeInput = document.getElementById('storeInput');
+
+    requestForSelect.addEventListener('change', async function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const employeeId = selectedOption.getAttribute('data-employee-id');
+        
+        console.log('Request For changed:', employeeId);
+        
+        if (!employeeId) {
+            // Reset if nothing selected
+            departmentSelect.value = '';
+            
+            // RE-ENABLE the department dropdown
+            departmentSelect.disabled = false;
+            departmentSelect.removeAttribute('readonly');  // Remove readonly
+            if (departmentChoices) {
+                departmentChoices.enable();
+            }
+            console.log('Department dropdown re-enabled');
+            
+            storeContainer.style.display = 'none';
+            storeInput.value = '';
+            return;
+        }
+
+        try {
+            // Fetch department and store requirement from tbl201_jobrec
+            const response = await fetch('/zen/reqHub/getempdept?emp_no=' + encodeURIComponent(employeeId));
+            
+            if (!response.ok) {
+                console.error('Failed to fetch employee department:', response.status);
+                return;
+            }
+            
+            const data = await response.json();
+            console.log('Employee data:', data);
+            
+            // Set department if found
+            if (data.department) {
+                console.log('Looking for department:', data.department);
+                
+                // Find the department option by name/value and set it
+                let found = false;
+                for (let option of departmentSelect.options) {
+                    const optionText = option.textContent.trim();
+                    console.log('Comparing with option:', optionText, 'Value:', option.value);
+                    
+                    if (optionText === data.department || option.value === data.department) {
+                        console.log('Match found! Setting value to:', option.value);
+                        departmentSelect.value = option.value;
+                        
+                        // Update Choices.js if it's active
+                        if (departmentChoices) {
+                            departmentChoices.setChoiceByValue(option.value);
+                            console.log('Updated Choices.js');
+                        }
+                        
+                        // Disable the department dropdown - user cannot change it
+                        departmentSelect.disabled = false;  // Don't disable
+                        departmentSelect.setAttribute('readonly', 'readonly');  // Make readonly instead
+                        if (departmentChoices) {
+                            // Don't disable Choices.js, just prevent interaction
+                            departmentChoices.disable();
+                        }
+                        console.log('Department dropdown set to readonly');
+                        
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    console.warn('Department not found in dropdown:', data.department);
+                }
+            }
+            
+            // Show/hide store input based on requirement
+            if (data.requires_store) {
+                storeContainer.style.display = 'block';
+                storeInput.required = true;
+            } else {
+                storeContainer.style.display = 'none';
+                storeInput.required = false;
+                storeInput.value = '';
+            }
+        } catch (error) {
+            console.error('Error fetching employee department:', error);
+        }
+    });
+
 });
 </script>
 
-<?php include "../includes/footer.php"; ?>
+<?php include ($reqhub_root . "/includes/footer.php"); ?>

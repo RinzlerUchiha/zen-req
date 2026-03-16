@@ -1,43 +1,68 @@
 <?php
-require_once (__DIR__ . '/../database/db.php');
+/**
+ * API endpoint to fetch roles for a system
+ * File: /zen/reqHub/actions/system_roles_action.php
+ */
 
-// Expect: GET request with system_id
-$system_id = isset($_GET['system_id']) ? (int)$_GET['system_id'] : 0;
+require_once ($reqhub_root . '/includes/auth.php');
+require_once ($reqhub_root . '/database/db.php');
 
-if ($system_id <= 0) {
-    echo json_encode(['error' => 'Invalid system ID']);
-    exit;
+if (!isAuthenticated()) {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    die(json_encode(['success' => false, 'message' => 'Not authenticated']));
 }
 
-// Get system name by ID
-$systemStmt = $pdo->prepare("SELECT name FROM systems WHERE id = ?");
-$systemStmt->execute([$system_id]);
-$system = $systemStmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$system) {
-    echo json_encode(['error' => 'System not found']);
-    exit;
+$system_id = $_GET['system_id'] ?? null;
+if (!$system_id) {
+    http_response_code(400);
+    header('Content-Type: application/json');
+    die(json_encode(['success' => false, 'message' => 'system_id parameter required']));
 }
 
-$systemName = $system['name'];
+$pdo = ReqHubDatabase::getConnection('reqhub');
 
-// Get all DISTINCT roles for this system from access_types
-$rolesStmt = $pdo->prepare("
-    SELECT DISTINCT role
-    FROM access_types
-    WHERE system = ?
-    AND role IS NOT NULL
-    AND role != ''
-    ORDER BY role
-");
-
-$rolesStmt->execute([$systemName]);
-$roles = $rolesStmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Return as JSON
-echo json_encode([
-    'success' => true,
-    'system_id' => $system_id,
-    'system_name' => $systemName,
-    'roles' => array_map(function($r) { return $r['role']; }, $roles)
-]);
+try {
+    // Get the system name
+    $stmt = $pdo->prepare("SELECT name FROM systems WHERE id = ?");
+    $stmt->execute([$system_id]);
+    $system = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$system) {
+        http_response_code(404);
+        header('Content-Type: application/json');
+        die(json_encode(['success' => false, 'message' => 'System not found']));
+    }
+    
+    $system_name = $system['name'];
+    
+    // Get all unique roles for this system from access_types
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT role
+        FROM access_types
+        WHERE system = ?
+        ORDER BY role ASC
+    ");
+    $stmt->execute([$system_name]);
+    $roles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Extract just the role names
+    $role_names = array_map(function($r) { return $r['role']; }, $roles);
+    
+    error_log("Fetched roles for system '$system_name': " . json_encode($role_names));
+    
+    // Return JSON response
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'system_name' => $system_name,
+        'roles' => $role_names
+    ]);
+    
+} catch (PDOException $e) {
+    error_log("Error fetching roles: " . $e->getMessage());
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Database error']);
+}
+?>

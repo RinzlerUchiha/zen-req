@@ -179,3 +179,4 @@ function refreshNotification(PDO $pdo, int $userId): void
         $stmt->execute([':uid' => $userId]);
     }
 }
+?>

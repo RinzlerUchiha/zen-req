@@ -1,126 +1,93 @@
 <?php
-/**
- * Redirect Loop Diagnostic
- * 
- * Place this at: /zen/reqHub/public/diagnose-redirect.php
- * 
- * This page will show you exactly what's happening
- */
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../database/db.php');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+if (!isAuthenticated()) {
+    die('Not authenticated');
 }
 
-error_log("=== DIAGNOSE-REDIRECT.PHP LOADED ===");
-error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
-error_log("Session contents: " . json_encode($_SESSION));
+// Only admins should run this
+$currentUser = getCurrentUser();
+if ($currentUser['reqhub_role'] !== 'Admin') {
+    die('Access denied: Admin only');
+}
 
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Redirect Diagnostic</title>
-    <style>
-        body { font-family: monospace; margin: 20px; background: #f5f5f5; }
-        .section { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #2196F3; }
-        .section h3 { margin-top: 0; }
-        .good { border-left-color: #4CAF50; }
-        .bad { border-left-color: #f44336; }
-        .warn { border-left-color: #ff9800; }
-        pre { background: #f0f0f0; padding: 10px; border-radius: 3px; overflow-x: auto; }
-        code { color: #d32f2f; }
-    </style>
-</head>
-<body>
+$pdo = ReqHubDatabase::getConnection('reqhub');
 
-<h1>ReqHub Redirect Loop Diagnostic</h1>
+echo "<h2>Migrate Departments Table - Add Code Column</h2>";
 
-<!-- Check 1: Session -->
-<div class="section good">
-    <h3>✓ Session Status</h3>
-    <pre>Session ID: <?= session_id() ?>
-Session Status: <?= session_status() === PHP_SESSION_ACTIVE ? 'ACTIVE' : 'INACTIVE' ?>
-</pre>
-</div>
+// Step 1: Check if code column exists
+echo "<h3>Step 1: Check if 'code' column exists...</h3>";
+$stmt = $pdo->query("DESCRIBE departments");
+$columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-<!-- Check 2: ZenHub Session -->
-<div class="section <?= isset($_SESSION['user_id']) ? 'good' : 'bad' ?>">
-    <h3><?= isset($_SESSION['user_id']) ? '✓' : '✗' ?> ZenHub Session</h3>
-    <pre>user_id: <?= $_SESSION['user_id'] ?? 'NOT SET' ?>
-HR_UID: <?= $_SESSION['HR_UID'] ?? 'NOT SET' ?>
-</pre>
-</div>
+$codeColumnExists = false;
+foreach ($columns as $col) {
+    if ($col['Field'] === 'code') {
+        $codeColumnExists = true;
+        break;
+    }
+}
 
-<!-- Check 3: ReqHub Session -->
-<div class="section <?= isset($_SESSION['reqhub_user']) ? 'good' : 'bad' ?>">
-    <h3><?= isset($_SESSION['reqhub_user']) ? '✓' : '✗' ?> ReqHub User Session</h3>
-    <pre><?php 
-if (isset($_SESSION['reqhub_user'])) {
-    echo "Name: " . $_SESSION['reqhub_user']['name'] . "\n";
-    echo "Role: " . $_SESSION['reqhub_user']['reqhub_role'] . "\n";
-    echo "Employee: " . $_SESSION['reqhub_user']['emp_no'] . "\n";
-    echo "Active: " . $_SESSION['reqhub_user']['is_active'] . "\n";
+if ($codeColumnExists) {
+    echo "<p style='color: green;'>✅ 'code' column already exists</p>";
 } else {
-    echo "NOT SET - This is the problem!";
-}
-?>
-</pre>
-</div>
-
-<!-- Check 4: Database Connection -->
-<div class="section warn">
-    <h3>Testing Database Connection</h3>
-    <pre><?php
-require_once __DIR__ . '/../database/db.php';
-
-try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
-    echo "✓ ReqHub database connection: OK\n\n";
+    echo "<p style='color: orange;'>⚠️ 'code' column does not exist. Adding it...</p>";
     
-    // Try a simple query
-    $result = $pdo->query("SELECT COUNT(*) as cnt FROM requests")->fetch();
-    echo "✓ Query test: OK (found " . $result['cnt'] . " requests)\n";
-} catch (Exception $e) {
-    echo "✗ Database error: " . $e->getMessage() . "\n";
+    try {
+        $pdo->query("ALTER TABLE departments ADD COLUMN code VARCHAR(50) UNIQUE AFTER name");
+        echo "<p style='color: green;'>✅ Column added successfully</p>";
+    } catch (Exception $e) {
+        echo "<p style='color: red;'>❌ Error adding column: " . htmlspecialchars($e->getMessage()) . "</p>";
+        exit;
+    }
 }
-?>
-</pre>
-</div>
 
-<!-- Check 5: Current Route -->
-<div class="section warn">
-    <h3>Current Request Info</h3>
-    <pre>REQUEST_URI: <?= $_SERVER['REQUEST_URI'] ?>
-REQUEST_METHOD: <?= $_SERVER['REQUEST_METHOD'] ?>
-SCRIPT_FILENAME: <?= $_SERVER['SCRIPT_FILENAME'] ?>
-PHP_SELF: <?= $_SERVER['PHP_SELF'] ?>
-</pre>
-</div>
+// Step 2: Populate the code column with department names (since name = code)
+echo "<h3>Step 2: Populate 'code' column...</h3>";
 
-<!-- Check 6: What happens if we try dashboard.php directly? -->
-<div class="section warn">
-    <h3>Next Steps</h3>
-    <p>This diagnostic page works fine, right? Then the problem is in <code>dashboard.php</code> itself.</p>
-    <p>The redirect is happening INSIDE dashboard.php, not in the router.</p>
-    <hr>
-    <p><strong>Check your error log for these patterns:</strong></p>
-    <pre>
-=== DASHBOARD.PHP LOADED ===
-Database connection successful
-User: 045-2026-001, Role: Requestor
-Final SQL: SELECT ...
-Query successful - found X requests
-=== DASHBOARD.PHP DATA LOADED ===
-    </pre>
-    <p>If you see any ERROR lines before "=== DASHBOARD.PHP DATA LOADED ===" that's what's causing the redirect.</p>
-</div>
+$stmt = $pdo->query("SELECT id, name FROM departments WHERE code IS NULL OR code = ''");
+$depts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-<!-- Check 7: Try loading dashboard.php -->
-<div class="section">
-    <h3>Test Dashboard</h3>
-    <p><a href="/zen/reqHub/dashboard" style="padding: 10px 20px; background: #2196F3; color: white; text-decoration: none; border-radius: 3px;">Try Dashboard →</a></p>
-    <p style="color: #666; font-size: 12px;">This will redirect if there's an error. Check error log to see why.</p>
-</div>
+if (empty($depts)) {
+    echo "<p style='color: green;'>✅ All departments already have codes</p>";
+} else {
+    echo "<p>Found " . count($depts) . " departments without codes. Populating...</p>";
+    
+    $updated = 0;
+    foreach ($depts as $dept) {
+        try {
+            $stmt = $pdo->prepare("UPDATE departments SET code = name WHERE id = ?");
+            $stmt->execute([$dept['id']]);
+            $updated++;
+            echo "<p style='color: green;'>✅ Updated: " . htmlspecialchars($dept['name']) . " (ID: " . $dept['id'] . ")</p>";
+        } catch (Exception $e) {
+            echo "<p style='color: red;'>❌ Error updating ID " . $dept['id'] . ": " . htmlspecialchars($e->getMessage()) . "</p>";
+        }
+    }
+    echo "<p>Updated " . $updated . " departments</p>";
+}
 
-</body>
-</html>
+// Step 3: Verify
+echo "<h3>Step 3: Verify the migration...</h3>";
+$stmt = $pdo->query("SELECT id, name, code FROM departments ORDER BY name LIMIT 10");
+$verify = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+if (!empty($verify)) {
+    echo "<table border='1' cellpadding='10'>";
+    echo "<tr><th>ID</th><th>Name</th><th>Code</th></tr>";
+    foreach ($verify as $v) {
+        echo "<tr>";
+        echo "<td>" . $v['id'] . "</td>";
+        echo "<td>" . htmlspecialchars($v['name']) . "</td>";
+        echo "<td>" . htmlspecialchars($v['code'] ?? 'NULL') . "</td>";
+        echo "</tr>";
+    }
+    echo "</table>";
+}
+
+echo "<h3>Migration Complete! ✅</h3>";
+echo "<p>The departments table now has a 'code' column populated with department codes.</p>";
+echo "<p>You can now query ZenHub directly and use the numeric ID from the departments table.</p>";
+
+?> 

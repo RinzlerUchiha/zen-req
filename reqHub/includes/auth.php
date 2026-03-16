@@ -173,6 +173,25 @@ function userHasRole($requiredRole) {
 }
 
 /**
+ * Check if user's role is in a list of allowed roles
+ * Useful for pages accessible to multiple roles
+ * 
+ * Example: if (!userHasRoleIn('Requestor', 'Approver')) { die('Access denied'); }
+ */
+function userHasRoleIn(...$allowedRoles) {
+    global $currentUser;
+    
+    if (!$currentUser) {
+        return false;
+    }
+    
+    $userRole = $currentUser['reqhub_role'] ?? null;
+    
+    // Since each user has exactly one role, simple comparison
+    return in_array($userRole, $allowedRoles);
+}
+
+/**
  * Check if current user has exact role (no hierarchy)
  */
 function userHasExactRole($role) {
