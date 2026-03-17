@@ -1,13 +1,23 @@
 <?php
-// require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../database/db.php');
 
+if (!isAuthenticated()) {
+    http_response_code(403);
+    die('Access denied');
+}
 
-if ($_SESSION['user']['role'] !== 'admin') die("Access denied");
+$currentUser = getCurrentUser();
 
-require_once '../includes/db.php';
+if ($currentUser['reqhub_role'] !== 'Admin') {
+    http_response_code(403);
+    die('Access denied: Admin only');
+}
+
+$pdo = ReqHubDatabase::getConnection('reqhub');
 
 // --- Fetch data ---
-$users = $pdo->query("SELECT id, name, user_type FROM users ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$users = $pdo->query("SELECT id, employee_id, reqhub_role as name FROM users ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
 $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $actions = $pdo->query("SELECT id, name FROM actions ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
@@ -84,7 +94,7 @@ foreach ($actions as $act) {
 }
 ?>
 
-<?php include '../includes/header.php'; ?>
+<?php include (__DIR__ . '/../includes/header.php'); ?>
 
 <div class="container-fluid mt-4">
     <h4 class="mb-4">Admin Settings</h4>
@@ -773,7 +783,7 @@ foreach ($actions as $act) {
     overflow-y: auto;
 }
 </style>
-<?php include '../includes/footer.php'; ?>
+<?php include (__DIR__ . '/../includes/footer.php'); ?>
 
 <script>
 $(function(){
