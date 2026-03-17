@@ -40,6 +40,9 @@ $routes = [
     '/chat_fetch' => '/includes/chat_fetch.php',
     '/chat_send' => '/actions/chat_send.php',
     '/getempdept' => '/includes/get_employee_dept.php',
+    '/approve' => '/actions/request_approve_action.php',
+    '/deny' => '/actions/request_deny_action.php',
+    '/served' => '/actions/request_serve_action.php',
 ];
 
 // ============================================================================

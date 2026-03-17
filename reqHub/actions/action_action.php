@@ -1,83 +1,47 @@
 <?php
-require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+require_once ($reqhub_root . '/includes/auth.php');
+require_once ($reqhub_root . '/database/db.php');
 
 header('Content-Type: application/json');
 
-if ($_SESSION['user']['role'] !== 'admin') {
+if (!isAuthenticated() || !userHasRoleIn('Admin')) {
+    http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit;
 }
 
+$pdo = ReqHubDatabase::getConnection('reqhub');
+
 $action = $_POST['action'] ?? '';
-$id = $_POST['id'] ?? null;
-$name = $_POST['name'] ?? '';
+$id     = $_POST['id'] ?? null;
+$name   = trim($_POST['name'] ?? '');
 
 try {
-    if ($action === 'addAction') {
-        if (!$name) {
-            echo json_encode(['success' => false, 'message' => 'Name cannot be empty']);
-            exit;
-        }
 
-        // Insert into actions table only
+    if ($action === 'addAction') {
+
+        if (!$name) throw new Exception("Name required");
+
         $stmt = $pdo->prepare("INSERT INTO actions (name) VALUES (?)");
         $stmt->execute([$name]);
-        $actionId = $pdo->lastInsertId();
 
         echo json_encode([
             'success' => true,
-            'id' => $actionId,
-            'name' => $name,
-            'message' => 'Action added successfully'
-        ]);
-    }
-
-    elseif ($action === 'editAction') {
-        if (!$name || !$id) {
-            echo json_encode(['success' => false, 'message' => 'Invalid data']);
-            exit;
-        }
-
-        // Update actions table
-        $stmt = $pdo->prepare("UPDATE actions SET name = ? WHERE id = ?");
-        $stmt->execute([$name, $id]);
-
-        echo json_encode([
-            'success' => true,
-            'id' => $id,
-            'name' => $name,
-            'message' => 'Action updated successfully'
+            'id' => $pdo->lastInsertId(),
+            'name' => $name
         ]);
     }
 
     elseif ($action === 'deleteAction') {
-        if (!$id && !$name) {
-            echo json_encode(['success' => false, 'message' => 'Invalid data']);
-            exit;
-        }
 
-        // If only name provided, get ID
-        if ($name && !$id) {
-            $stmt = $pdo->prepare("SELECT id FROM actions WHERE name = ?");
-            $stmt->execute([$name]);
-            $result = $stmt->fetch();
-            $id = $result['id'] ?? null;
-        }
+        if (!$id) throw new Exception("ID required");
 
-        // Delete from actions
-        if ($id) {
-            $stmt = $pdo->prepare("DELETE FROM actions WHERE id = ?");
-            $stmt->execute([$id]);
-        }
+        $pdo->prepare("DELETE FROM actions WHERE id = ?")->execute([$id]);
 
-        echo json_encode(['success' => true, 'message' => 'Action deleted successfully']);
+        echo json_encode(['success' => true]);
     }
 
-    else {
-        echo json_encode(['success' => false, 'message' => 'Invalid action']);
-    }
 } catch (Exception $e) {
+    error_log($e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-?>

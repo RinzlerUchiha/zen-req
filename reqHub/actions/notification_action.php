@@ -1,37 +1,44 @@
 <?php
-//session_start();
-require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+require_once ($reqhub_root . '/includes/auth.php');
+require_once ($reqhub_root . '/database/db.php');
 
-requireLogin();
+if (!isAuthenticated()) {
+    http_response_code(403);
+    die('Not authenticated');
+}
 
-$userId  = $_SESSION['user']['id'];
+$pdo = ReqHubDatabase::getConnection('reqhub');
+$currentUser = getCurrentUser();
+
+$stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+$stmt->execute([$currentUser['emp_no']]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$userId = $user['id'];
 $notifId = $_POST['id'] ?? null;
 
+try {
 
-if ($notifId) {
-    $stmt = $pdo->prepare("
-        UPDATE notifications
-        SET is_read = 1
-        WHERE user_id = :uid AND user_id = :uid
-");
-
-    $stmt->execute([
-        ':id'  => $notifId,
-        ':uid' => $userId
-    ]);
-    }else {
-
+    if ($notifId) {
         $stmt = $pdo->prepare("
             UPDATE notifications
             SET is_read = 1
-            WHERE user_id = :uid AND is_read = 0
+            WHERE id = :id AND user_id = :uid
         ");
+        $stmt->execute([':id' => $notifId, ':uid' => $userId]);
+    } else {
+        $stmt = $pdo->prepare("
+            UPDATE notifications
+            SET is_read = 1
+            WHERE user_id = :uid
+        ");
+        $stmt->execute([':uid' => $userId]);
+    }
 
-        $stmt->execute([
-            ':uid' => $userId
-    ]);
-    
-}
-header("Location: ../public/dashboard.php");
-exit;
+    header("Location: /zen/reqHub/public/dashboard");
+    exit;
+
+} catch (Exception $e) {
+    error_log($e->getMessage());
+    die("Error");
+}`
