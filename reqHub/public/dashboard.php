@@ -265,6 +265,8 @@ if (!empty($req['access_type'])) {
 "></div>
 </p>
 
+
+
 </div>
 
 <div class="col-md-6 border-start">
@@ -281,14 +283,16 @@ if (!empty($req['access_type'])) {
 </div>
 </form>
 
-<div id="modalActions" class="mt-3 pt-2 border-top mb-3"></div>
 
-<p class="mt-2 mb-1"><strong>Description:</strong></p>
+<p class="mt-2 mb-1 pt-2 border-top mb-3"><strong>Description:</strong></p>
 <div id="modalDescription"
      style="flex:1;min-height:100px;max-height:250px;overflow-y:auto;
             white-space:pre-wrap;border:1px solid #ddd;
             padding:8px;border-radius:4px;background:#f8f9fa;">
 </div>
+
+<div id="modalActions" class="mt-3 pt-2 border-top mb-3"></div>
+
 </div>
 </div>
 </div>
