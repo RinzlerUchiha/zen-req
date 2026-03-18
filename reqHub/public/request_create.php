@@ -118,7 +118,7 @@ foreach ($accessTypes as $type) {
     }
 </style>
 
-<div class="container mt-4">
+<div class="container-fluid mt-4 px-3 px-lg-5">
     <h2>Create New Request</h2>
 
     <form action="/zen/reqHub/request_create_action" method="POST" id="requestForm">
@@ -173,7 +173,7 @@ foreach ($accessTypes as $type) {
             <div class="row">
                 
                 <!-- COLUMN 1 — ROLES (System-Specific) -->
-                <div class="col-md-3 border-end">
+                <div class="border-end" style="flex: 0 0 15%; max-width: 15%;">
                     <h6>Roles</h6>
                     <div class="list-group" id="roleList">
                         <div class="text-muted small p-2">Select a system first</div>
@@ -181,7 +181,7 @@ foreach ($accessTypes as $type) {
                 </div>
 
                 <!-- COLUMN 2 — MODULES + ACTIONS (System & Role Specific) -->
-                <div class="col-md-6">
+                <div style="flex: 0 0 85%; max-width: 85%;">
                     <h6>Modules & Actions</h6>
 
                     <div id="modulePlaceholder" class="text-muted small p-2">
@@ -203,7 +203,7 @@ foreach ($accessTypes as $type) {
                                 </div>
 
                                 <!-- Modules & Actions in 2-column CSS Grid (no gaps) -->
-                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
                                     <?php foreach ($modules as $module => $actions): ?>
                                         <div class="border rounded p-2" style="background-color: #f8f9fa;">
                                             <!-- Module Header (Compact) -->
@@ -246,8 +246,13 @@ foreach ($accessTypes as $type) {
                     <?php endforeach; ?>
                 </div>
 
-                <!-- COLUMN 3 — SUMMARY -->
-                <div class="col-md-3 border-start">
+                
+
+            </div>
+        </div>
+
+        <!-- COLUMN 3 — SUMMARY -->
+                <div class="mt-3">
                     <h6>Selected Access</h6>
                     <div id="selectedSummary" class="small" style="
                         max-height: 400px;
@@ -260,9 +265,6 @@ foreach ($accessTypes as $type) {
                         <em>No access selected</em>
                     </div>
                 </div>
-
-            </div>
-        </div>
 
         <!-- Remove From -->
         <div class="mb-3">

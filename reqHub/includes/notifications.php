@@ -28,7 +28,7 @@ function refreshNotification(PDO $pdo, int $userId): void
 {
     // Get user role and system
     $stmt = $pdo->prepare("
-        SELECT role, system_assigned 
+        SELECT reqhub_role, system_assigned 
         FROM users 
         WHERE id = :id
     ");
@@ -40,7 +40,7 @@ function refreshNotification(PDO $pdo, int $userId): void
         return;
     }
 
-    $role   = $user['role'];
+    $role = strtolower($user['reqhub_role'] ?? '');
     $system = $user['system_assigned'] ?? null;
 
     $message = null;

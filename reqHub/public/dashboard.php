@@ -252,9 +252,11 @@ if (!empty($req['access_type'])) {
 <p><strong>Requestor:</strong><br><span id="modalName"></span></p>
 <p><strong>System:</strong><br><span id="modalSystem"></span></p>
 
+<p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>
+
 <p><strong>Access Type:</strong><br>
 <div id="modalAccess" class="small" style="
-    max-height: 250px;
+    max-height: 560px;
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -263,22 +265,11 @@ if (!empty($req['access_type'])) {
 "></div>
 </p>
 
-<p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>
-
-<p><strong>Description:</strong></p>
-<div id="modalDescription"
-     style="flex:1;min-height:150px;max-height:250px;overflow-y:auto;
-            white-space:pre-wrap;border:1px solid #ddd;
-            padding:8px;border-radius:4px;background:#f8f9fa;">
-</div>
-
-<div id="modalActions" class="mt-3 pt-2 border-top"></div>
-
 </div>
 
 <div class="col-md-6 border-start">
 <h6>Chat</h6>
-<div id="chatBox" style="height:350px; overflow-y:auto;"
+<div id="chatBox" style="height:430px; overflow-y:auto;"
      class="border p-2 mb-2"></div>
 
 <form id="chatForm">
@@ -289,6 +280,15 @@ if (!empty($req['access_type'])) {
 <button class="btn btn-primary">Send</button>
 </div>
 </form>
+
+<div id="modalActions" class="mt-3 pt-2 border-top mb-3"></div>
+
+<p class="mt-2 mb-1"><strong>Description:</strong></p>
+<div id="modalDescription"
+     style="flex:1;min-height:100px;max-height:250px;overflow-y:auto;
+            white-space:pre-wrap;border:1px solid #ddd;
+            padding:8px;border-radius:4px;background:#f8f9fa;">
+</div>
 </div>
 </div>
 </div>
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <strong>Role: ${role}</strong>
                     </button>
                 </h2>
-                <div id="accordion${accordionIndex}" class="accordion-collapse collapse show" data-bs-parent="#accessAccordion">
+                <div id="accordion${accordionIndex}" class="accordion-collapse collapse" data-bs-parent="#accessAccordion">
                     <div class="accordion-body p-2">
             `;
             
@@ -401,11 +401,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (role === 'Approver' && data.status === 'pending') {
             console.log('Showing Approver actions');
             container.innerHTML = `
-                <form method="post" action="/zen/reqHub/request_approve_action" class="d-inline">
+                <form method="post" action="/zen/reqHub/approve" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-success btn-sm">Approve</button>
                 </form>
-                <form method="post" action="/zen/reqHub/request_deny_action" class="d-inline ms-2">
+                <form method="post" action="/zen/reqHub/deny" class="d-inline ms-2">
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-danger btn-sm">Deny</button>
                 </form>`;
@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (role === 'Admin' && data.status === 'approved' && data.adminStatus !== 'served') {
             console.log('Showing Admin actions');
             container.innerHTML = `
-                <form method="post" action="/zen/reqHub/request_serve_action">
+                <form method="post" action="/zen/reqHub/served">
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-primary btn-sm">Mark as Served</button>
                 </form>`;
