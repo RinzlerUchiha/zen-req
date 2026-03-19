@@ -15,10 +15,66 @@ if ($currentUser['reqhub_role'] !== 'Admin') {
 }
 
 $pdo = ReqHubDatabase::getConnection('reqhub');
+$hrPdo = ReqHubDatabase::getConnection('hr'); // HR database connection
 
 // --- Fetch data ---
-$users = $pdo->query("SELECT id, employee_id, reqhub_role as name FROM users ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
+// Get users from reqhub
+$users = $pdo->query("SELECT id, employee_id, user_type FROM users ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
+
+// Get full names from HR database
+$userNames = [];
+try {
+    $hrUsers = $hrPdo->query("
+        SELECT bi_empno, CONCAT(COALESCE(bi_empfname, ''), ' ', COALESCE(bi_empmname, ''), ' ', COALESCE(bi_emplname, '')) as full_name
+        FROM tbl201_basicinfo
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($hrUsers as $user) {
+        $userNames[$user['bi_empno']] = trim($user['full_name']);
+    }
+} catch (Exception $e) {
+    // If query fails, names will be empty and fall back to employee_id
+}
+
+// Add user_name to users
+foreach ($users as &$user) {
+    $user['user_name'] = $userNames[$user['employee_id']] ?? $user['employee_id'];
+}
+
+// Get systems from reqhub, then enrich with descriptions from HR database
 $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch system descriptions from HR database
+$systemDescriptions = [];
+try {
+    $hrSystems = $hrPdo->query("
+        SELECT system_id, sys_desc
+        FROM tbl_systems
+    ")->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($hrSystems as $sys) {
+        // Store by system_id (which is the code like HRIS, abs, ATD, etc)
+        $key = strtolower($sys['system_id']);
+        $systemDescriptions[$key] = $sys['sys_desc'];
+    }
+} catch (Exception $e) {
+    // If query fails, descriptions will be empty and fall back to system name
+}
+
+// Add full_name to systems by matching with system_id (code)
+$systemsWithFullNames = [];
+foreach ($systems as $system) {
+    $systemCodeLower = strtolower(trim($system['name']));
+    $system['full_name'] = $systemDescriptions[$systemCodeLower] ?? $system['name'];
+    $systemsWithFullNames[] = $system;
+}
+$systems = $systemsWithFullNames;
+
+// Test: output full_name to HTML comment so we can see if it's being set
+error_log("Systems with full_name:");
+foreach ($systems as $sys) {
+    error_log("ID: {$sys['id']}, Name: {$sys['name']}, FullName: {$sys['full_name']}");
+}
 $departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $actions = $pdo->query("SELECT id, name FROM actions ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $modules = $pdo->query("SELECT id, name FROM modules ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
@@ -251,6 +307,11 @@ foreach ($actions as $act) {
                 <input type="text" class="form-control search-input" id="searchSystems" placeholder="Search systems..." style="max-width: 300px;">
             </div>
             <div class="systems-list">
+                <!-- DEBUG: Systems being rendered -->
+                <?php foreach ($systems as $system): ?>
+                    <!-- System ID: <?= $system['id'] ?>, Name: <?= $system['name'] ?>, FullName: <?= $system['full_name'] ?> -->
+                <?php endforeach; ?>
+                
                 <?php foreach ($systems as $system): ?>
                     <div class="system-item card p-3 mb-3" data-system-id="<?= $system['id'] ?>">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -260,11 +321,11 @@ foreach ($actions as $act) {
                                         data-type="system"
                                         data-id="<?= $system['id'] ?>"
                                         title="Click to edit">
-                                    <?= htmlspecialchars($system['name']) ?>
+                                    <?= htmlspecialchars($system['full_name'] ?? $system['name']) ?>
                                 </strong>
                             </div>
                             <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="<?= $system['id'] ?>" data-system-name="<?= htmlspecialchars($system['name'], ENT_QUOTES) ?>">Duplicate</button>
+                                <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="<?= $system['id'] ?>" data-system-name="<?= htmlspecialchars($system['full_name'] ?? $system['name'], ENT_QUOTES) ?>">Duplicate</button>
                                 <button class="btn btn-sm btn-danger" data-action="deleteSystem" data-system-id="<?= $system['id'] ?>">×</button>
                             </div>
                         </div>
@@ -347,7 +408,7 @@ foreach ($actions as $act) {
                                         <button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>
                                     <?php endif; ?>
                                     <div>
-                                        <strong><?= htmlspecialchars($user['name']) ?></strong>
+                                        <strong><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></strong>
                                         <br>
                                         <small class="text-muted"><?= htmlspecialchars($user['user_type']) ?></small>
                                     </div>
@@ -402,7 +463,7 @@ foreach ($actions as $act) {
                                 <button class="btn btn-sm btn-secondary me-2" 
                                         data-action="editUser" 
                                         data-user-id="<?= $user['id'] ?>" 
-                                        data-name="<?= htmlspecialchars($user['name'], ENT_QUOTES) ?>"
+                                        data-name="<?= htmlspecialchars($user['user_name'] ?? $user['employee_id'], ENT_QUOTES) ?>"
                                         data-user-type="<?= htmlspecialchars($user['user_type']) ?>">Edit</button>
                                 <button class="btn btn-sm btn-danger" data-action="deleteUser" data-user-id="<?= $user['id'] ?>">×</button>
                             </div>
@@ -417,7 +478,7 @@ foreach ($actions as $act) {
 
 <!-- SINGLE MODAL -->
 <div class="modal fade" id="accessTypeModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog">
     <form id="accessTypeForm" method="post" autocomplete="off">
       <div class="modal-content">
         <div class="modal-header">
@@ -731,15 +792,24 @@ foreach ($actions as $act) {
 }
 
 /* ============================= */
-/* MODULE MODAL CUSTOM WIDTH */
+/* MODULE MODAL CUSTOM WIDTH - REMOVED (use Bootstrap classes instead) */
 /* ============================= */
-#accessTypeModal.show .modal-dialog[class*="modal"] {
-    max-width: 1350px !important;
+
+/* Explicit modal sizes since Bootstrap classes aren't applying */
+#accessTypeModal .modal-dialog.modal-sm {
+    max-width: 300px !important;
 }
 
-/* Ensure module modals specifically get 1350px */
-#accessTypeModal.show .modal-dialog {
-    max-width: 1350px !important;
+#accessTypeModal .modal-dialog.modal-md {
+    max-width: 500px !important;
+}
+
+#accessTypeModal .modal-dialog.modal-lg {
+    max-width: 800px !important;
+}
+
+#accessTypeModal .modal-dialog.modal-xl {
+    max-width: 1200px !important;
 }
 
 /* Prevent modal body scrollbar */
@@ -786,6 +856,13 @@ foreach ($actions as $act) {
 <?php include (__DIR__ . '/../includes/footer.php'); ?>
 
 <script>
+// Check if jQuery is loaded
+if (typeof $ === 'undefined') {
+    console.error('jQuery is NOT loaded! Buttons will not work.');
+} else {
+    console.log('jQuery is loaded successfully');
+}
+
 $(function(){
 
     const modal = new bootstrap.Modal(document.getElementById('accessTypeModal'));
@@ -796,6 +873,8 @@ $(function(){
     let defaultActionIds = <?= json_encode($defaultActionIds ?? []) ?>;
 
     let duplicateSystemCounter = {};
+
+    // Do NOT set a default modal size - let the click handler set it
 
     // ==============================
     // HELPER FUNCTIONS
@@ -832,12 +911,9 @@ $(function(){
             label = 'Actions';
         } else if (action.includes('Role')) {
             selected = $('.role-permission-checkbox:checked').map(function() {
-                const moduleId = $(this).data('module');
-                const moduleName = $(`input[data-module="${moduleId}"]`).closest('.role-modal-module-card').find('strong').text();
-                const actionName = $(this).closest('label').find('span').text();
-                return { module: moduleName, action: actionName };
+                return $(this).closest('label').find('span').text();
             }).get();
-            label = 'Modules & Actions';
+            label = 'Actions';
         } else if (action.includes('System')) {
             selected = $('.system-role-checkbox:checked').map(function() {
                 return $(this).closest('label').find('span').text();
@@ -861,25 +937,11 @@ $(function(){
                 html += `<div style="margin-left: 10px;">• ${htmlEscape(action)}</div>`;
             });
         } else if (action.includes('Role')) {
-            // For roles: group by module
-            let grouped = {};
-            $('.role-permission-checkbox:checked').each(function() {
-                const moduleId = $(this).data('module');
-                const moduleCard = $(`.module-master-checkbox[data-module="${moduleId}"]`).closest('.role-modal-module-card');
-                const moduleName = moduleCard.find('strong').text();
-                const actionName = $(this).closest('label').find('span').text();
-
-                if (!grouped[moduleName]) grouped[moduleName] = [];
-                grouped[moduleName].push(actionName);
+            // For roles: just list actions like modules does
+            html = '<strong>' + label + '</strong><br>';
+            selected.forEach(action => {
+                html += `<div style="margin-left: 10px;">• ${htmlEscape(action)}</div>`;
             });
-
-            for (let module in grouped) {
-                html += `<strong>${htmlEscape(module)}</strong><br>`;
-                grouped[module].forEach(action => {
-                    html += `<div style="margin-left: 10px;">• ${htmlEscape(action)}</div>`;
-                });
-                html += '<br>';
-            }
         } else if (action.includes('System')) {
             // For systems: just list roles
             html = '<strong>' + label + '</strong><br>';
@@ -1033,6 +1095,7 @@ $(function(){
 
                 const moduleActions = moduleAssignments[mid] || [];
 
+                // Show ONLY actions assigned to this module
                 moduleActions.forEach(function(actionId){
                     const actionItem = $(`.action-item`).find(`[data-id="${actionId}"]`).closest('.action-item');
 
@@ -1045,7 +1108,7 @@ $(function(){
                                     class="role-permission-checkbox"
                                     data-module="${mid}"
                                     value="${actionId}" class="me-1">
-                                ${actionName}
+                                <span>${actionName}</span>
                             </label>
                         `;
                     }
@@ -1200,7 +1263,7 @@ $(function(){
             hasChanges = true;
             $(this).attr('contenteditable', 'false');
 
-            $.post('../actions/inline_edit_action.php', {
+            $.post('/zen/reqHub/actions/inline_edit_action.php', {
                 action: 'editLabel',
                 type: type,
                 id: id,
@@ -1260,23 +1323,23 @@ $(function(){
 
         switch(action) {
             case 'deleteAction':
-                url = '../actions/action_action.php';
+                url = '/zen/reqHub/actions/action_action.php';
                 data.id = button.data('id');
                 break;
             case 'deleteModule':
-                url = '../actions/module_action.php';
+                url = '/zen/reqHub/actions/module_action.php';
                 data.module_id = button.data('module-id');
                 break;
             case 'deleteRole':
-                url = '../actions/role_action.php';
+                url = '/zen/reqHub/actions/role_action.php';
                 data.role_id = button.data('role-id');
                 break;
             case 'deleteSystem':
-                url = '../actions/system_action.php';
+                url = '/zen/reqHub/actions/system_action.php';
                 data.system_id = button.data('system-id');
                 break;
             case 'deleteUser':
-                url = '../actions/user_action.php';
+                url = '/zen/reqHub/actions/user_action.php';
                 data.user_id = button.data('user-id');
                 break;
             default:
@@ -1321,15 +1384,34 @@ $(function(){
     $(document).on('click', '[data-action]:not([data-action^="delete"]):not([data-action="duplicateSystem"])', function(){
 
         const action = $(this).data('action');
+        console.log('Button clicked! Action:', action);
         const modalDialog = $('#accessTypeModal .modal-dialog');
 
+        // Remove all size classes
         modalDialog.removeClass('modal-sm modal-md modal-lg modal-xl');
-        if(action.includes('Action')) modalDialog.addClass('modal-sm');
-        else if(action.includes('Role')) modalDialog.addClass('modal-xl');
-        else if(action.includes('Module')) modalDialog.addClass('modal-xl');
-        else if(action.includes('System')) modalDialog.addClass('modal-xl');
-        else if(action.includes('User')) modalDialog.addClass('modal-lg');
-        else modalDialog.addClass('modal-md');
+        
+        // Force reflow to ensure class removal takes effect
+        void modalDialog[0].offsetWidth;
+        
+        // Add new size class
+        if(action.includes('Action')) {
+            modalDialog.addClass('modal-sm');
+        }
+        else if(action.includes('Role')) {
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('Module')) {
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('System')) {
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('User')) {
+            modalDialog.addClass('modal-lg');
+        }
+        else {
+            modalDialog.addClass('modal-md');
+        }
 
         $('#modalAction').val(action);
         $('#modalRole').val($(this).data('role-id')||'');
@@ -1438,6 +1520,7 @@ $(function(){
 
                 const moduleActions = moduleAssignments[mid] || [];
 
+                // Show ONLY actions assigned to this module
                 moduleActions.forEach(function(actionId){
                     const actionItem = $(`.action-item`).find(`[data-id="${actionId}"]`).closest('.action-item');
 
@@ -1450,7 +1533,7 @@ $(function(){
                                     class="role-permission-checkbox"
                                     data-module="${mid}"
                                     value="${actionId}" class="me-1">
-                                ${actionName}
+                                <span>${actionName}</span>
                             </label>
                         `;
                     }
@@ -1481,6 +1564,11 @@ $(function(){
                 });
             }
 
+            // Add change listener for role permission checkboxes IMMEDIATELY
+            $('#permissionsContainer').off('change', '.role-permission-checkbox').on('change', '.role-permission-checkbox', function(){
+                updateModalSummary();
+            });
+
             // Add search functionality for role modules
             setTimeout(() => {
                 $(document).off('keyup', '#searchRoleModules').on('keyup', '#searchRoleModules', function(){
@@ -1489,11 +1577,6 @@ $(function(){
                         const text = $(this).find('strong').text().toLowerCase();
                         $(this).toggle(text.includes(query));
                     });
-                });
-                
-                // Add change listener for role permission checkboxes
-                $('#permissionsContainer').off('change', '.role-permission-checkbox').on('change', '.role-permission-checkbox', function(){
-                    updateModalSummary();
                 });
                 
                 // Initial summary update
@@ -1609,17 +1692,18 @@ $(function(){
                         <label class="form-label">Department/Store(s)</label>
                         <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">`;
             
-            // Populate from PHP data
-            <?php foreach ($departments as $d): ?>
-                const dId = <?= $d['id'] ?>;
-                const dName = '<?= htmlspecialchars($d['name']) ?>';
+            // Populate from JavaScript data
+            const departmentsData = <?= json_encode($departments) ?>;
+            departmentsData.forEach(dept => {
+                const dId = dept.id;
+                const dName = dept.name;
                 const isDeptSelected = selectedDepts.includes(dId);
                 const checkIdDept = `dept-${dId}`;
                 html += `<div class="form-check">
                             <input type="checkbox" class="form-check-input department-checkbox" id="${checkIdDept}" value="${dId}" ${isDeptSelected ? 'checked' : ''}>
                             <label class="form-check-label" for="${checkIdDept}">${dName}</label>
                         </div>`;
-            <?php endforeach; ?>
+            });
 
             html += `</div></div>`;
 
@@ -1653,6 +1737,47 @@ $(function(){
     });
 
     // ==============================
+    // RE-APPLY SIZE WHEN MODAL SHOWS
+    // ==============================
+    $('#accessTypeModal').on('show.bs.modal', function() {
+        const action = $('#modalAction').val();
+        const modalDialog = $('#accessTypeModal .modal-dialog');
+        
+        console.log('Modal showing, action:', action);
+        
+        // Remove all size classes
+        modalDialog.removeClass('modal-sm modal-md modal-lg modal-xl');
+        
+        // Add correct size
+        if(action.includes('Action')) {
+            console.log('Setting modal-sm');
+            modalDialog.addClass('modal-sm');
+        }
+        else if(action.includes('Role')) {
+            console.log('Setting modal-xl');
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('Module')) {
+            console.log('Setting modal-xl');
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('System')) {
+            console.log('Setting modal-xl');
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('User')) {
+            console.log('Setting modal-lg');
+            modalDialog.addClass('modal-lg');
+        }
+        else {
+            console.log('Setting modal-md');
+            modalDialog.addClass('modal-md');
+        }
+        
+        console.log('Modal-dialog classes:', modalDialog.attr('class'));
+    });
+
+    // ==============================
     // DUPLICATE SYSTEM
     // ==============================
     $(document).on('click', '[data-action="duplicateSystem"]', function(){
@@ -1667,7 +1792,7 @@ $(function(){
 
         const newSystemName = sourceSystemName + ' Copy ' + duplicateSystemCounter[sourceSystemId];
 
-        $.post('../actions/system_action.php', {
+        $.post('/zen/reqHub/actions/system_action.php', {
             action: 'duplicateSystem',
             source_system_id: sourceSystemId,
             new_system_name: newSystemName
@@ -1739,6 +1864,9 @@ $(function(){
 
             $('.systems-list').append(html);
             systemRoles[res.id] = sourceRoles;
+            
+            // Show success message
+            alert('System duplicated successfully: ' + newSystemName);
         }, 'json');
     });
 
@@ -1866,16 +1994,16 @@ $(function(){
                     action_id: $(this).val()
                 });
             });
-            url='../actions/role_action.php';
+            url='/zen/reqHub/actions/role_action.php';
         }
 
         if(action.includes('Action')){
-            url='../actions/action_action.php';
+            url='/zen/reqHub/actions/action_action.php';
             data.id = $('#modalActionId').val();
         }
 
         if(action.includes('Module')){
-            url='../actions/module_action.php';
+            url='/zen/reqHub/actions/module_action.php';
             data.module_id = $('#modalModule').val();
             data.selected_actions = [];
             $('.module-action-checkbox:checked').each(function(){
@@ -1884,7 +2012,7 @@ $(function(){
         }
 
         if(action.includes('System')){
-            url='../actions/system_action.php';
+            url='/zen/reqHub/actions/system_action.php';
             data.system_id = $('#modalSystem').val();
             data.role_ids = [];
             $('.system-role-checkbox:checked').each(function(){
@@ -1893,7 +2021,7 @@ $(function(){
         }
 
         if(action.includes('User')){
-            url='../actions/user_action.php';
+            url='/zen/reqHub/actions/user_action.php';
             data.user_id = $('#modalUser').val();
             data.user_type = $('#permissionsContainer select[name="user_type"]').val();
             data.system_ids = [];
@@ -1910,8 +2038,12 @@ $(function(){
             });
         }
 
+        console.log('Posting to:', url);
+        console.log('Data:', data);
+
         $.post(url, data, function(res){
             submitBtn.prop('disabled', false).text(originalText);
+            console.log('Response:', res);
 
             if(!res.success){
                 alert(res.message);
@@ -2375,6 +2507,11 @@ $(function(){
             $('#modalInputGroup').hide();
         }, 'json').always(function() {
             submitBtn.prop('disabled', false).text(originalText);
+        }).fail(function(xhr, status, error){
+            console.error('AJAX Error:', status, error);
+            console.error('Response:', xhr.responseText);
+            alert('Error: ' + error + '\n\nCheck browser console for details');
+            submitBtn.prop('disabled', false).text(originalText);
         });
     });
 
@@ -2540,6 +2677,37 @@ $(function(){
         $('#modalSummary').html('<em>None selected</em>');
         $('#summaryColumn').hide();
         $(document).off('change', '.user-type-select');
+    });
+
+    // ==============================
+    // RE-APPLY SIZE ON SHOW
+    // ==============================
+    $('#accessTypeModal').on('show.bs.modal', function () {
+        const action = $('#modalAction').val();
+        const modalDialog = $('#accessTypeModal .modal-dialog');
+        
+        // Remove all size classes
+        modalDialog.removeClass('modal-sm modal-md modal-lg modal-xl');
+        
+        // Re-apply the correct size based on action
+        if(action.includes('Action')) {
+            modalDialog.addClass('modal-sm');
+        }
+        else if(action.includes('Role')) {
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('Module')) {
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('System')) {
+            modalDialog.addClass('modal-xl');
+        }
+        else if(action.includes('User')) {
+            modalDialog.addClass('modal-lg');
+        }
+        else {
+            modalDialog.addClass('modal-md');
+        }
     });
 
 });

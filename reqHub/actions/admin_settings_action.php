@@ -1,10 +1,25 @@
 <?php
-// admin_settings_action.php — Unified backend for all Admin Settings tabs (PDO)
-// Covers: Actions, Modules, Roles, Users, Approver, Systems
-// Handles: add, update, delete, rename, duplicate, get_module_actions, get_role_perms
+/**
+ * Admin Settings Action Handler
+ * File: /zen/reqHub/actions/admin_settings_action.php
+ */
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
+
 header('Content-Type: application/json');
+
+requireRole('Admin');
+
+try {
+    $pdo = ReqHubDatabase::getConnection('reqhub');
+} catch (Exception $e) {
+    die(json_encode(['success' => false, 'message' => 'Database connection failed']));
+}
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 $type   = $_POST['type']   ?? $_GET['type']   ?? '';
@@ -260,3 +275,4 @@ switch ($action) {
     default:
         respond(false, 'Unknown action.');
 }
+?>

@@ -1,5 +1,25 @@
 <?php
+/**
+ * System Management
+ * File: /zen/reqHub/actions/system_action.php
+ */
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
+
+header('Content-Type: application/json');
+
+requireRole('Admin');
+
+try {
+    $pdo = ReqHubDatabase::getConnection('reqhub');
+} catch (Exception $e) {
+    die(json_encode(['success' => false, 'message' => 'Database connection failed']));
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
@@ -154,7 +174,6 @@ try {
             break;
 
         case 'getSystemRoles':
-            // AJAX endpoint to fetch fresh system role data with permissions
             $systemId = intval($_GET['system_id'] ?? 0);
 
             if (!$systemId) {
@@ -291,3 +310,4 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+?>

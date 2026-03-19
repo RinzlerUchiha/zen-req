@@ -4,25 +4,29 @@
  * File: /zen/reqHub/actions/system_roles_action.php
  */
 
-require_once ($reqhub_root . '/includes/auth.php');
-require_once ($reqhub_root . '/database/db.php');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../database/db.php');
+
+header('Content-Type: application/json');
 
 if (!isAuthenticated()) {
     http_response_code(401);
-    header('Content-Type: application/json');
     die(json_encode(['success' => false, 'message' => 'Not authenticated']));
 }
 
 $system_id = $_GET['system_id'] ?? null;
 if (!$system_id) {
     http_response_code(400);
-    header('Content-Type: application/json');
     die(json_encode(['success' => false, 'message' => 'system_id parameter required']));
 }
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
-
 try {
+    $pdo = ReqHubDatabase::getConnection('reqhub');
+    
     // Get the system name
     $stmt = $pdo->prepare("SELECT name FROM systems WHERE id = ?");
     $stmt->execute([$system_id]);
@@ -30,7 +34,6 @@ try {
     
     if (!$system) {
         http_response_code(404);
-        header('Content-Type: application/json');
         die(json_encode(['success' => false, 'message' => 'System not found']));
     }
     
@@ -52,7 +55,6 @@ try {
     error_log("Fetched roles for system '$system_name': " . json_encode($role_names));
     
     // Return JSON response
-    header('Content-Type: application/json');
     echo json_encode([
         'success' => true,
         'system_name' => $system_name,
@@ -62,7 +64,6 @@ try {
 } catch (PDOException $e) {
     error_log("Error fetching roles: " . $e->getMessage());
     http_response_code(500);
-    header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Database error']);
 }
 ?>

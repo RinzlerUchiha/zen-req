@@ -1,10 +1,25 @@
 <?php
+/**
+ * User Management
+ * File: /zen/reqHub/actions/user_action.php
+ */
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 
-if ($_SESSION['user']['role'] !== 'admin') die(json_encode(['success' => false, 'message' => 'Access denied']));
-
 header('Content-Type: application/json');
+
+requireRole('Admin');
+
+try {
+    $pdo = ReqHubDatabase::getConnection('reqhub');
+} catch (Exception $e) {
+    die(json_encode(['success' => false, 'message' => 'Database connection failed']));
+}
 
 $action = $_POST['action'] ?? null;
 

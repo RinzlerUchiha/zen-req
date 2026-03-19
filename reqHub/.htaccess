@@ -1,9 +1,7 @@
 RewriteEngine On
-# RewriteBase /prosperityph/pi/
-# RewriteRule \.(js|css|ico|gif|jpg|png|xml|html|swf|ttf|eot)$ - [NC,L]
 
-# RewriteRule ^admin_template/(.*)$ /prosperityph/admin_template/$1 [NC,L]
-# RewriteRule ^assets/(.*)$ /prosperityph/assets/$1 [NC,L]
+# Exclude /actions/ folder - let PHP files work directly
+RewriteCond %{REQUEST_URI} !^/actions/
 
 RewriteRule ^index\\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-d
