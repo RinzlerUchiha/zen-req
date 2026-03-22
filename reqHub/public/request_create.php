@@ -108,17 +108,17 @@ foreach ($accessTypes as $type) {
         <div class="mb-4">
             <label class="form-label fw-bold">Access Types</label>
 
-            <div class="row g-3">
-                <!-- COLUMN 1: Roles (Radio Buttons) -->
-                <div class="col-md-2">
-                    <h6>Roles</h6>
-                    <div id="roleList" class="border rounded p-3" style="background-color: #f9f9f9; min-height: 200px;">
-                        <div class="text-muted small">Select a system first</div>
-                    </div>
-                </div>
+            <!-- Roles Dropdown -->
+            <div class="mb-3">
+                <label class="form-label">Select Role (Auto-selects all its modules)</label>
+                <select id="roleSelect" class="form-select">
+                    <option value="">-- Choose a role --</option>
+                </select>
+            </div>
 
-                <!-- COLUMN 2: Modules & Actions (Compact) -->
-                <div class="col-md-5">
+            <div class="row g-3">
+                <!-- COLUMN 2: Modules & Actions (62% width) -->
+                <div style="flex: 0 0 62.333333%; max-width: 62.333333%;">
                     <h6>Modules & Actions</h6>
                     
                     <!-- Search Bar -->
@@ -132,11 +132,11 @@ foreach ($accessTypes as $type) {
                     </div>
                 </div>
 
-                <!-- COLUMN 3: Summary (Horizontal scrollable cards) -->
-                <div class="col-md-5">
+                <!-- COLUMN 3: Summary (38% width, 2-column grid) -->
+                <div style="flex: 0 0 37.666667%; max-width: 37.666667%;">
                     <h6>Selected Access</h6>
-                    <div id="summaryContainer" class="border rounded p-3" style="max-height: 600px; overflow-x: auto; overflow-y: auto; background-color: #fafafa; display: flex; gap: 12px; flex-wrap: nowrap; padding: 12px;">
-                        <div class="text-muted small flex-shrink-0">No access selected</div>
+                    <div id="summaryContainer" class="border rounded p-3" style="max-height: 600px; overflow-y: auto; background-color: #fafafa; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px;">
+                        <div class="text-muted small" style="grid-column: 1 / -1;">No access selected</div>
                     </div>
                 </div>
             </div>
@@ -172,7 +172,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const departmentChoices = new Choices('#departmentSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
 
     const systemSelect = document.getElementById("systemSelect");
-    const roleList = document.getElementById("roleList");
+    const roleSelect = document.getElementById("roleSelect");
     const modulesDisplay = document.getElementById("modulesDisplay");
     const summaryContainer = document.getElementById("summaryContainer");
     const searchModules = document.getElementById("searchModules");
@@ -202,33 +202,87 @@ document.addEventListener("DOMContentLoaded", function() {
         // Group by module
         const grouped = {};
         toDisplay.forEach(type => {
-            if (!grouped[type.module]) grouped[type.module] = [];
-            grouped[type.module].push(type);
+            if (!grouped[type.module]) grouped[type.module] = {};
+            // Use action name as key to deduplicate - we only need one entry per action per module
+            if (!grouped[type.module][type.actions]) {
+                grouped[type.module][type.actions] = type;
+            }
         });
 
-        // Display grouped modules in cards
-        Object.entries(grouped).forEach(([moduleName, actions]) => {
+        // Display grouped modules in cards like the photo
+        Object.entries(grouped).forEach(([moduleName, actionsMap]) => {
+            const actions = Object.values(actionsMap); // Convert back to array
+            
             const moduleCard = document.createElement("div");
-            moduleCard.style.border = "1px solid #ddd";
+            moduleCard.className = "module-card";
+            moduleCard.style.border = "1px solid #555";
             moduleCard.style.borderRadius = "4px";
             moduleCard.style.padding = "10px";
-            moduleCard.style.backgroundColor = "#f8f9fa";
+            moduleCard.style.backgroundColor = "#2a2a2a";
+            moduleCard.style.minHeight = "250px";
+            moduleCard.style.display = "flex";
+            moduleCard.style.flexDirection = "column";
 
-            const moduleTitle = document.createElement("div");
+            // Module header with checkbox and name and action count
+            const headerDiv = document.createElement("div");
+            headerDiv.style.display = "flex";
+            headerDiv.style.justifyContent = "space-between";
+            headerDiv.style.alignItems = "flex-start";
+            headerDiv.style.marginBottom = "10px";
+            headerDiv.style.paddingBottom = "8px";
+            headerDiv.style.borderBottom = "1px solid #444";
+            headerDiv.style.gap = "8px";
+
+            // Module checkbox
+            const moduleCheckbox = document.createElement("input");
+            moduleCheckbox.type = "checkbox";
+            moduleCheckbox.className = "module-checkbox";
+            moduleCheckbox.style.width = "16px";
+            moduleCheckbox.style.height = "16px";
+            moduleCheckbox.style.marginTop = "2px";
+            moduleCheckbox.style.cursor = "pointer";
+            moduleCheckbox.style.flexShrink = "0";
+
+            const moduleTitle = document.createElement("label");
             moduleTitle.style.fontWeight = "bold";
-            moduleTitle.style.fontSize = "0.85rem";
-            moduleTitle.style.marginBottom = "8px";
+            moduleTitle.style.fontSize = "0.9rem";
+            moduleTitle.style.color = "#fff";
             moduleTitle.style.wordBreak = "break-word";
+            moduleTitle.style.flex = "1";
+            moduleTitle.style.cursor = "pointer";
+            moduleTitle.style.marginBottom = "0";
             moduleTitle.textContent = moduleName;
 
-            moduleCard.appendChild(moduleTitle);
+            const badge = document.createElement("span");
+            badge.style.backgroundColor = "#555";
+            badge.style.color = "#fff";
+            badge.style.padding = "3px 6px";
+            badge.style.borderRadius = "3px";
+            badge.style.fontSize = "0.7rem";
+            badge.style.fontWeight = "bold";
+            badge.style.whiteSpace = "nowrap";
+            badge.style.flexShrink = "0";
+            badge.textContent = actions.length + " action" + (actions.length !== 1 ? "s" : "");
+
+            headerDiv.appendChild(moduleCheckbox);
+            headerDiv.appendChild(moduleTitle);
+            headerDiv.appendChild(badge);
+            moduleCard.appendChild(headerDiv);
+
+            // Actions in 2-column grid
+            const actionsGrid = document.createElement("div");
+            actionsGrid.style.display = "grid";
+            actionsGrid.style.gridTemplateColumns = "1fr 1fr";
+            actionsGrid.style.gap = "8px";
+            actionsGrid.style.flex = "1";
+
+            const actionCheckboxes = [];
 
             actions.forEach(type => {
                 const actionDiv = document.createElement("div");
-                actionDiv.style.marginBottom = "6px";
                 actionDiv.style.display = "flex";
                 actionDiv.style.alignItems = "flex-start";
-                actionDiv.style.gap = "4px";
+                actionDiv.style.gap = "6px";
 
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
@@ -240,28 +294,62 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.dataset.role = type.role;
                 checkbox.dataset.module = type.module;
                 checkbox.dataset.name = type.actions;
-                checkbox.style.width = "14px";
-                checkbox.style.height = "14px";
-                checkbox.style.marginRight = "0";
-                checkbox.style.marginTop = "2px";
+                checkbox.style.width = "16px";
+                checkbox.style.height = "16px";
+                checkbox.style.marginTop = "1px";
                 checkbox.style.flexShrink = "0";
-                checkbox.addEventListener("change", updateSummary);
+                checkbox.style.cursor = "pointer";
+                
+                actionCheckboxes.push(checkbox);
+
+                checkbox.addEventListener("change", function() {
+                    // Remove from auto-selected if user manually toggles
+                    if (this.checked && !autoSelectedItems.has(this.value)) {
+                        // Manually checked - not auto
+                    } else if (!this.checked && autoSelectedItems.has(this.value)) {
+                        // Manually unchecked - remove from auto
+                        autoSelectedItems.delete(this.value);
+                    }
+                    
+                    // Update module checkbox state
+                    const allChecked = actionCheckboxes.every(cb => cb.checked);
+                    const anyChecked = actionCheckboxes.some(cb => cb.checked);
+                    moduleCheckbox.checked = allChecked;
+                    moduleCheckbox.indeterminate = anyChecked && !allChecked;
+                    
+                    updateSummary();
+                });
 
                 const label = document.createElement("label");
                 label.htmlFor = `access_${type.id}`;
                 label.style.marginBottom = "0";
                 label.style.cursor = "pointer";
-                label.style.fontSize = "0.75rem";
+                label.style.fontSize = "0.8rem";
                 label.style.userSelect = "none";
                 label.style.wordBreak = "break-word";
-                label.style.lineHeight = "1.2";
-                label.textContent = "• " + type.actions;
+                label.style.lineHeight = "1.4";
+                label.style.color = "#ccc";
+                label.textContent = type.actions;
 
                 actionDiv.appendChild(checkbox);
                 actionDiv.appendChild(label);
-                moduleCard.appendChild(actionDiv);
+                actionsGrid.appendChild(actionDiv);
             });
 
+            // Handle module checkbox click
+            moduleCheckbox.addEventListener("change", function() {
+                actionCheckboxes.forEach(cb => {
+                    cb.checked = this.checked;
+                    // If manually unchecking, remove from auto-selected
+                    if (!this.checked && autoSelectedItems.has(cb.value)) {
+                        autoSelectedItems.delete(cb.value);
+                    }
+                    // If manually checking, don't add to auto-selected
+                });
+                updateSummary();
+            });
+
+            moduleCard.appendChild(actionsGrid);
             modulesDisplay.appendChild(moduleCard);
         });
     }
@@ -277,8 +365,17 @@ document.addEventListener("DOMContentLoaded", function() {
 
     systemSelect.addEventListener("change", function() {
         const systemId = this.value;
+        
+        // Unselect all modules and actions when system changes
+        document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.module-checkbox').forEach(cb => cb.checked = false);
+        updateSummary();
+        
+        // Reset role dropdown
+        roleSelect.value = '';
+        
         if (!systemId) {
-            roleList.innerHTML = '<div class="text-muted small">Select a system first</div>';
+            roleSelect.innerHTML = '<option value="">-- Choose a role --</option>';
             return;
         }
 
@@ -289,91 +386,140 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (data.success && data.roles.length > 0) {
                     updateRoleUI(data.roles, data.system_name);
                 } else {
-                    roleList.innerHTML = '<div class="text-muted small">No roles found</div>';
+                    roleSelect.innerHTML = '<option value="">No roles found</option>';
                 }
             })
             .catch(error => {
                 console.error("Error:", error);
-                roleList.innerHTML = '<div class="alert alert-danger small p-2">Error loading roles</div>';
+                roleSelect.innerHTML = '<option value="">Error loading roles</option>';
             });
     });
 
     function updateRoleUI(roles, systemName) {
-        roleList.innerHTML = "";
+        roleSelect.innerHTML = '<option value="">-- Choose a role --</option>';
         roles.forEach(role => {
-            const radioDiv = document.createElement("div");
-            radioDiv.className = "form-check mb-2";
-            
-            const radio = document.createElement("input");
-            radio.type = "radio";
-            radio.className = "form-check-input";
-            radio.name = "selected_role";
-            radio.value = role;
-            radio.id = `role_${role}`;
-            
-            const label = document.createElement("label");
-            label.className = "form-check-label";
-            label.htmlFor = `role_${role}`;
-            label.textContent = role;
-            
-            radio.addEventListener("change", () => {
-                if (radio.checked) {
-                    selectAllModulesForRole(role, systemName);
-                }
-            });
-            
-            radioDiv.appendChild(radio);
-            radioDiv.appendChild(label);
-            roleList.appendChild(radioDiv);
+            const option = document.createElement("option");
+            option.value = role;
+            option.dataset.system = systemName;
+            option.textContent = role;
+            roleSelect.appendChild(option);
         });
     }
+
+    // Handle role selection from dropdown
+    roleSelect.addEventListener("change", function() {
+        const role = this.value;
+        if (!role) {
+            // Clear selections if no role selected
+            document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
+            updateSummary();
+            return;
+        }
+        
+        const systemName = systemNameMap[systemSelect.value];
+        selectAllModulesForRole(role, systemName);
+    });
 
     function selectAllModulesForRole(role, systemName) {
         // Uncheck all first
         document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.module-checkbox').forEach(cb => cb.checked = false);
+        
+        // Clear auto-selected tracking
+        autoSelectedItems.clear();
         
         // Check only items for this role and system
-        document.querySelectorAll(`.access-checkbox[data-role="${role}"][data-system="${systemName}"]`).forEach(cb => cb.checked = true);
+        const roleCbs = document.querySelectorAll(`.access-checkbox[data-role="${role}"][data-system="${systemName}"]`);
+        roleCbs.forEach(cb => {
+            cb.checked = true;
+            autoSelectedItems.add(cb.value); // Mark as auto-selected
+        });
+        
+        // Also check the module checkboxes for selected modules
+        const selectedModules = new Set();
+        roleCbs.forEach(cb => selectedModules.add(cb.dataset.module));
+        
+        document.querySelectorAll('.module-checkbox').forEach(moduleCheckbox => {
+            const parentCard = moduleCheckbox.closest('.module-card');
+            if (parentCard) {
+                const moduleTitle = parentCard.querySelector('label');
+                const moduleName = moduleTitle.textContent.trim();
+                if (selectedModules.has(moduleName)) {
+                    moduleCheckbox.checked = true;
+                }
+            }
+        });
         
         updateSummary();
     }
+
+    let autoSelectedItems = new Set(); // Track items auto-selected by role
 
     function updateSummary() {
         const selected = document.querySelectorAll(".access-checkbox:checked");
 
         if (selected.length === 0) {
-            summaryContainer.innerHTML = '<div class="text-muted small flex-shrink-0">No access selected</div>';
+            summaryContainer.innerHTML = '<div class="text-muted small" style="grid-column: 1 / -1;">No access selected</div>';
             return;
         }
 
         const grouped = {};
+        
         selected.forEach(cb => {
             const module = cb.dataset.module;
             const action = cb.dataset.name;
-            if (!grouped[module]) grouped[module] = [];
-            grouped[module].push(action);
+            const itemId = cb.value;
+            
+            if (!grouped[module]) {
+                grouped[module] = { default: [], added: [] };
+            }
+            
+            // Check if this item was auto-selected and hasn't been manually toggled
+            const isStillAuto = autoSelectedItems.has(itemId);
+            
+            if (isStillAuto) {
+                grouped[module].default.push(action);
+            } else {
+                grouped[module].added.push(action);
+            }
         });
 
         summaryContainer.innerHTML = "";
-        Object.entries(grouped).forEach(([moduleName, actions]) => {
+        Object.entries(grouped).forEach(([moduleName, items]) => {
+            // Determine if this module has any manually selected items
+            const hasAddedItems = items.added.length > 0;
+            
             const card = document.createElement("div");
-            card.className = "border rounded p-3 flex-shrink-0";
+            card.className = "border rounded p-3";
             card.style.backgroundColor = "#f5f5f5";
-            card.style.minWidth = "200px";
-            card.style.maxWidth = "250px";
+            card.style.borderColor = "#ddd";
 
             const title = document.createElement("strong");
             title.style.fontSize = "0.95rem";
+            title.style.color = hasAddedItems ? "#0d6efd" : "#fff";
             title.textContent = moduleName;
 
             const actionsList = document.createElement("div");
             actionsList.style.marginTop = "8px";
             actionsList.style.fontSize = "0.85rem";
 
-            actions.forEach(action => {
+            // Default items (white text if no added items, blue if any added)
+            items.default.forEach(action => {
                 const item = document.createElement("div");
-                item.textContent = "• " + action;
+                item.style.color = hasAddedItems ? "#0d6efd" : "#fff";
+                item.style.fontWeight = hasAddedItems ? "bold" : "normal";
                 item.style.marginBottom = "4px";
+                item.textContent = "• " + action;
+                actionsList.appendChild(item);
+            });
+
+            // Added items (blue text)
+            items.added.forEach(action => {
+                const item = document.createElement("div");
+                item.style.color = "#0d6efd";
+                item.style.fontWeight = "bold";
+                item.style.marginBottom = "4px";
+                item.textContent = "• " + action;
                 actionsList.appendChild(item);
             });
 
