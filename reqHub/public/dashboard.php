@@ -28,8 +28,9 @@ $user   = $_SESSION['reqhub_user'];
 $userId = $user['emp_no'];
 $role   = $user['reqhub_role'];
 $status = $_GET['status'] ?? 'pending';
+$pending_tab = $_GET['pending_tab'] ?? 'all';  // 'all' or 'needs_revision'
 
-error_log("User: $userId, Role: $role, Status: $status");
+error_log("User: $userId, Role: $role, Status: $status, Pending Tab: $pending_tab");
 
 /* ================================
    FETCH REQUESTS
@@ -41,8 +42,8 @@ SELECT
     s.name AS system_name,
     COALESCE(
         CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
-        req_user.U_Name,
-        req_user.Emp_No
+        hu.U_Name,
+        hu.Emp_No
     ) AS requestor_name,
     u1.U_Name AS approved_by_name,
     u2.U_Name AS denied_by_name,
@@ -53,9 +54,8 @@ SELECT
     ) AS access_type
 FROM requests r
 LEFT JOIN systems s ON r.system_id = s.id
-LEFT JOIN users u ON r.user_id = u.id
-LEFT JOIN tngc_hrd2.tbl_user2 req_user ON u.employee_id = req_user.Emp_No
-LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON req_user.Emp_No = bi.bi_empno AND bi.datastat = 'current'
+LEFT JOIN tngc_hrd2.tbl_user2 hu ON hu.U_ID = r.request_for
+LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
 LEFT JOIN tngc_hrd2.tbl_user2 u1 ON u1.Emp_No = r.approved_by
 LEFT JOIN tngc_hrd2.tbl_user2 u2 ON u2.Emp_No = r.denied_by
 LEFT JOIN tngc_hrd2.tbl_user2 u3 ON u3.Emp_No = r.served_by
@@ -67,7 +67,13 @@ WHERE 1=1
 /* STATUS FILTER */
 switch ($status) {
     case 'pending':
-        $sql .= " AND r.status = 'pending'";
+        // Handle both 'all' and 'needs_revision' sub-tabs
+        if ($pending_tab === 'needs_revision') {
+            $sql .= " AND r.status = 'needs_revision'";
+        } else {
+            // 'all' tab - show only original pending
+            $sql .= " AND r.status = 'pending'";
+        }
         break;
     case 'approved':
         $sql .= " AND r.status = 'approved' 
@@ -175,6 +181,24 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 <?php endforeach; ?>
 </ul>
 
+<!-- Sub-tabs for Pending -->
+<?php if ($status === 'pending'): ?>
+<ul class="nav nav-tabs mt-2 ms-3" style="border-bottom: 2px solid #dee2e6;">
+    <li class="nav-item">
+        <a class="nav-link <?= $pending_tab === 'all' ? 'active' : '' ?>" 
+           href="?status=pending&pending_tab=all">
+            All Pending
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= $pending_tab === 'needs_revision' ? 'active' : '' ?>" 
+           href="?status=pending&pending_tab=needs_revision">
+            Needs Revision
+        </a>
+    </li>
+</ul>
+<?php endif; ?>
+
 <table class="table table-hover mt-3">
 <thead>
 <tr>
@@ -224,11 +248,15 @@ if (!empty($req['access_type'])) {
     <td><?= htmlspecialchars($req['requestor_name'] ?? '') ?></td>
     <td><?= htmlspecialchars(implode(', ', array_keys($roles))) ?></td>
     <td>
-        <?= ucfirst(
-            ($req['admin_status'] ?? '') === 'served'
-                ? 'Served'
-                : ($req['status'] ?? '')
-        ) ?>
+        <?php if ($req['status'] === 'needs_revision'): ?>
+            <span class="badge bg-warning text-dark">Needs revision!</span>
+        <?php else: ?>
+            <?= ucfirst(
+                ($req['admin_status'] ?? '') === 'served'
+                    ? 'Served'
+                    : ($req['status'] ?? '')
+            ) ?>
+        <?php endif; ?>
     </td>
 </tr>
 
@@ -242,10 +270,11 @@ if (!empty($req['access_type'])) {
 <div class="modal-dialog modal-xl">
 <div class="modal-content">
 <div class="modal-header">
-<h5 class="modal-title">Request Details</h5>
+<h5 class="modal-title" id="modalTitle">Request Details</h5>
 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 </div>
 <div class="modal-body">
+
 <div class="row">
 <div class="col-md-6 d-flex flex-column">
 
@@ -265,12 +294,10 @@ if (!empty($req['access_type'])) {
 "></div>
 </p>
 
-
-
 </div>
 
 <div class="col-md-6 border-start">
-<h6>Chat</h6>
+<h6>Chat & Revisions</h6>
 <div id="chatBox" style="height:430px; overflow-y:auto;"
      class="border p-2 mb-2"></div>
 
@@ -278,11 +305,10 @@ if (!empty($req['access_type'])) {
 <input type="hidden" name="request_id" id="chatRequestId">
 <div class="input-group">
 <input type="text" name="message" class="form-control"
-       placeholder="Type message..." required>
-<button class="btn btn-primary">Send</button>
+       placeholder="Type message..." required id="chatInput">
+<button class="btn btn-primary" type="submit" id="chatSubmitBtn">Send</button>
 </div>
 </form>
-
 
 <p class="mt-2 mb-1 pt-2 border-top mb-3"><strong>Description:</strong></p>
 <div id="modalDescription"
@@ -296,6 +322,31 @@ if (!empty($req['access_type'])) {
 </div>
 </div>
 </div>
+
+</div>
+</div>
+</div>
+
+<!-- REVISE MODAL (for Approver) -->
+<div class="modal fade" id="reviseModal" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h5 class="modal-title">Request Revision</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+<form id="reviseForm">
+<input type="hidden" name="request_id" id="reviseRequestId">
+<div class="mb-3">
+<label class="form-label">Reason for Revision:</label>
+<textarea name="revision_message" class="form-control" rows="6" required placeholder="Explain what needs to be revised..."></textarea>
+</div>
+<div class="d-flex gap-2">
+<button type="submit" class="btn btn-primary">Send to Revise</button>
+<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+</div>
+</form>
 </div>
 </div>
 </div>
@@ -303,9 +354,23 @@ if (!empty($req['access_type'])) {
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 
 <script>
+// Define global variables for modals
+let modal;
+let reviseModal;
+
+// Define helper functions FIRST, before they're referenced
+function openReviseModal(requestId) {
+    document.getElementById('reviseRequestId').value = requestId;
+    document.getElementById('reviseForm').reset();
+    reviseModal.show();
+}
+
+// NOW run the main code
 document.addEventListener('DOMContentLoaded', function () {
 
-    const modal = new bootstrap.Modal(document.getElementById('requestModal'));
+    // Initialize modals as global variables
+    modal = new bootstrap.Modal(document.getElementById('requestModal'));
+    reviseModal = new bootstrap.Modal(document.getElementById('reviseModal'));
     let chatInterval = null;
 
     document.querySelectorAll('.request-row').forEach(row => {
@@ -363,11 +428,11 @@ document.addEventListener('DOMContentLoaded', function () {
             html += `
             <div class="accordion-item">
                 <h2 class="accordion-header">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#accordion${accordionIndex}">
+                    <button class="accordion-button collapsed" type="button" data-accordion-toggle="${accordionIndex}">
                         <strong>Role: ${role}</strong>
                     </button>
                 </h2>
-                <div id="accordion${accordionIndex}" class="accordion-collapse collapse" data-bs-parent="#accessAccordion">
+                <div id="accordion${accordionIndex}" class="accordion-collapse collapse" style="display:none;">
                     <div class="accordion-body p-2">
             `;
             
@@ -390,6 +455,33 @@ document.addEventListener('DOMContentLoaded', function () {
         
         html += '</div>';
         container.innerHTML = html;
+        
+        // Add manual click handlers for collapse functionality
+        document.querySelectorAll('[data-accordion-toggle]').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = 'accordion' + this.getAttribute('data-accordion-toggle');
+                const targetDiv = document.getElementById(targetId);
+                const isHidden = targetDiv.style.display === 'none';
+                
+                // Close all other accordions
+                document.querySelectorAll('[data-accordion-toggle]').forEach(otherBtn => {
+                    const otherId = 'accordion' + otherBtn.getAttribute('data-accordion-toggle');
+                    const otherDiv = document.getElementById(otherId);
+                    otherDiv.style.display = 'none';
+                    otherBtn.classList.add('collapsed');
+                });
+                
+                // Toggle current accordion
+                if (isHidden) {
+                    targetDiv.style.display = 'block';
+                    this.classList.remove('collapsed');
+                } else {
+                    targetDiv.style.display = 'none';
+                    this.classList.add('collapsed');
+                }
+            });
+        });
     }
 
     function renderActions(data) {
@@ -397,13 +489,41 @@ document.addEventListener('DOMContentLoaded', function () {
         container.innerHTML = '';
         const role = "<?= $role ?>";
         
+        // Disable chat if request is denied or served
+        const chatInput = document.getElementById('chatInput');
+        const chatSubmitBtn = document.getElementById('chatSubmitBtn');
+        
+        if (data.status === 'denied' || data.adminStatus === 'served') {
+            chatInput.disabled = true;
+            chatSubmitBtn.disabled = true;
+            chatInput.placeholder = 'Chat disabled for this request';
+        } else {
+            chatInput.disabled = false;
+            chatSubmitBtn.disabled = false;
+            chatInput.placeholder = 'Type message...';
+        }
+        
         console.log('renderActions called with data:', data);
         console.log('role:', role);
         console.log('data.status:', data.status);
         console.log('data.adminStatus:', data.adminStatus);
 
         if (role === 'Approver' && data.status === 'pending') {
-            console.log('Showing Approver actions');
+            console.log('Showing Approver actions for pending');
+            container.innerHTML = `
+                <form method="post" action="/zen/reqHub/approve" class="d-inline">
+                    <input type="hidden" name="id" value="${data.id}">
+                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                </form>
+                <form method="post" action="/zen/reqHub/deny" class="d-inline ms-2">
+                    <input type="hidden" name="id" value="${data.id}">
+                    <button type="submit" class="btn btn-danger btn-sm">Deny</button>
+                </form>
+                <button class="btn btn-warning btn-sm ms-2" onclick="openReviseModal('${data.id}')">Revise</button>`;
+        }
+
+        if (role === 'Approver' && data.status === 'needs_revision') {
+            console.log('Showing Approver actions for needs_revision');
             container.innerHTML = `
                 <form method="post" action="/zen/reqHub/approve" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
@@ -415,10 +535,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 </form>`;
         }
 
+        if (role === 'Requestor' && data.status === 'needs_revision') {
+            console.log('Showing Requestor actions for needs_revision');
+            container.innerHTML = `
+                <a href="/zen/reqHub/request_revise?request_id=${data.id}" class="btn btn-primary btn-sm">Edit & Resubmit</a>`;
+        }
+
         if (role === 'Admin' && data.status === 'approved' && data.adminStatus !== 'served') {
             console.log('Showing Admin actions');
             container.innerHTML = `
-                <form method="post" action="/zen/reqHub/served">
+                <form method="post" action="/zen/reqHub/served" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-primary btn-sm">Mark as Served</button>
                 </form>`;
@@ -427,6 +553,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (container.innerHTML === '') {
             console.log('No actions available for this user/status combination');
         }
+    }
+
+    function openReviseModal(requestId) {
+        document.getElementById('reviseRequestId').value = requestId;
+        document.getElementById('reviseForm').reset();
+        reviseModal.show();
     }
 
     function loadChat(requestId){
@@ -471,6 +603,40 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('requestModal').addEventListener('hidden.bs.modal', function () {
         if (chatInterval) clearInterval(chatInterval);
     });
+
+    // Handle revise form submission (for approver)
+    const reviseForm = document.getElementById('reviseForm');
+    if (reviseForm && !reviseForm.hasListener) {
+        reviseForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const requestId = document.getElementById('reviseRequestId').value;
+            const revisionMessage = document.querySelector('[name="revision_message"]').value;
+            
+            fetch('/zen/reqHub/revise_action', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'id=' + requestId + '&revision_message=' + encodeURIComponent(revisionMessage)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    reviseModal.hide();
+                    modal.hide();
+                    alert('Request sent to revision.');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending revision request');
+            });
+        });
+        reviseForm.hasListener = true;
+    }
 
 });
 </script>

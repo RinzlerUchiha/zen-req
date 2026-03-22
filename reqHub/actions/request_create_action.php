@@ -90,6 +90,7 @@ try {
     $approved_at = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
 
     // 1️⃣ Insert into requests table
+    // IMPORTANT: Store the ZenHub U_ID ($request_for) in request_for column, not the ReqHub user id!
     $stmt = $pdo->prepare("
         INSERT INTO requests (
             user_id,
@@ -122,7 +123,7 @@ try {
 
     $stmt->execute([
         ':user_id'       => $user_id,
-        ':request_for'   => $request_for_id,
+        ':request_for'   => $request_for,  // FIXED: Use ZenHub U_ID, not ReqHub user id
         ':system_id'     => $system_id,
         ':department_id' => $department_id,
         ':remove_from'   => $remove_from,
@@ -183,7 +184,7 @@ try {
         }
 
         // Notify requestor
-        refreshNotification($pdo, (int)$request_for);
+        refreshNotification($pdo, (int)$request_for_id);
         
         error_log("Notified admins and requestor for approved request");
     }

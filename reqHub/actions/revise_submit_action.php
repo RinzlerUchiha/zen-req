@@ -1,0 +1,157 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+header('Content-Type: application/json');
+
+error_log("revise_submit_action.php START");
+
+require_once (__DIR__ . '/../includes/auth.php');
+require_once (__DIR__ . '/../database/db.php');
+
+error_log("revise_submit_action: Auth and DB loaded");
+
+// Check if user is authenticated and is a Requestor
+if (!isAuthenticated()) {
+    error_log("revise_submit_action: User not authenticated");
+    http_response_code(403);
+    die(json_encode(['success' => false, 'message' => 'Not authenticated']));
+}
+
+$current_user = getCurrentUser();
+if (!in_array($current_user['reqhub_role'], ['Requestor', 'Approver'])) {
+    error_log("revise_submit_action: User role is " . $current_user['reqhub_role']);
+    http_response_code(403);
+    die(json_encode(['success' => false, 'message' => 'Only requestors can submit revisions']));
+}
+
+error_log("revise_submit_action: Auth passed");
+
+// Log all POST data for debugging
+error_log("revise_submit_action: Full \$_POST: " . json_encode($_POST));
+
+$request_id = $_POST['request_id'] ?? null;
+$system_id = $_POST['system_id'] ?? null;
+$department_id = $_POST['department_id'] ?? null;
+$request_for = $_POST['request_for'] ?? null;
+$remove_from = $_POST['remove_from'] ?? null;
+$description = $_POST['description'] ?? null;
+$access_types = $_POST['access_types[]'] ?? $_POST['access_types'] ?? [];
+
+error_log("revise_submit_action: Parsed - request_id=$request_id, system_id=$system_id, dept=$department_id, req_for=$request_for");
+error_log("revise_submit_action: access_types raw = " . json_encode($access_types));
+
+// Handle access_types as comma-separated string or array
+if (is_string($access_types)) {
+    $access_types = array_filter(explode(',', $access_types));
+}
+
+error_log("revise_submit_action: request_id=$request_id, system_id=$system_id, dept=$department_id, req_for=$request_for, access_types=" . json_encode($access_types));
+
+if (!$request_id || !$system_id || !$department_id || !$request_for) {
+    error_log("revise_submit_action: Missing core required fields - request_id=$request_id, system_id=$system_id, dept=$department_id, req_for=$request_for");
+    http_response_code(400);
+    die(json_encode(['success' => false, 'message' => 'System, Request For, and Department are required']));
+}
+
+if (empty($access_types)) {
+    error_log("revise_submit_action: No access types selected");
+    http_response_code(400);
+    die(json_encode(['success' => false, 'message' => 'At least one access type must be selected']));
+}
+
+try {
+    $pdo = ReqHubDatabase::getConnection('reqhub');
+    error_log("revise_submit_action: Got PDO connection");
+    
+    $emp_no = $current_user['emp_no'];
+    error_log("revise_submit_action: emp_no = $emp_no");
+    
+    // Get the users.id for the current employee
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+    $stmt->execute([$emp_no]);
+    $userRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$userRecord) {
+        error_log("revise_submit_action: User not found for emp_no=$emp_no");
+        http_response_code(400);
+        die(json_encode(['success' => false, 'message' => 'User not found in database']));
+    }
+    
+    $actual_user_id = $userRecord['id'];
+    error_log("revise_submit_action: Mapped emp_no=$emp_no to users.id=$actual_user_id");
+    
+    // Verify the request belongs to the current user and is in needs_revision status
+    $stmt = $pdo->prepare("SELECT id, status FROM requests WHERE id = ? AND user_id = ? AND status = 'needs_revision'");
+    $stmt->execute([$request_id, $actual_user_id]);
+    $existingRequest = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    error_log("revise_submit_action: Request lookup returned: " . ($existingRequest ? 'FOUND' : 'NOT FOUND'));
+    
+    if (!$existingRequest) {
+        error_log("revise_submit_action: Request not found or not in needs_revision status");
+        http_response_code(400);
+        die(json_encode(['success' => false, 'message' => 'Request not found or cannot be revised']));
+    }
+    
+    // Update the request with new values and set status back to 'pending'
+    $sql = "UPDATE requests SET 
+            system_id = ?, 
+            department_id = ?, 
+            request_for = ?, 
+            remove_from = ?, 
+            description = ?, 
+            status = 'pending',
+            updated_at = NOW()
+            WHERE id = ?";
+    
+    error_log("revise_submit_action: Executing UPDATE");
+    
+    $stmt = $pdo->prepare($sql);
+    $result = $stmt->execute([$system_id, $department_id, $request_for, $remove_from, $description, $request_id]);
+    
+    error_log("revise_submit_action: UPDATE result: " . ($result ? 'true' : 'false') . ", rowCount: " . $stmt->rowCount());
+    
+    // Delete old access types
+    $stmt = $pdo->prepare("DELETE FROM request_access_types WHERE request_id = ?");
+    $stmt->execute([$request_id]);
+    error_log("revise_submit_action: Deleted old access types");
+    
+    // Insert new access types
+    $stmt = $pdo->prepare("INSERT INTO request_access_types (request_id, access_type_id) VALUES (?, ?)");
+    foreach ($access_types as $access_type_id) {
+        $stmt->execute([$request_id, $access_type_id]);
+    }
+    error_log("revise_submit_action: Inserted " . count($access_types) . " new access types");
+    
+    // Store a system message in chat indicating the revision was submitted
+    $stmt = $pdo->prepare("
+        INSERT INTO request_chats (request_id, sender_id, message, created_at)
+        VALUES (?, 19, ?, NOW())
+    ");
+    
+    $system_message = "[REQUEST RESUBMITTED]\n\nRevisions have been submitted. The request is back in pending for approver review.";
+    
+    $stmt->execute([$request_id, $system_message]);
+    error_log("revise_submit_action: System message inserted");
+    
+    error_log("revise_submit_action: SUCCESS");
+    
+    // Return success but indicate the user should be redirected to dashboard
+    http_response_code(200);
+    echo json_encode([
+        'success' => true, 
+        'message' => 'Request revisions submitted successfully!',
+        'redirect' => '/zen/reqHub/dashboard?status=pending&pending_tab=all'
+    ]);
+    
+} catch (Exception $e) {
+    error_log("revise_submit_action: Exception - " . $e->getMessage());
+    error_log("revise_submit_action: Trace - " . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
+
+error_log("revise_submit_action.php END");
+?>
