@@ -1,7 +1,9 @@
 <?php
 /**
- * User Management
+ * User Management for ReqHub Admin Settings
  * File: /zen/reqHub/actions/user_action.php
+ * 
+ * Manages users in reqhub.users table with proper employee_id, reqhub_role, system_id, department_id
  */
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -17,6 +19,7 @@ requireRole('Admin');
 
 try {
     $pdo = ReqHubDatabase::getConnection('reqhub');
+    $hrPdo = ReqHubDatabase::getConnection('hr');
 } catch (Exception $e) {
     die(json_encode(['success' => false, 'message' => 'Database connection failed']));
 }
@@ -25,18 +28,53 @@ $action = $_POST['action'] ?? null;
 
 try {
     if ($action === 'addUser') {
-        $name = trim($_POST['name'] ?? '');
+        $employeeId = trim($_POST['name'] ?? ''); // This is actually employee_id
         $userType = $_POST['user_type'] ?? 'Requestor';
+        $systemId = !empty($_POST['system_ids']) ? $_POST['system_ids'][0] : null;
+        $departmentId = !empty($_POST['department_ids']) ? $_POST['department_ids'][0] : null;
         
-        if (!$name) {
-            die(json_encode(['success' => false, 'message' => 'Name required']));
+        if (!$employeeId) {
+            die(json_encode(['success' => false, 'message' => 'Employee ID required']));
         }
 
-        $stmt = $pdo->prepare("INSERT INTO users (name, user_type) VALUES (?, ?)");
-        $stmt->execute([$name, $userType]);
+        // Map user_type to reqhub_role
+        $reqhubRole = $userType; // Requestor, Approver, Admin, Reviewer
+
+        // Check if employee already exists
+        $checkStmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+        $checkStmt->execute([$employeeId]);
+        if ($checkStmt->fetch()) {
+            die(json_encode(['success' => false, 'message' => 'Employee ID already exists']));
+        }
+
+        // Get employee name from HR database for display
+        $employeeName = $employeeId;
+        try {
+            $hrStmt = $hrPdo->prepare("
+                SELECT CONCAT(COALESCE(bi_empfname, ''), ' ', COALESCE(bi_emplname, '')) as full_name
+                FROM tbl201_basicinfo
+                WHERE bi_empno = ? AND datastat = 'current'
+                LIMIT 1
+            ");
+            $hrStmt->execute([$employeeId]);
+            $hrResult = $hrStmt->fetch(PDO::FETCH_ASSOC);
+            if ($hrResult && !empty(trim($hrResult['full_name']))) {
+                $employeeName = trim($hrResult['full_name']);
+            }
+        } catch (Exception $e) {
+            // If HR lookup fails, use employee_id as name
+            error_log("HR lookup failed for $employeeId: " . $e->getMessage());
+        }
+
+        // Insert user with all required fields
+        $stmt = $pdo->prepare("
+            INSERT INTO users (employee_id, reqhub_role, system_id, department_id, is_active)
+            VALUES (?, ?, ?, ?, 1)
+        ");
+        $stmt->execute([$employeeId, $reqhubRole, $systemId, $departmentId]);
         $userId = $pdo->lastInsertId();
 
-        // Store assignments and fetch them for response
+        // If Approver, store all system-department combinations
         $assignments = [];
         if ($userType === 'Approver') {
             $systemIds = $_POST['system_ids'] ?? [];
@@ -64,7 +102,8 @@ try {
         echo json_encode([
             'success' => true,
             'id' => $userId,
-            'name' => $name,
+            'name' => $employeeName,
+            'employee_id' => $employeeId,
             'user_type' => $userType,
             'assignments' => $assignments
         ]);
@@ -72,17 +111,63 @@ try {
 
     else if ($action === 'editUser') {
         $userId = $_POST['user_id'] ?? null;
-        $name = trim($_POST['name'] ?? '');
+        $employeeId = trim($_POST['name'] ?? ''); // This is actually employee_id from inline edit
         $userType = $_POST['user_type'] ?? 'Requestor';
+        $systemId = !empty($_POST['system_ids']) ? $_POST['system_ids'][0] : null;
+        $departmentId = !empty($_POST['department_ids']) ? $_POST['department_ids'][0] : null;
 
-        if (!$userId || !$name) {
+        if (!$userId || !$employeeId) {
             die(json_encode(['success' => false, 'message' => 'Missing required fields']));
         }
 
-        $stmt = $pdo->prepare("UPDATE users SET name = ?, user_type = ? WHERE id = ?");
-        $stmt->execute([$name, $userType, $userId]);
+        // Get current employee_id to check if it changed
+        $currentStmt = $pdo->prepare("SELECT employee_id FROM users WHERE id = ?");
+        $currentStmt->execute([$userId]);
+        $currentRow = $currentStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$currentRow) {
+            die(json_encode(['success' => false, 'message' => 'User not found']));
+        }
 
-        // Handle approver assignments
+        // If employee_id changed, check uniqueness
+        if ($currentRow['employee_id'] !== $employeeId) {
+            $checkStmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+            $checkStmt->execute([$employeeId]);
+            if ($checkStmt->fetch()) {
+                die(json_encode(['success' => false, 'message' => 'Employee ID already exists']));
+            }
+        }
+
+        // Map user_type to reqhub_role
+        $reqhubRole = $userType;
+
+        // Get employee name from HR database
+        $employeeName = $employeeId;
+        try {
+            $hrStmt = $hrPdo->prepare("
+                SELECT CONCAT(COALESCE(bi_empfname, ''), ' ', COALESCE(bi_emplname, '')) as full_name
+                FROM tbl201_basicinfo
+                WHERE bi_empno = ? AND datastat = 'current'
+                LIMIT 1
+            ");
+            $hrStmt->execute([$employeeId]);
+            $hrResult = $hrStmt->fetch(PDO::FETCH_ASSOC);
+            if ($hrResult && !empty(trim($hrResult['full_name']))) {
+                $employeeName = trim($hrResult['full_name']);
+            }
+        } catch (Exception $e) {
+            error_log("HR lookup failed for $employeeId: " . $e->getMessage());
+        }
+
+        // Update user with all fields
+        $stmt = $pdo->prepare("
+            UPDATE users 
+            SET employee_id = ?, reqhub_role = ?, system_id = ?, department_id = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$employeeId, $reqhubRole, $systemId, $departmentId, $userId]);
+
+        // Handle approver assignments if type is Approver
         $assignments = [];
         if ($userType === 'Approver') {
             // Delete old assignments
@@ -102,18 +187,13 @@ try {
                 foreach ($systemIds as $sysId) {
                     foreach ($departmentIds as $deptId) {
                         $insertStmt->execute([$userId, $sysId, $deptId]);
+                        $assignments[] = [
+                            'system_id' => (int)$sysId,
+                            'department_id' => (int)$deptId
+                        ];
                     }
                 }
             }
-            
-            // Fetch the saved assignments
-            $fetchStmt = $pdo->prepare("
-                SELECT system_id, department_id 
-                FROM user_approver_assignments 
-                WHERE user_id = ?
-            ");
-            $fetchStmt->execute([$userId]);
-            $assignments = $fetchStmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
             // Clear approver assignments if not approver
             $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
@@ -123,7 +203,8 @@ try {
         echo json_encode([
             'success' => true,
             'id' => $userId,
-            'name' => $name,
+            'name' => $employeeName,
+            'employee_id' => $employeeId,
             'user_type' => $userType,
             'assignments' => $assignments
         ]);
@@ -136,10 +217,11 @@ try {
             die(json_encode(['success' => false, 'message' => 'User ID required']));
         }
 
-        // Cascade delete via foreign keys, but just in case:
+        // Delete approver assignments
         $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
         $delStmt->execute([$userId]);
 
+        // Delete user
         $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
         $stmt->execute([$userId]);
 
@@ -151,6 +233,7 @@ try {
     }
 
 } catch (Exception $e) {
+    error_log("user_action.php error: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

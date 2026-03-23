@@ -23,11 +23,20 @@ $request_for   = $_POST['request_for'] ?? null;  // This is ZenHub U_ID
 $access_types  = $_POST['access_types'] ?? [];
 $remove_from   = trim($_POST['remove_from'] ?? '') ?: null;
 $description   = trim($_POST['description'] ?? '');
+$chosen_role   = $_POST['chosen_role'] ?? null;  // NEW: capture chosen role
+
+error_log("=== REQUEST CREATE DEBUG ===");
+error_log("request_for: " . ($request_for ?? 'NULL'));
+error_log("system_id: " . ($system_id ?? 'NULL'));
+error_log("department_id: " . ($department_id ?? 'NULL'));
+error_log("access_types: " . json_encode($access_types));
+error_log("chosen_role: " . ($chosen_role ?? 'NULL'));
 
 // Validate required fields
 if (!$system_id || !$department_id || !$request_for || empty($access_types)) {
+    error_log("VALIDATION FAILED");
     http_response_code(400);
-    die("All required fields must be filled out.");
+    die(json_encode(['success' => false, 'message' => 'All required fields must be filled out.']));
 }
 
 $pdo = ReqHubDatabase::getConnection('reqhub');
@@ -90,7 +99,9 @@ try {
     $approved_at = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
 
     // 1️⃣ Insert into requests table
-    // IMPORTANT: Store the ZenHub U_ID ($request_for) in request_for column, not the ReqHub user id!
+    // IMPORTANT: Store the ZenHub U_ID ($request_for) in request_for column
+    // This is needed so the dashboard can JOIN with tbl_user2.U_ID to get requestor names
+    // We also created $request_for_id (ReqHub users.id) for notifications
     $stmt = $pdo->prepare("
         INSERT INTO requests (
             user_id,
@@ -103,6 +114,7 @@ try {
             admin_status,
             approved_by,
             approved_at,
+            chosen_role,
             created_at,
             updated_at
         ) VALUES (
@@ -116,6 +128,7 @@ try {
             :admin_status,
             :approved_by,
             :approved_at,
+            :chosen_role,
             NOW(),
             NOW()
         )
@@ -123,7 +136,7 @@ try {
 
     $stmt->execute([
         ':user_id'       => $user_id,
-        ':request_for'   => $request_for,  // FIXED: Use ZenHub U_ID, not ReqHub user id
+        ':request_for'   => $request_for,  // Store ZenHub U_ID for proper JOIN in dashboard
         ':system_id'     => $system_id,
         ':department_id' => $department_id,
         ':remove_from'   => $remove_from,
@@ -131,7 +144,8 @@ try {
         ':status'        => $status,
         ':admin_status'  => $admin_status,
         ':approved_by'   => $approved_by,
-        ':approved_at'   => $approved_at
+        ':approved_at'   => $approved_at,
+        ':chosen_role'   => $chosen_role
     ]);
 
     $request_id = (int)$pdo->lastInsertId();

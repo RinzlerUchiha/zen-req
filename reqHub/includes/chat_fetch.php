@@ -75,10 +75,26 @@ try {
         echo "<div class='text-muted'>No messages yet. Start the conversation!</div>";
     } else {
         foreach ($messages as $msg) {
+            $timestamp = strtotime($msg['created_at']);
+            $today = strtotime('today');
+            $yesterday = strtotime('yesterday');
+            $messageDate = strtotime('today', $timestamp);
+            
+            // Determine relative date string
+            if ($messageDate == $today) {
+                $dateStr = 'Today';
+            } elseif ($messageDate == $yesterday) {
+                $dateStr = 'Yesterday';
+            } else {
+                $dateStr = date('M d, Y', $timestamp);
+            }
+            
+            $timeStr = date('H:i', $timestamp);
+            
             echo '<div class="mb-1">';
             echo '<strong>' . htmlspecialchars($msg['sender_name'] ?? 'Unknown') . ':</strong> ';
             echo htmlspecialchars($msg['message']);
-            echo ' <span class="text-muted small">(' . date('H:i', strtotime($msg['created_at'])) . ')</span>';
+            echo ' <span class="text-muted small">(' . $dateStr . ' ' . $timeStr . ')</span>';
             echo '</div>';
         }
     }

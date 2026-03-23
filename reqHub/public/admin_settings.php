@@ -18,8 +18,13 @@ $pdo = ReqHubDatabase::getConnection('reqhub');
 $hrPdo = ReqHubDatabase::getConnection('hr'); // HR database connection
 
 // --- Fetch data ---
-// Get users from reqhub
-$users = $pdo->query("SELECT id, employee_id, user_type FROM users ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
+// Get users from reqhub (exclude SYSTEM user)
+$users = $pdo->query("SELECT id, employee_id, reqhub_role FROM users WHERE employee_id != 'SYSTEM' ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
+
+if (!$users) {
+    $users = [];
+    error_log("WARNING: No users found in query");
+}
 
 // Get full names from HR database
 $userNames = [];
@@ -131,14 +136,20 @@ foreach ($systems as $system) {
 
 // --- Fetch approver assignments for each user ---
 $approverAssignments = [];
-foreach ($users as $user) {
-    $stmt = $pdo->prepare("
-        SELECT system_id, department_id
-        FROM user_approver_assignments
-        WHERE user_id = ?
-    ");
-    $stmt->execute([$user['id']]);
-    $approverAssignments[$user['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if (!empty($users)) {
+    foreach ($users as $user) {
+        if (!isset($user['id'])) {
+            error_log("WARNING: User record missing 'id' field: " . json_encode($user));
+            continue;
+        }
+        $stmt = $pdo->prepare("
+            SELECT system_id, department_id
+            FROM user_approver_assignments
+            WHERE user_id = ?
+        ");
+        $stmt->execute([$user['id']]);
+        $approverAssignments[$user['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 // --- Fetch default actions (Add, Edit, Delete, View) ---
@@ -398,24 +409,28 @@ foreach ($actions as $act) {
             </div>
             <div class="users-list">
                 <?php foreach ($users as $user): 
+                    if (!isset($user['id']) || !isset($user['employee_id'])) {
+                        error_log("WARNING: User missing required fields: " . json_encode($user));
+                        continue;
+                    }
                     $userApprovals = $approverAssignments[$user['id']] ?? [];
                 ?>
                     <div class="user-item card p-3 mb-2" data-user-id="<?= $user['id'] ?>">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center">
-                                    <?php if($user['user_type'] === 'Approver'): ?>
+                                    <?php if($user['reqhub_role'] === 'Approver'): ?>
                                         <button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>
                                     <?php endif; ?>
                                     <div>
-                                        <strong><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></strong>
+                                        <strong><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></strong> <small class="text-muted">(<?= htmlspecialchars($user['employee_id']) ?>)</small>
                                         <br>
-                                        <small class="text-muted"><?= htmlspecialchars($user['user_type']) ?></small>
+                                        <small class="text-muted"><?= htmlspecialchars($user['reqhub_role']) ?></small>
                                     </div>
                                 </div>
                                 
                                 <!-- Approver assignments (collapsible) -->
-                                <?php if($user['user_type'] === 'Approver' && !empty($userApprovals)): ?>
+                                <?php if($user['reqhub_role'] === 'Approver' && !empty($userApprovals)): ?>
                                     <div class="user-approvals mt-2" style="display:none; margin-left: 30px;">
                                         <small class="text-muted d-block mb-1">Assigned to:</small>
                                         <div class="ps-2">
@@ -463,8 +478,8 @@ foreach ($actions as $act) {
                                 <button class="btn btn-sm btn-secondary me-2" 
                                         data-action="editUser" 
                                         data-user-id="<?= $user['id'] ?>" 
-                                        data-name="<?= htmlspecialchars($user['user_name'] ?? $user['employee_id'], ENT_QUOTES) ?>"
-                                        data-user-type="<?= htmlspecialchars($user['user_type']) ?>">Edit</button>
+                                        data-name="<?= htmlspecialchars($user['employee_id'], ENT_QUOTES) ?>"
+                                        data-user-role="<?= htmlspecialchars($user['reqhub_role']) ?>">Edit</button>
                                 <button class="btn btn-sm btn-danger" data-action="deleteUser" data-user-id="<?= $user['id'] ?>">×</button>
                             </div>
                         </div>
@@ -1643,10 +1658,10 @@ $(function(){
         // ==============================
         if(action.includes('User')){
             $('#modalInputGroup').show();
-            $('#modalInputLabel').text('User Name');
-            $('#modalInput').val(name.trim()).attr('disabled', false);
+            $('#modalInputLabel').text('Employee ID');
+            $('#modalInput').val(name.trim()).attr('disabled', false).attr('placeholder', 'e.g., 045-2026-001');
 
-            const userType = $(this).data('user-type')||'Requestor';
+            const userType = $(this).data('user-role')||'Requestor';
             const userId = $(this).data('user-id')||'';
 
             let html = `<div class="mt-3">
@@ -2406,7 +2421,7 @@ $(function(){
                             <div class="d-flex align-items-center">
                                 ${toggleHtml}
                                 <div>
-                                    <strong>${res.name}</strong>
+                                    <strong>${res.name}</strong> <small class="text-muted">(${res.employee_id})</small>
                                     <br>
                                     <small class="text-muted">${res.user_type}</small>
                                 </div>
@@ -2414,7 +2429,7 @@ $(function(){
                             ${approvalsHtml}
                         </div>
                         <div class="ms-3">
-                            <button class="btn btn-sm btn-secondary me-2" data-action="editUser" data-user-id="${res.id}" data-name="${res.name}" data-user-type="${res.user_type}">Edit</button>
+                            <button class="btn btn-sm btn-secondary me-2" data-action="editUser" data-user-id="${res.id}" data-name="${res.employee_id}" data-user-role="${res.user_type}">Edit</button>
                             <button class="btn btn-sm btn-danger" data-action="deleteUser" data-user-id="${res.id}">×</button>
                         </div>
                     </div>
@@ -2425,9 +2440,10 @@ $(function(){
 
             if(action === 'editUser'){
                 const item = $(`.user-item[data-user-id="${res.id}"]`);
+                const nameDisplay = `${res.name} (${res.employee_id})`;
                 item.find('strong').text(res.name);
-                item.find('small').text(res.user_type);
-                item.find('[data-action="editUser"]').data('name', res.name).data('user-type', res.user_type);
+                item.find('small.text-muted').first().text(`(${res.employee_id})`);
+                item.find('[data-action="editUser"]').data('name', res.employee_id).data('user-role', res.user_type);
                 
                 // Update the approverAssignments with the new data
                 approverAssignments[res.id] = res.assignments || [];

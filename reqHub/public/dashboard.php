@@ -168,6 +168,12 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
         + Create Request
     </a>
 </div>
+<?php elseif ($role === 'Admin'): ?>
+<div class="d-flex justify-content-end mb-3">
+    <a href="/zen/reqHub/admin" class="btn btn-lg btn-primary">
+        Admin Settings
+    </a>
+</div>
 <?php endif; ?>
 
 <ul class="nav nav-tabs">
@@ -204,7 +210,7 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 <tr>
     <th>System</th>
     <th>Name</th>
-    <th>Access Type</th>
+    <th>Role</th>
     <th>Status</th>
 </tr>
 </thead>
@@ -220,25 +226,12 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 
 <?php foreach ($requests as $req): ?>
 
-<?php
-$roles = [];
-
-if (!empty($req['access_type'])) {
-    $entries = explode('##', $req['access_type']);
-    foreach ($entries as $entry) {
-        $parts = explode('||', $entry);
-        if (count($parts) === 3) {
-            $roles[$parts[0]] = true;
-        }
-    }
-}
-?>
-
 <tr class="request-row" style="cursor:pointer"
     data-id="<?= $req['id'] ?>"
     data-name="<?= htmlspecialchars($req['requestor_name'] ?? '') ?>"
     data-system="<?= htmlspecialchars($req['system_name'] ?? '') ?>"
     data-access="<?= htmlspecialchars($req['access_type'] ?? '') ?>"
+    data-chosen-role="<?= htmlspecialchars($req['chosen_role'] ?? '') ?>"
     data-remove="<?= htmlspecialchars($req['remove_from'] ?: 'New Request') ?>"
     data-description="<?= htmlspecialchars($req['description'] ?? '') ?>"
     data-status="<?= $req['status'] ?>"
@@ -246,7 +239,7 @@ if (!empty($req['access_type'])) {
 >
     <td><?= htmlspecialchars($req['system_name'] ?? '') ?></td>
     <td><?= htmlspecialchars($req['requestor_name'] ?? '') ?></td>
-    <td><?= htmlspecialchars(implode(', ', array_keys($roles))) ?></td>
+    <td><?= htmlspecialchars($req['chosen_role'] ?? '(Not specified)') ?></td>
     <td>
         <?php if ($req['status'] === 'needs_revision'): ?>
             <span class="badge bg-warning text-dark">Needs revision!</span>
@@ -281,11 +274,13 @@ if (!empty($req['access_type'])) {
 <p><strong>Requestor:</strong><br><span id="modalName"></span></p>
 <p><strong>System:</strong><br><span id="modalSystem"></span></p>
 
+<p><strong>Role:</strong><br><span id="modalRole" style="color: rgb(255, 255, 255); font-weight: bold;"></span></p>
+
 <p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>
 
 <p><strong>Access Type:</strong><br>
 <div id="modalAccess" class="small" style="
-    max-height: 560px;
+    max-height: 400px;
     overflow-y: auto;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -297,7 +292,7 @@ if (!empty($req['access_type'])) {
 </div>
 
 <div class="col-md-6 border-start">
-<h6>Chat & Revisions</h6>
+<h6>Chat</h6>
 <div id="chatBox" style="height:430px; overflow-y:auto;"
      class="border p-2 mb-2"></div>
 
@@ -305,7 +300,7 @@ if (!empty($req['access_type'])) {
 <input type="hidden" name="request_id" id="chatRequestId">
 <div class="input-group">
 <input type="text" name="message" class="form-control"
-       placeholder="Type message..." required id="chatInput">
+       placeholder="Type message..." required id="chatInput" autocomplete="off">
 <button class="btn btn-primary" type="submit" id="chatSubmitBtn">Send</button>
 </div>
 </form>
@@ -378,11 +373,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.getElementById('modalName').textContent = this.dataset.name;
             document.getElementById('modalSystem').textContent = this.dataset.system;
+            document.getElementById('modalRole').textContent = this.dataset.chosenRole || '(Not specified)';
             document.getElementById('modalRemove').textContent = this.dataset.remove;
             document.getElementById('modalDescription').textContent = this.dataset.description;
             document.getElementById('chatRequestId').value = this.dataset.id;
 
-            renderAccessStructure(this.dataset.access);
+            renderAccessStructure(this.dataset.access, this.dataset.chosenRole);
             renderActions(this.dataset);
 
             loadChat(this.dataset.id);
@@ -396,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    function renderAccessStructure(raw) {
+    function renderAccessStructure(raw, chosenRole) {
         const container = document.getElementById('modalAccess');
         container.innerHTML = '';
         if (!raw) {
@@ -415,32 +411,53 @@ document.addEventListener('DOMContentLoaded', function () {
             const module = parts[1];
             const action = parts[2];
 
-            if (!grouped[role]) grouped[role] = {};
-            if (!grouped[role][module]) grouped[role][module] = [];
-            grouped[role][module].push(action);
+            if (!grouped[module]) grouped[module] = {};
+            if (!grouped[module][action]) {
+                grouped[module][action] = {
+                    role: role,
+                    isFromChosenRole: role === chosenRole
+                };
+            }
         });
 
-        // Create accordion HTML with collapsible sections
+        // Create accordion HTML with collapsible sections by Module
         let html = '<div class="accordion" id="accessAccordion">';
         let accordionIndex = 0;
         
-        for (let role in grouped) {
+        for (let module in grouped) {
+            // Check if ANY action in this module is manually added
+            let hasManuallyAdded = false;
+            for (let action in grouped[module]) {
+                if (!grouped[module][action].isFromChosenRole) {
+                    hasManuallyAdded = true;
+                    break;
+                }
+            }
+            
+            const moduleColor = hasManuallyAdded ? '#0d6efd' : '#000';
+            const moduleFontWeight = hasManuallyAdded ? 'bold' : 'normal';
+            
             html += `
             <div class="accordion-item">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-accordion-toggle="${accordionIndex}">
-                        <strong>Role: ${role}</strong>
+                        <strong style="color: ${moduleColor}; font-weight: ${moduleFontWeight};">${module}</strong>
                     </button>
                 </h2>
                 <div id="accordion${accordionIndex}" class="accordion-collapse collapse" style="display:none;">
                     <div class="accordion-body p-2">
             `;
             
-            for (let module in grouped[role]) {
+            for (let action in grouped[module]) {
+                const isFromChosenRole = grouped[module][action].isFromChosenRole;
+                const role = grouped[module][action].role;
+                const color = isFromChosenRole ? '#000' : '#0d6efd';
+                const fontWeight = isFromChosenRole ? 'normal' : 'bold';
+                
                 html += `
-                <div class="ms-3 mb-2">
-                    <strong style="color: #0d6efd;">Module: ${module}</strong><br>
-                    <span class="ms-3">Actions: ${grouped[role][module].join(', ')}</span>
+                <div class="ms-2 mb-2">
+                    <span style="color: ${color}; font-weight: ${fontWeight};">• ${action}</span>
+                    <span style="font-size: 0.75rem; color: #666;">(${role})</span>
                 </div>
                 `;
             }

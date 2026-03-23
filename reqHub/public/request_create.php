@@ -68,6 +68,8 @@ foreach ($accessTypes as $type) {
 
     <form action="/zen/reqHub/request_create_action" method="POST" id="requestForm">
 
+        <input type="hidden" name="chosen_role" id="chosenRoleInput" value="">
+
         <div class="mb-3">
             <label class="form-label">System</label>
             <select name="system_id" id="systemSelect" class="form-select" required>
@@ -409,6 +411,12 @@ document.addEventListener("DOMContentLoaded", function() {
     // Handle role selection from dropdown
     roleSelect.addEventListener("change", function() {
         const role = this.value;
+        console.log('Role selected:', role);
+        
+        // IMPORTANT: Store the chosen role in the hidden input
+        document.getElementById('chosenRoleInput').value = role;
+        console.log('Stored chosen_role:', role);
+        
         if (!role) {
             // Clear selections if no role selected
             document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);

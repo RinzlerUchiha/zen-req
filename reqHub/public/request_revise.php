@@ -142,22 +142,36 @@ try {
     
     $currentAccessTypes = array_column($currentAccessTypesWithRoles, 'access_type_id');
     
-    // Detect the original role - if all access types belong to same role, that's the original role
-    $originalRole = null;
+    // Use the stored chosen_role from the request
+    $originalRole = $request['chosen_role'] ?? null;
     $originalSystem = $request['system_name'] ?? null;
     
-    if (!empty($currentAccessTypesWithRoles)) {
-        $uniqueRoles = array_unique(array_column($currentAccessTypesWithRoles, 'role'));
-        // If there's only one role, or if all belong to the same role, use that
-        if (count($uniqueRoles) === 1) {
-            $originalRole = reset($uniqueRoles);
-            error_log("Detected original role: $originalRole");
-        }
+    error_log("Stored chosen_role: $originalRole");
+    
+    // Get all access_type IDs that belong to the chosen role (auto-selected items)
+    $roleAccessTypeIds = [];
+    if (!empty($originalRole) && !empty($originalSystem)) {
+        $stmt = $pdo->prepare("
+            SELECT id
+            FROM access_types
+            WHERE role = ? AND system = ?
+        ");
+        $stmt->execute([$originalRole, $originalSystem]);
+        $roleAccessTypeIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        error_log("Role access type IDs: " . json_encode($roleAccessTypeIds));
     }
+    
+    // Determine which saved access_types are manually added
+    // Manually added = in currentAccessTypes but NOT in roleAccessTypeIds
+    $manuallyAddedAccessTypeIds = array_diff($currentAccessTypes, $roleAccessTypeIds);
+    error_log("Manually added access type IDs: " . json_encode($manuallyAddedAccessTypeIds));
+    
 } catch (PDOException $e) {
     error_log("Error fetching current access types: " . $e->getMessage());
     $currentAccessTypes = [];
     $originalRole = null;
+    $roleAccessTypeIds = [];
+    $manuallyAddedAccessTypeIds = [];
 }
 ?>
 
@@ -344,20 +358,21 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const allAccessTypesList = <?= json_encode($accessTypes) ?>;
     const currentAccessTypeIds = <?= json_encode($currentAccessTypes ?? []) ?>;
+    const manuallyAddedAccessTypeIds = <?= json_encode(array_values(array_map('intval', $manuallyAddedAccessTypeIds ?? []))) ?>;
     const originalRole = <?= json_encode($originalRole ?? null) ?>;
     const originalSystemRaw = <?= json_encode($request['system_name'] ?? null) ?>;
     const originalSystem = originalSystemRaw ? originalSystemRaw.trim() : null;
     
-    // Convert currentAccessTypeIds to integers for comparison
+    // Convert to Sets for faster lookup
     const currentAccessTypeIdsSet = new Set(currentAccessTypeIds.map(id => parseInt(id)));
+    const manuallyAddedAccessTypeIdsSet = new Set((manuallyAddedAccessTypeIds || []).map(id => parseInt(id)));
     
     console.log('=== Variables loaded from PHP ===');
     console.log('allAccessTypesList:', allAccessTypesList);
-    console.log('currentAccessTypeIds (from PHP):', currentAccessTypeIds);
-    console.log('currentAccessTypeIdsSet (converted):', Array.from(currentAccessTypeIdsSet));
+    console.log('currentAccessTypeIds:', currentAccessTypeIds);
+    console.log('manuallyAddedAccessTypeIds:', manuallyAddedAccessTypeIds);
     console.log('originalRole:', originalRole);
-    console.log('originalSystemRaw:', originalSystemRaw);
-    console.log('originalSystem (trimmed):', originalSystem);
+    console.log('originalSystem:', originalSystem);
 
     // Build systemNameMap FIRST before any event listeners
     let systemNameMap = {};
@@ -367,12 +382,9 @@ document.addEventListener("DOMContentLoaded", function() {
     console.log('systemNameMap:', systemNameMap);
     
     // Build a map of system ID → system name from access_types data
-    // This is needed because checkboxes have data-system="RPS" but dropdown has value="19"
     let systemIdToNameMap = {};
     allAccessTypesList.forEach(at => {
-        // Find which system ID this system name belongs to by checking dropdown
         for (let [sysId, sysName] of Object.entries(systemNameMap)) {
-            // Trim both values for comparison
             const cleanAtSystem = (at.system || '').trim();
             const cleanSysName = (sysName || '').trim();
             
@@ -390,8 +402,6 @@ document.addEventListener("DOMContentLoaded", function() {
     // Render modules based on search
     function renderModules() {
         console.log('=== renderModules() called ===');
-        console.log('currentAccessTypeIds:', currentAccessTypeIds);
-        console.log('allAccessTypesList count:', allAccessTypesList.length);
         
         modulesDisplay.innerHTML = "";
         let toDisplay = allAccessTypesList;
@@ -408,7 +418,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const grouped = {};
         toDisplay.forEach(type => {
             if (!grouped[type.module]) grouped[type.module] = {};
-            // Use action name as key to deduplicate
             if (!grouped[type.module][type.actions]) {
                 grouped[type.module][type.actions] = type;
             }
@@ -428,7 +437,7 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCard.style.display = "flex";
             moduleCard.style.flexDirection = "column";
 
-            // Module header with checkbox and name and action count
+            // Module header
             const headerDiv = document.createElement("div");
             headerDiv.style.display = "flex";
             headerDiv.style.justifyContent = "space-between";
@@ -438,7 +447,6 @@ document.addEventListener("DOMContentLoaded", function() {
             headerDiv.style.borderBottom = "1px solid #444";
             headerDiv.style.gap = "8px";
 
-            // Module checkbox
             const moduleCheckbox = document.createElement("input");
             moduleCheckbox.type = "checkbox";
             moduleCheckbox.className = "module-checkbox";
@@ -517,9 +525,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.addEventListener("change", function() {
                     // Remove from auto-selected if user manually toggles
                     if (this.checked && !autoSelectedItems.has(this.value)) {
-                        // Manually checked - not auto
+                        // Manually checked
                     } else if (!this.checked && autoSelectedItems.has(this.value)) {
-                        // Manually unchecked - remove from auto
                         autoSelectedItems.delete(this.value);
                     }
                     
@@ -552,11 +559,9 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCheckbox.addEventListener("change", function() {
                 actionCheckboxes.forEach(cb => {
                     cb.checked = this.checked;
-                    // If manually unchecking, remove from auto-selected
                     if (!this.checked && autoSelectedItems.has(cb.value)) {
                         autoSelectedItems.delete(cb.value);
                     }
-                    // If manually checking, don't add to auto-selected
                 });
                 updateSummary();
             });
@@ -565,7 +570,7 @@ document.addEventListener("DOMContentLoaded", function() {
             modulesDisplay.appendChild(moduleCard);
         });
         
-        // After rendering, update module checkbox states based on their actions
+        // After rendering, update module checkbox states
         document.querySelectorAll('.module-checkbox').forEach(moduleCheckbox => {
             const parentCard = moduleCheckbox.closest('.module-card');
             if (parentCard) {
@@ -611,6 +616,42 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(data => {
                 if (data.success && data.roles.length > 0) {
                     updateRoleUI(data.roles, data.system_name);
+                    
+                    // After roles are populated, set the original role if available
+                    if (originalRole && originalSystem) {
+                        console.log('Setting roleSelect.value to:', originalRole);
+                        roleSelect.value = originalRole;
+                        
+                        // Mark all pre-saved items as auto-selected
+                        document.querySelectorAll('.access-checkbox').forEach(cb => {
+                            const checkboxId = parseInt(cb.value);
+                            if (currentAccessTypeIdsSet.has(checkboxId)) {
+                                autoSelectedItems.add(cb.value);
+                            }
+                        });
+                        
+                        // Re-check the items
+                        document.querySelectorAll('.access-checkbox').forEach(cb => {
+                            const checkboxId = parseInt(cb.value);
+                            if (currentAccessTypeIdsSet.has(checkboxId)) {
+                                cb.checked = true;
+                            }
+                        });
+                        
+                        // Update module checkboxes and summary
+                        document.querySelectorAll('.module-checkbox').forEach(moduleCheckbox => {
+                            const parentCard = moduleCheckbox.closest('.module-card');
+                            if (parentCard) {
+                                const actionCheckboxes = parentCard.querySelectorAll('.access-checkbox');
+                                const allChecked = Array.from(actionCheckboxes).every(cb => cb.checked);
+                                const anyChecked = Array.from(actionCheckboxes).some(cb => cb.checked);
+                                moduleCheckbox.checked = allChecked;
+                                moduleCheckbox.indeterminate = anyChecked && !allChecked;
+                            }
+                        });
+                        
+                        updateSummary();
+                    }
                 } else {
                     roleSelect.innerHTML = '<option value="">No roles found</option>';
                 }
@@ -636,31 +677,25 @@ document.addEventListener("DOMContentLoaded", function() {
     roleSelect.addEventListener("change", function() {
         const role = this.value;
         console.log('=== Role dropdown changed ===');
-        console.log('Selected role value:', role);
-        console.log('System select value:', systemSelect.value);
         
         if (!role) {
             console.log('No role selected, clearing');
-            // Clear selections if no role selected
             document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
             updateSummary();
             return;
         }
         
-        // Get the actual system name (e.g., "RPS") from the system ID
         const systemId = systemSelect.value;
         const systemName = systemIdToNameMap[systemId] || '';
-        console.log('systemId:', systemId, 'systemName from map:', systemName);
+        console.log('systemId:', systemId, 'systemName:', systemName);
         selectAllModulesForRole(role, systemName);
     });
 
     function selectAllModulesForRole(role, systemName) {
         console.log('=== selectAllModulesForRole called ===');
-        console.log('role:', role, 'systemName (raw):', systemName);
+        console.log('role:', role, 'systemName:', systemName);
         
-        // Ensure systemName is trimmed
         systemName = (systemName || '').trim();
-        console.log('systemName (trimmed):', systemName);
         
         // Uncheck all first
         document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
@@ -671,24 +706,18 @@ document.addEventListener("DOMContentLoaded", function() {
         
         // Check only items for this role and system
         const selector = `.access-checkbox[data-role="${role}"][data-system="${systemName}"]`;
-        console.log('Using selector:', selector);
-        
         const roleCbs = document.querySelectorAll(selector);
+        
         console.log('Found checkboxes for this role:', roleCbs.length);
         
         roleCbs.forEach(cb => {
             cb.checked = true;
-            autoSelectedItems.add(cb.value); // Mark as auto-selected
-            console.log('✓ Checked:', cb.value, 'action:', cb.dataset.name);
+            autoSelectedItems.add(cb.value);
         });
         
-        console.log('autoSelectedItems after role selection:', Array.from(autoSelectedItems));
-        
-        // Also check the module checkboxes for selected modules
+        // Update module checkboxes
         const selectedModules = new Set();
         roleCbs.forEach(cb => selectedModules.add(cb.dataset.module));
-        
-        console.log('Selected modules:', Array.from(selectedModules));
         
         document.querySelectorAll('.module-checkbox').forEach(moduleCheckbox => {
             const parentCard = moduleCheckbox.closest('.module-card');
@@ -697,13 +726,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 const moduleName = moduleTitle.textContent.trim();
                 if (selectedModules.has(moduleName)) {
                     moduleCheckbox.checked = true;
-                    console.log('✓ Module checked:', moduleName);
                 }
             }
         });
         
         updateSummary();
-        console.log('=== selectAllModulesForRole complete ===');
     }
 
     function updateSummary() {
@@ -719,16 +746,18 @@ document.addEventListener("DOMContentLoaded", function() {
         selected.forEach(cb => {
             const module = cb.dataset.module;
             const action = cb.dataset.name;
-            const itemId = cb.value;
+            const itemId = parseInt(cb.value);
+            const role = cb.dataset.role;
             
             if (!grouped[module]) {
                 grouped[module] = { default: [], added: [] };
             }
             
-            // Check if this item was auto-selected and hasn't been manually toggled
-            const isStillAuto = autoSelectedItems.has(itemId);
+            // Check if this item belongs to the currently selected role
+            const currentRole = roleSelect.value;
+            const isFromCurrentRole = (role === currentRole);
             
-            if (isStillAuto) {
+            if (isFromCurrentRole) {
                 grouped[module].default.push(action);
             } else {
                 grouped[module].added.push(action);
@@ -737,7 +766,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         summaryContainer.innerHTML = "";
         Object.entries(grouped).forEach(([moduleName, items]) => {
-            // Determine if this module has any manually selected items
+            // Determine if this module has any manually added items
             const hasAddedItems = items.added.length > 0;
             
             const card = document.createElement("div");
@@ -822,67 +851,11 @@ document.addEventListener("DOMContentLoaded", function() {
     // On page load, initialize with pre-selected values
     console.log('=== Page Load Initialization ===');
     console.log('originalRole:', originalRole);
-    console.log('originalSystem:', originalSystem);
     console.log('currentAccessTypeIds:', currentAccessTypeIds);
     
     if (systemSelect.value) {
         console.log('System already selected:', systemSelect.value);
         systemSelect.dispatchEvent(new Event('change'));
-        
-        // After system change loads roles, auto-select the original role
-        setTimeout(() => {
-            if (originalRole && originalSystem) {
-                console.log('Auto-selecting original role:', originalRole, 'system:', originalSystem);
-                roleSelect.value = originalRole;
-                
-                // Mark all pre-saved items as auto-selected since they come from the original role
-                document.querySelectorAll('.access-checkbox').forEach(cb => {
-                    const checkboxId = parseInt(cb.value);
-                    if (currentAccessTypeIdsSet.has(checkboxId)) {
-                        autoSelectedItems.add(cb.value);
-                        console.log('Marked as auto-selected:', checkboxId, 'action:', cb.dataset.name);
-                    }
-                });
-                
-                console.log('autoSelectedItems after marking:', Array.from(autoSelectedItems));
-                
-                // Re-check the items now that autoSelectedItems is populated
-                document.querySelectorAll('.access-checkbox').forEach(cb => {
-                    const checkboxId = parseInt(cb.value);
-                    if (currentAccessTypeIdsSet.has(checkboxId)) {
-                        cb.checked = true;
-                        console.log('✓ Visually checked:', checkboxId);
-                    }
-                });
-                
-                // Update module checkboxes and summary
-                document.querySelectorAll('.module-checkbox').forEach(moduleCheckbox => {
-                    const parentCard = moduleCheckbox.closest('.module-card');
-                    if (parentCard) {
-                        const actionCheckboxes = parentCard.querySelectorAll('.access-checkbox');
-                        const allChecked = Array.from(actionCheckboxes).every(cb => cb.checked);
-                        const anyChecked = Array.from(actionCheckboxes).some(cb => cb.checked);
-                        moduleCheckbox.checked = allChecked;
-                        moduleCheckbox.indeterminate = anyChecked && !allChecked;
-                    }
-                });
-                
-                updateSummary();
-            } else {
-                console.log('No original role detected, but checking for saved items...');
-                // No original role detected, but we still have saved items
-                // Mark all current items as auto-selected for display purposes
-                document.querySelectorAll('.access-checkbox').forEach(cb => {
-                    const checkboxId = parseInt(cb.value);
-                    if (currentAccessTypeIdsSet.has(checkboxId)) {
-                        autoSelectedItems.add(cb.value);
-                        cb.checked = true;
-                        console.log('Marked as auto-selected (no role):', checkboxId);
-                    }
-                });
-                updateSummary();
-            }
-        }, 200);
     } else {
         console.log('No system selected');
     }
@@ -892,7 +865,7 @@ document.addEventListener("DOMContentLoaded", function() {
         requestForSelect.dispatchEvent(new Event('change'));
     }
 
-    // Update summary on initial load (for pre-selected access types)
+    // Update summary on initial load
     setTimeout(() => {
         console.log('Calling updateSummary() after 300ms');
         updateSummary();
