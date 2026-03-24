@@ -776,7 +776,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const title = document.createElement("strong");
             title.style.fontSize = "0.95rem";
-            title.style.color = hasAddedItems ? "#0d6efd" : "#fff";
+            title.style.color = hasAddedItems ? "#0d6efd" : "#333";
             title.textContent = moduleName;
 
             const actionsList = document.createElement("div");
@@ -786,8 +786,8 @@ document.addEventListener("DOMContentLoaded", function() {
             // Default items (white text if no added items, blue if any added)
             items.default.forEach(action => {
                 const item = document.createElement("div");
-                item.style.color = hasAddedItems ? "#0d6efd" : "#fff";
-                item.style.fontWeight = hasAddedItems ? "bold" : "normal";
+                item.style.color = hasAddedItems ? "#0d6efd" : "#666";
+                // item.style.fontWeight = hasAddedItems ? "bold" : "normal";
                 item.style.marginBottom = "4px";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);
@@ -797,7 +797,7 @@ document.addEventListener("DOMContentLoaded", function() {
             items.added.forEach(action => {
                 const item = document.createElement("div");
                 item.style.color = "#0d6efd";
-                item.style.fontWeight = "bold";
+                // item.style.fontWeight = "bold";
                 item.style.marginBottom = "4px";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);

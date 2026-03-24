@@ -6,16 +6,22 @@
  * Manages users in reqhub.users table with proper employee_id, reqhub_role, system_id, department_id
  */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 
 header('Content-Type: application/json');
 
-requireRole('Admin');
+if (!isAuthenticated()) {
+    http_response_code(403);
+    die(json_encode(['success' => false, 'message' => 'Access denied']));
+}
+
+$currentUser = getCurrentUser();
+
+if ($currentUser['reqhub_role'] !== 'Admin') {
+    http_response_code(403);
+    die(json_encode(['success' => false, 'message' => 'Access denied: Admin only']));
+}
 
 try {
     $pdo = ReqHubDatabase::getConnection('reqhub');

@@ -54,7 +54,7 @@ try {
     
     // Store the revision message as a system message in chat
     $system_message = "[REVISION REQUESTED]: \n\n" . $revision_message;
-    $sql2 = "INSERT INTO request_chats (request_id, sender_id, message, created_at) VALUES (?, 19, ?, NOW())";
+    $sql2 = "INSERT INTO request_chats (request_id, sender_id, message, created_at) VALUES (?, 1, ?, NOW())";
     error_log("revise_action: Executing INSERT");
     
     $stmt2 = $pdo->prepare($sql2);

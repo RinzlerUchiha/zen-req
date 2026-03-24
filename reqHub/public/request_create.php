@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCard.style.border = "1px solid #555";
             moduleCard.style.borderRadius = "4px";
             moduleCard.style.padding = "10px";
-            moduleCard.style.backgroundColor = "#2a2a2a";
+            moduleCard.style.backgroundColor = "#fffcfc";
             moduleCard.style.minHeight = "250px";
             moduleCard.style.display = "flex";
             moduleCard.style.flexDirection = "column";
@@ -248,7 +248,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const moduleTitle = document.createElement("label");
             moduleTitle.style.fontWeight = "bold";
             moduleTitle.style.fontSize = "0.9rem";
-            moduleTitle.style.color = "#fff";
+            moduleTitle.style.color = "#000000";
             moduleTitle.style.wordBreak = "break-word";
             moduleTitle.style.flex = "1";
             moduleTitle.style.cursor = "pointer";
@@ -330,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 label.style.userSelect = "none";
                 label.style.wordBreak = "break-word";
                 label.style.lineHeight = "1.4";
-                label.style.color = "#ccc";
+                label.style.color = "#333";
                 label.textContent = type.actions;
 
                 actionDiv.appendChild(checkbox);
@@ -504,18 +504,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const title = document.createElement("strong");
             title.style.fontSize = "0.95rem";
-            title.style.color = hasAddedItems ? "#0d6efd" : "#fff";
+            title.style.color = hasAddedItems ? "#0d6efd" : "#333";
             title.textContent = moduleName;
 
             const actionsList = document.createElement("div");
             actionsList.style.marginTop = "8px";
             actionsList.style.fontSize = "0.85rem";
 
-            // Default items (white text if no added items, blue if any added)
+            // Default items (gray text if no added items, blue if any added)
             items.default.forEach(action => {
                 const item = document.createElement("div");
-                item.style.color = hasAddedItems ? "#0d6efd" : "#fff";
-                item.style.fontWeight = hasAddedItems ? "bold" : "normal";
+                item.style.color = hasAddedItems ? "#0d6efd" : "#666";
+                // item.style.fontWeight = hasAddedItems ? "bold" : "normal";
                 item.style.marginBottom = "4px";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);
@@ -525,7 +525,7 @@ document.addEventListener("DOMContentLoaded", function() {
             items.added.forEach(action => {
                 const item = document.createElement("div");
                 item.style.color = "#0d6efd";
-                item.style.fontWeight = "bold";
+                // item.style.fontWeight = "bold";
                 item.style.marginBottom = "4px";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);

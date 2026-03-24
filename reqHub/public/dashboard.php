@@ -274,7 +274,7 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 <p><strong>Requestor:</strong><br><span id="modalName"></span></p>
 <p><strong>System:</strong><br><span id="modalSystem"></span></p>
 
-<p><strong>Role:</strong><br><span id="modalRole" style="color: rgb(255, 255, 255); font-weight: bold;"></span></p>
+<p><strong>Role:</strong><br><span id="modalRole" style="color: #333; font-weight: bold;"></span></p>
 
 <p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>
 

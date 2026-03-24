@@ -128,7 +128,7 @@ try {
     // Store a system message in chat indicating the revision was submitted
     $stmt = $pdo->prepare("
         INSERT INTO request_chats (request_id, sender_id, message, created_at)
-        VALUES (?, 19, ?, NOW())
+        VALUES (?, 1, ?, NOW())
     ");
     
     $system_message = "[REQUEST RESUBMITTED]\n\nRevisions have been submitted. The request is back in pending for approver review.";
