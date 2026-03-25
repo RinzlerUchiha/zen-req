@@ -209,7 +209,7 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 <thead>
 <tr>
     <th>System</th>
-    <th>Name</th>
+    <th>Access For</th>
     <th>Role</th>
     <th>Status</th>
 </tr>
