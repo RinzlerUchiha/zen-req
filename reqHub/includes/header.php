@@ -132,8 +132,35 @@ $totalCount = count($derivedNotifications) + count($eventNotifications);
 </head>
 <body>
 
+<!-- DEV ROLE SWITCHER -->
+<div class="bg-secondary px-3 py-1 d-flex align-items-center gap-2" style="font-size: 0.8rem;">
+    <span class="text-white">Dev Role:</span>
+    <select onchange="switchRole(this.value)" class="form-select form-select-sm w-auto">
+        <option value="Requestor" <?= $role === 'Requestor' ? 'selected' : '' ?>>Requestor</option>
+        <option value="Approver" <?= $role === 'Approver' ? 'selected' : '' ?>>Approver</option>
+        <option value="Admin" <?= $role === 'Admin' ? 'selected' : '' ?>>Admin</option>
+    </select>
+    <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($role) ?></strong></span>
+</div>
+
+<script>
+function switchRole(newRole) {
+    fetch('/zen/reqHub/role_switch_action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'role=' + encodeURIComponent(newRole)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) window.location.reload();
+        else alert('Failed: ' + (data.message || 'Unknown error'));
+    });
+}
+</script>
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
     <a class="navbar-brand" href="/zen/reqHub/dashboard">Access Portal</a>
+    <a class="btn btn-outline-light btn-sm" href="/zen/dashboard">Return to ZenHub</a>
 
     <div class="ms-auto dropdown">
         <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">

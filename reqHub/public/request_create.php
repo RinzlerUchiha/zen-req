@@ -137,7 +137,7 @@ foreach ($accessTypes as $type) {
                 <!-- COLUMN 3: Summary (38% width, 2-column grid) -->
                 <div style="flex: 0 0 37.666667%; max-width: 37.666667%;">
                     <h6>Selected Access</h6>
-                    <div id="summaryContainer" class="border rounded p-3" style="max-height: 600px; overflow-y: auto; background-color: #fafafa; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px;">
+                    <div id="summaryContainer" class="border rounded p-3" style="max-height: 639px; overflow-y: auto; background-color: #fafafa; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px;">
                         <div class="text-muted small" style="grid-column: 1 / -1;">No access selected</div>
                     </div>
                 </div>
@@ -203,14 +203,14 @@ document.addEventListener("DOMContentLoaded", function() {
             );
         }
 
-        // Group by module
+        // Group by module — store ALL entries per action to preserve all IDs
         const grouped = {};
         toDisplay.forEach(type => {
             if (!grouped[type.module]) grouped[type.module] = {};
-            // Use action name as key to deduplicate - we only need one entry per action per module
             if (!grouped[type.module][type.actions]) {
-                grouped[type.module][type.actions] = type;
+                grouped[type.module][type.actions] = [];
             }
+            grouped[type.module][type.actions].push(type);
         });
 
         // If prioritizeAutoSelected, split modules into auto-selected and others
@@ -221,7 +221,6 @@ document.addEventListener("DOMContentLoaded", function() {
             const others = [];
             
             modulesToDisplay.forEach(([moduleName, actionsMap]) => {
-                // Check if this module is in autoSelectedModules
                 if (autoSelectedModules.has(moduleName)) {
                     prioritized.push([moduleName, actionsMap]);
                 } else {
@@ -301,7 +300,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const actionCheckboxes = [];
 
-            actions.forEach(type => {
+            actions.forEach(types => {
+                // Find the matching entry from autoSelectedItems, fallback to first
+                const matchedType = types.find(t => autoSelectedItems.has(t.id.toString())) || types[0];
+
                 const actionDiv = document.createElement("div");
                 actionDiv.style.display = "flex";
                 actionDiv.style.alignItems = "flex-start";
@@ -311,31 +313,27 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.type = "checkbox";
                 checkbox.className = "access-checkbox";
                 checkbox.name = "access_types[]";
-                checkbox.value = type.id;
-                checkbox.id = `access_${type.id}`;
-                checkbox.dataset.system = type.system;
-                checkbox.dataset.role = type.role;
-                checkbox.dataset.module = type.module;
-                checkbox.dataset.name = type.actions;
+                checkbox.value = matchedType.id;
+                checkbox.id = `access_${matchedType.id}`;
+                checkbox.dataset.system = matchedType.system;
+                checkbox.dataset.role = matchedType.role;
+                checkbox.dataset.module = matchedType.module;
+                checkbox.dataset.name = matchedType.actions;
                 checkbox.style.width = "16px";
                 checkbox.style.height = "16px";
                 checkbox.style.marginTop = "1px";
                 checkbox.style.flexShrink = "0";
                 checkbox.style.cursor = "pointer";
                 
-                // PRESERVE checked state if item is in autoSelectedItems
-                if (autoSelectedItems.has(type.id.toString())) {
+                // PRESERVE checked state if matched item is in autoSelectedItems
+                if (autoSelectedItems.has(matchedType.id.toString())) {
                     checkbox.checked = true;
                 }
                 
                 actionCheckboxes.push(checkbox);
 
                 checkbox.addEventListener("change", function() {
-                    // Remove from auto-selected if user manually toggles
-                    if (this.checked && !autoSelectedItems.has(this.value)) {
-                        // Manually checked - not auto
-                    } else if (!this.checked && autoSelectedItems.has(this.value)) {
-                        // Manually unchecked - remove from auto
+                    if (!this.checked && autoSelectedItems.has(this.value)) {
                         autoSelectedItems.delete(this.value);
                     }
                     
@@ -349,7 +347,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
 
                 const label = document.createElement("label");
-                label.htmlFor = `access_${type.id}`;
+                label.htmlFor = `access_${matchedType.id}`;
                 label.style.marginBottom = "0";
                 label.style.cursor = "pointer";
                 label.style.fontSize = "0.8rem";
@@ -357,7 +355,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 label.style.wordBreak = "break-word";
                 label.style.lineHeight = "1.4";
                 label.style.color = "#333";
-                label.textContent = type.actions;
+                label.textContent = matchedType.actions;
 
                 actionDiv.appendChild(checkbox);
                 actionDiv.appendChild(label);
@@ -368,11 +366,9 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCheckbox.addEventListener("change", function() {
                 actionCheckboxes.forEach(cb => {
                     cb.checked = this.checked;
-                    // If manually unchecking, remove from auto-selected
                     if (!this.checked && autoSelectedItems.has(cb.value)) {
                         autoSelectedItems.delete(cb.value);
                     }
-                    // If manually checking, don't add to auto-selected
                 });
                 updateSummary();
             });
@@ -391,7 +387,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // Search functionality
     searchModules.addEventListener("input", function() {
         currentSearch = this.value;
-        renderModules(true); // Keep auto-selected modules at top during search
+        renderModules(true);
     });
 
     // Initialize modules
@@ -400,14 +396,12 @@ document.addEventListener("DOMContentLoaded", function() {
     systemSelect.addEventListener("change", function() {
         const systemId = this.value;
         
-        // Unselect all modules and actions when system changes
         document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
         document.querySelectorAll('.module-checkbox').forEach(cb => cb.checked = false);
         autoSelectedItems.clear();
         autoSelectedModules.clear();
         updateSummary();
         
-        // Reset role dropdown
         roleSelect.value = '';
         
         if (!systemId) {
@@ -442,17 +436,14 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Handle role selection from dropdown
     roleSelect.addEventListener("change", function() {
         const role = this.value;
         console.log('Role selected:', role);
         
-        // IMPORTANT: Store the chosen role in the hidden input
         document.getElementById('chosenRoleInput').value = role;
         console.log('Stored chosen_role:', role);
         
         if (!role) {
-            // Clear selections if no role selected
             document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
             autoSelectedItems.clear();
             autoSelectedModules.clear();
@@ -465,22 +456,20 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     function selectAllModulesForRole(role, systemName) {
-        // Clear auto-selected tracking
         autoSelectedItems.clear();
         autoSelectedModules.clear();
         
-        // Query the DATA, not the DOM - find all items matching this role and system
         allAccessTypesList.forEach(type => {
             if (type.role === role && type.system === systemName) {
-                autoSelectedItems.add(type.id.toString()); // Add item ID
-                autoSelectedModules.add(type.module); // Add module name
+                autoSelectedItems.add(type.id.toString());
+                autoSelectedModules.add(type.module);
             }
         });
         
         console.log('Auto-selected items:', autoSelectedItems);
         console.log('Auto-selected modules:', autoSelectedModules);
+        console.log('autoSelectedItems contents:', [...autoSelectedItems]);
         
-        // NOW render with prioritization - checkboxes will be checked via autoSelectedItems
         renderModules(true);
         updateSummary();
     }
@@ -504,7 +493,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 grouped[module] = { default: [], added: [] };
             }
             
-            // Check if this item was auto-selected and hasn't been manually toggled
             const isStillAuto = autoSelectedItems.has(itemId);
             
             if (isStillAuto) {
@@ -516,9 +504,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
         summaryContainer.innerHTML = "";
         Object.entries(grouped).forEach(([moduleName, items]) => {
-            // Determine module title color based on Case A/B/C logic
-            // Case A/C: Module is in autoSelectedModules (had auto-selected items) → BLACK
-            // Case B: Module is NOT in autoSelectedModules but has manually selected items → BLUE
             const isAutoSelectedModule = autoSelectedModules.has(moduleName);
             const moduleTitleColor = isAutoSelectedModule ? "#333" : "#0d6efd";
             
@@ -536,21 +521,19 @@ document.addEventListener("DOMContentLoaded", function() {
             actionsList.style.marginTop = "8px";
             actionsList.style.fontSize = "0.85rem";
 
-            // Default items (gray text - auto-selected)
             items.default.forEach(action => {
                 const item = document.createElement("div");
-                item.style.color = "#666"; // Gray for auto-selected
+                item.style.color = "#666";
                 item.style.fontWeight = "normal";
                 item.style.marginBottom = "4px";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);
             });
 
-            // Added items (blue text - manually selected)
             items.added.forEach(action => {
                 const item = document.createElement("div");
-                item.style.color = "#0d6efd"; // Blue for manually-added
-                item.style.fontWeight = "normal"; // NOT bold
+                item.style.color = "#0d6efd";
+                item.style.fontWeight = "normal";
                 item.style.marginBottom = "4px";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);

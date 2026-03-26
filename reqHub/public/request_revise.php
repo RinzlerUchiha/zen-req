@@ -414,13 +414,14 @@ document.addEventListener("DOMContentLoaded", function() {
             );
         }
 
-        // Group by module
+        // Group by module — store ALL entries per action to preserve all IDs
         const grouped = {};
         toDisplay.forEach(type => {
             if (!grouped[type.module]) grouped[type.module] = {};
             if (!grouped[type.module][type.actions]) {
-                grouped[type.module][type.actions] = type;
+                grouped[type.module][type.actions] = [];
             }
+            grouped[type.module][type.actions].push(type);
         });
 
         // Display grouped modules in cards
@@ -432,7 +433,7 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCard.style.border = "1px solid #555";
             moduleCard.style.borderRadius = "4px";
             moduleCard.style.padding = "10px";
-            moduleCard.style.backgroundColor = "#2a2a2a";
+            moduleCard.style.backgroundColor = "#fafafa";
             moduleCard.style.minHeight = "250px";
             moduleCard.style.display = "flex";
             moduleCard.style.flexDirection = "column";
@@ -459,7 +460,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const moduleTitle = document.createElement("label");
             moduleTitle.style.fontWeight = "bold";
             moduleTitle.style.fontSize = "0.9rem";
-            moduleTitle.style.color = "#fff";
+            moduleTitle.style.color = "#212529";
             moduleTitle.style.wordBreak = "break-word";
             moduleTitle.style.flex = "1";
             moduleTitle.style.cursor = "pointer";
@@ -491,7 +492,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const actionCheckboxes = [];
 
-            actions.forEach(type => {
+            actions.forEach(types => {
+                // Find the matching entry from currentAccessTypeIdsSet, fallback to first
+                const matchedType = types.find(t => currentAccessTypeIdsSet.has(t.id)) || types[0];
+
                 const actionDiv = document.createElement("div");
                 actionDiv.style.display = "flex";
                 actionDiv.style.alignItems = "flex-start";
@@ -501,23 +505,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.type = "checkbox";
                 checkbox.className = "access-checkbox";
                 checkbox.name = "access_types[]";
-                checkbox.value = type.id;
-                checkbox.id = `access_${type.id}`;
-                checkbox.dataset.system = type.system;
-                checkbox.dataset.role = type.role;
-                checkbox.dataset.module = type.module;
-                checkbox.dataset.name = type.actions;
+                checkbox.value = matchedType.id;
+                checkbox.id = `access_${matchedType.id}`;
+                checkbox.dataset.system = matchedType.system;
+                checkbox.dataset.role = matchedType.role;
+                checkbox.dataset.module = matchedType.module;
+                checkbox.dataset.name = matchedType.actions;
                 checkbox.style.width = "16px";
                 checkbox.style.height = "16px";
                 checkbox.style.marginTop = "1px";
                 checkbox.style.flexShrink = "0";
                 checkbox.style.cursor = "pointer";
                 
-                // Pre-check if this access type is in the current request
-                const shouldBeChecked = currentAccessTypeIdsSet.has(type.id);
+                // Pre-check if matched type is in the current request
+                const shouldBeChecked = currentAccessTypeIdsSet.has(matchedType.id);
                 if (shouldBeChecked) {
                     checkbox.checked = true;
-                    console.log('✓ Pre-checked:', type.id, 'action:', type.actions);
+                    console.log('✓ Pre-checked:', matchedType.id, 'action:', matchedType.actions);
                 }
                 
                 actionCheckboxes.push(checkbox);
@@ -540,15 +544,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
 
                 const label = document.createElement("label");
-                label.htmlFor = `access_${type.id}`;
+                label.htmlFor = `access_${matchedType.id}`;
                 label.style.marginBottom = "0";
                 label.style.cursor = "pointer";
                 label.style.fontSize = "0.8rem";
                 label.style.userSelect = "none";
                 label.style.wordBreak = "break-word";
                 label.style.lineHeight = "1.4";
-                label.style.color = "#ccc";
-                label.textContent = type.actions;
+                label.style.color = "#212529";
+                label.textContent = matchedType.actions;
 
                 actionDiv.appendChild(checkbox);
                 actionDiv.appendChild(label);
