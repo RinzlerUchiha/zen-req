@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 12, 2026 at 08:48 AM
+-- Generation Time: Mar 23, 2026 at 11:43 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -2780,43 +2780,6 @@ INSERT INTO `actions` (`id`, `name`, `created_at`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `actions_backup`
---
-
-CREATE TABLE `actions_backup` (
-  `id` int(11) NOT NULL DEFAULT 0,
-  `name` varchar(150) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
---
--- Dumping data for table `actions_backup`
---
-
-INSERT INTO `actions_backup` (`id`, `name`, `created_at`) VALUES
-(1, 'Sample Action', '2026-02-27 00:35:19'),
-(2, 'View', '2026-03-02 00:33:10'),
-(3, 'Add', '2026-03-02 00:33:17'),
-(4, 'Delete', '2026-03-02 00:33:23'),
-(5, 'View all Request', '2026-03-02 00:33:49'),
-(6, 'Edit', '2026-03-02 00:34:07'),
-(7, 'Sample Action 1', '2026-03-02 01:48:44'),
-(8, 'Sample Action 2', '2026-03-02 01:48:53'),
-(9, 'Sample Action 3', '2026-03-02 01:49:08'),
-(10, 'Sample Action 4', '2026-03-02 01:49:14'),
-(11, 'Sample Action 5', '2026-03-02 01:49:21'),
-(12, 'Sample Action 6', '2026-03-02 01:49:26'),
-(13, 'Sample Action 7', '2026-03-02 01:49:37'),
-(14, 'Sample Action 8', '2026-03-02 01:49:42'),
-(15, 'Sample Action 9', '2026-03-02 01:49:47'),
-(16, 'Sample Action 10', '2026-03-02 01:49:57'),
-(21, 'Sample Action 11', '2026-03-02 02:18:14'),
-(39, 'Test', '2026-03-02 10:45:48'),
-(40, 'ADD2222', '2026-03-03 02:15:36');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `approver_assignments`
 --
 
@@ -2837,6 +2800,7 @@ CREATE TABLE `approver_assignments` (
 CREATE TABLE `departments` (
   `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
+  `code` varchar(50) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -2844,8 +2808,32 @@ CREATE TABLE `departments` (
 -- Dumping data for table `departments`
 --
 
-INSERT INTO `departments` (`id`, `name`, `created_at`) VALUES
-(5, 'TEST', '2026-02-13 09:25:35');
+INSERT INTO `departments` (`id`, `name`, `code`, `created_at`) VALUES
+(5, 'TEST', 'TEST', '0000-00-00 00:00:00'),
+(8, 'ACA', 'ACA', '2026-03-16 10:03:01'),
+(9, 'ACC', 'ACC', '2026-03-16 10:03:02'),
+(10, 'ACD', 'ACD', '2026-03-16 10:03:02'),
+(11, 'ADM', 'ADM', '2026-03-16 10:03:02'),
+(12, 'AUD', 'AUD', '2026-03-16 10:03:02'),
+(13, 'BMD', 'BMD', '2026-03-16 10:03:02'),
+(14, 'BOD', 'BOD', '2026-03-16 10:03:02'),
+(15, 'CSS', 'CSS', '2026-03-16 10:03:02'),
+(16, 'FAC', 'FAC', '2026-03-16 10:03:02'),
+(17, 'FIN', 'FIN', '2026-03-16 10:03:02'),
+(18, 'GED', 'GED', '2026-03-16 10:03:02'),
+(19, 'GYBP', 'GYBP', '2026-03-16 10:03:02'),
+(20, 'HRD', 'HRD', '2026-03-16 10:03:02'),
+(21, 'ITD', 'ITD', '2026-03-16 10:03:02'),
+(22, 'MIS', 'MIS', '2026-03-16 10:03:02'),
+(23, 'MKT', 'MKT', '2026-03-16 10:03:02'),
+(24, 'MNT', 'MNT', '2026-03-16 10:03:02'),
+(25, 'PRQ', 'PRQ', '2026-03-16 10:03:02'),
+(26, 'QCRT', 'QCRT', '2026-03-16 10:03:03'),
+(27, 'QSM', 'QSM', '2026-03-16 10:03:03'),
+(28, 'SCD', 'SCD', '2026-03-16 10:03:03'),
+(29, 'SLS', 'SLS', '2026-03-16 10:03:03'),
+(30, 'SO', 'SO', '2026-03-16 10:03:03'),
+(31, 'STFF', 'STFF', '2026-03-16 10:03:03');
 
 -- --------------------------------------------------------
 
@@ -3076,33 +3064,6 @@ INSERT INTO `modules` (`id`, `name`, `created_at`) VALUES
 (243, 'Partial Releasing', '2026-03-09 23:04:58'),
 (244, 'Voucher Monitoring', '2026-03-09 23:04:58'),
 (295, '2', '2026-03-10 06:22:17');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `modules_backup`
---
-
-CREATE TABLE `modules_backup` (
-  `id` int(11) NOT NULL DEFAULT 0,
-  `name` varchar(150) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
---
--- Dumping data for table `modules_backup`
---
-
-INSERT INTO `modules_backup` (`id`, `name`, `created_at`) VALUES
-(1, 'Sample Module', '2026-03-02 00:34:24'),
-(2, 'Sample Module 2', '2026-03-02 00:35:50'),
-(3, 'Sample Module 3', '2026-03-02 00:36:09'),
-(4, 'Sample Module 4', '2026-03-02 00:36:22'),
-(5, 'Sample Module 5', '2026-03-02 00:36:35'),
-(6, 'Sample Module 6', '2026-03-02 00:36:46'),
-(7, 'Sample Module 7', '2026-03-02 02:18:45'),
-(22, 'Test', '2026-03-02 10:45:58'),
-(24, 'test2', '2026-03-03 02:19:38');
 
 -- --------------------------------------------------------
 
@@ -4045,60 +4006,6 @@ INSERT INTO `module_actions` (`id`, `module_id`, `action_id`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `module_actions_backup`
---
-
-CREATE TABLE `module_actions_backup` (
-  `id` int(11) NOT NULL DEFAULT 0,
-  `module_id` int(11) NOT NULL,
-  `action_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
---
--- Dumping data for table `module_actions_backup`
---
-
-INSERT INTO `module_actions_backup` (`id`, `module_id`, `action_id`) VALUES
-(7, 2, 3),
-(8, 2, 6),
-(9, 2, 2),
-(10, 3, 4),
-(11, 3, 1),
-(12, 3, 5),
-(13, 4, 3),
-(14, 4, 1),
-(15, 4, 2),
-(16, 5, 6),
-(17, 5, 1),
-(18, 6, 2),
-(19, 6, 5),
-(20, 7, 3),
-(21, 7, 7),
-(22, 7, 9),
-(23, 7, 13),
-(24, 7, 5),
-(62, 22, 4),
-(63, 22, 10),
-(64, 22, 14),
-(65, 22, 39),
-(66, 24, 15),
-(67, 24, 39),
-(68, 24, 40),
-(69, 1, 3),
-(70, 1, 4),
-(71, 1, 6),
-(72, 1, 1),
-(73, 1, 7),
-(74, 1, 8),
-(75, 1, 9),
-(76, 1, 12),
-(77, 1, 13),
-(78, 1, 2),
-(79, 1, 5);
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `notifications`
 --
 
@@ -4108,15 +4015,6 @@ CREATE TABLE `notifications` (
   `is_read` tinyint(1) NOT NULL DEFAULT 0,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `notifications`
---
-
-INSERT INTO `notifications` (`user_id`, `message`, `is_read`, `updated_at`) VALUES
-(1, 'Your request has been approved and served.', 0, '2026-02-24 01:47:15'),
-(2, 'You have 3 pending request(s) that need approval.', 0, '2026-02-23 09:09:10'),
-(3, 'You have 2 approved request(s) waiting to be served.', 0, '2026-02-23 09:09:10');
 
 -- --------------------------------------------------------
 
@@ -4154,7 +4052,8 @@ CREATE TABLE `requests` (
   `department_id` int(11) NOT NULL,
   `remove_from` varchar(255) DEFAULT NULL,
   `description` text NOT NULL,
-  `status` enum('pending','approved','denied','served') DEFAULT 'pending',
+  `status` varchar(50) DEFAULT NULL,
+  `chosen_role` varchar(255) DEFAULT NULL COMMENT 'The role selected by the requestor when creating the request',
   `admin_status` enum('pending','served') DEFAULT 'pending',
   `created_at` datetime DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -6614,25 +6513,6 @@ INSERT INTO `systems` (`id`, `name`, `created_at`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `systems_backup`
---
-
-CREATE TABLE `systems_backup` (
-  `id` int(11) NOT NULL DEFAULT 0,
-  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-
---
--- Dumping data for table `systems_backup`
---
-
-INSERT INTO `systems_backup` (`id`, `name`, `created_at`) VALUES
-(10, 'HRIS', '2026-02-13 09:52:18');
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `system_roles`
 --
 
@@ -6743,12 +6623,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `employee_id`, `reqhub_role`, `system_id`, `department_id`, `access_type_id`, `system_assigned`, `role_id`, `user_type`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'EMP001', 'Requestor', NULL, NULL, NULL, 'HRIS', NULL, 'Requestor', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
-(2, 'EMP002', 'Approver', 10, 5, NULL, 'HRIS', NULL, 'Approver', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
-(3, 'EMP003', 'Admin', NULL, NULL, NULL, 'HRIS', NULL, 'Requestor', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
-(11, 'EMP004', NULL, NULL, NULL, NULL, '', NULL, 'Approver', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
-(14, '', NULL, NULL, NULL, NULL, '', NULL, 'Approver', 1, '2026-03-12 05:34:50', '2026-03-12 05:34:50'),
-(15, '045-2017-068', 'Admin', NULL, NULL, NULL, '', NULL, 'Requestor', 1, '2026-03-12 06:33:01', '2026-03-12 06:33:01');
+(1, 'SYSTEM', 'Admin', NULL, NULL, NULL, '', NULL, 'Requestor', 1, '2026-03-22 11:54:21', '2026-03-23 08:27:54'),
+(23, '045-2022-013', 'Admin', NULL, NULL, NULL, '', NULL, 'Requestor', 1, '2026-03-23 09:01:20', '2026-03-23 10:32:36');
 
 -- --------------------------------------------------------
 
@@ -6763,16 +6639,6 @@ CREATE TABLE `user_approver_assignments` (
   `department_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `user_approver_assignments`
---
-
-INSERT INTO `user_approver_assignments` (`id`, `user_id`, `system_id`, `department_id`, `created_at`) VALUES
-(19, 11, 11, 5, '2026-03-08 20:20:25'),
-(20, 11, 12, 5, '2026-03-08 20:20:25'),
-(21, 11, 13, 5, '2026-03-08 20:20:25'),
-(25, 14, 10, 5, '2026-03-10 08:44:08');
 
 -- --------------------------------------------------------
 
@@ -6818,7 +6684,8 @@ ALTER TABLE `approver_assignments`
 -- Indexes for table `departments`
 --
 ALTER TABLE `departments`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `code` (`code`);
 
 --
 -- Indexes for table `modules`
@@ -6965,7 +6832,7 @@ ALTER TABLE `approver_assignments`
 -- AUTO_INCREMENT for table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
 --
 -- AUTO_INCREMENT for table `modules`
@@ -6989,19 +6856,19 @@ ALTER TABLE `portal_roles`
 -- AUTO_INCREMENT for table `requests`
 --
 ALTER TABLE `requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
 
 --
 -- AUTO_INCREMENT for table `request_access_types`
 --
 ALTER TABLE `request_access_types`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1129;
 
 --
 -- AUTO_INCREMENT for table `request_chats`
 --
 ALTER TABLE `request_chats`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -7031,7 +6898,7 @@ ALTER TABLE `system_roles`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `user_approver_assignments`
@@ -7077,7 +6944,6 @@ ALTER TABLE `requests`
   ADD CONSTRAINT `fk_requests_approved_by` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_requests_denied_by` FOREIGN KEY (`denied_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_requests_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_requests_request_for` FOREIGN KEY (`request_for`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_requests_served_by` FOREIGN KEY (`served_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_requests_system` FOREIGN KEY (`system_id`) REFERENCES `systems` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_requests_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
