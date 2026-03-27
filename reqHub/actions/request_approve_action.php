@@ -37,12 +37,12 @@ $approver_id = $userRow['id'];
 
 try {
 
-    /* 1️⃣ Get request details */
+    /* 1️⃣ Get request details — allow both pending and needs_revision */
     $stmt = $pdo->prepare("
         SELECT user_id, system_id, department_id
         FROM requests
         WHERE id = :id
-        AND status = 'pending'
+        AND status IN ('pending', 'needs_revision')
     ");
     $stmt->execute([':id' => $request_id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -56,7 +56,7 @@ try {
     $systemId = $request['system_id'];
     $departmentId = $request['department_id'];
 
-    /* 2️⃣ Approve request */
+    /* 2️⃣ Approve request — allow both pending and needs_revision */
     $stmt = $pdo->prepare("
         UPDATE requests
         SET
@@ -65,7 +65,7 @@ try {
             approved_at = NOW(),
             updated_at = NOW()
         WHERE id = :id
-          AND status = 'pending'
+          AND status IN ('pending', 'needs_revision')
           AND system_id = :system_id
           AND department_id = :department_id
     ");

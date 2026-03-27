@@ -145,7 +145,7 @@ $totalCount = count($derivedNotifications) + count($eventNotifications);
 
 <script>
 function switchRole(newRole) {
-    fetch('/zen/reqHub/role_switch_action', {
+    fetch('/zen/reqHub/role_switch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'role=' + encodeURIComponent(newRole)

@@ -35,11 +35,11 @@ if (!$userRow) {
 $denier_id = $userRow['id'];
 
 try {
-    // Get requestor and system
+    // Get requestor and system — allow both pending and needs_revision
     $stmt = $pdo->prepare("
         SELECT user_id, system_id
         FROM requests
-        WHERE id = :id AND status = 'pending'
+        WHERE id = :id AND status IN ('pending', 'needs_revision')
     ");
     $stmt->execute([':id' => $request_id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
