@@ -45,6 +45,7 @@ try {
 foreach ($users as &$user) {
     $user['user_name'] = $userNames[$user['employee_id']] ?? $user['employee_id'];
 }
+unset($user); // Fix PHP foreach reference bug
 
 // Get systems from reqhub, then enrich with descriptions from HR database
 $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
@@ -163,7 +164,7 @@ foreach ($actions as $act) {
 
 <?php include (__DIR__ . '/../includes/header.php'); ?>
 
-<div class="container-fluid mt-4">
+<div class="container mt-4">
     <h4 class="mb-4">Admin Settings</h4>
 
     <!-- UNIFIED TABS -->
@@ -190,7 +191,10 @@ foreach ($actions as $act) {
         <!-- ACTIONS TAB -->
         <div class="tab-pane fade show active" id="actionsTab">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <button class="btn btn-primary" data-action="addAction">Add Action</button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" data-action="addAction">Add Action</button>
+                    <button class="btn btn-outline-danger" id="toggleDeleteModeActions">Delete Mode</button>
+                </div>
                 <input type="text" class="form-control search-input" id="searchActions" placeholder="Search actions..." style="max-width: 300px;">
             </div>
             <div class="actions-grid">
@@ -204,7 +208,7 @@ foreach ($actions as $act) {
                                 <?= htmlspecialchars($action['name']) ?>
                             </strong>
                             <div>
-                                <button class="btn btn-sm btn-danger" data-action="deleteAction" data-id="<?= $action['id'] ?>">×</button>
+                                <button class="btn btn-sm btn-danger action-delete-btn" data-action="deleteAction" data-id="<?= $action['id'] ?>">×</button>
                             </div>
                         </div>
                     </div>
@@ -554,6 +558,11 @@ foreach ($actions as $act) {
 
 .action-item strong {
     word-break: break-word;
+}
+
+/* Hide delete buttons by default — shown only in Delete Mode */
+.action-item .action-delete-btn {
+    display: none;
 }
 
 /* ============================= */
@@ -946,19 +955,16 @@ $(function(){
         let html = '';
 
         if (action.includes('Module')) {
-            // For modules: just list actions
             html = '<strong>' + label + '</strong><br>';
             selected.forEach(action => {
                 html += `<div style="margin-left: 10px;">• ${htmlEscape(action)}</div>`;
             });
         } else if (action.includes('Role')) {
-            // For roles: just list actions like modules does
             html = '<strong>' + label + '</strong><br>';
             selected.forEach(action => {
                 html += `<div style="margin-left: 10px;">• ${htmlEscape(action)}</div>`;
             });
         } else if (action.includes('System')) {
-            // For systems: just list roles
             html = '<strong>' + label + '</strong><br>';
             selected.forEach(role => {
                 html += `<div style="margin-left: 10px;">• ${htmlEscape(role)}</div>`;
@@ -967,6 +973,20 @@ $(function(){
 
         summary.html(html);
     }
+
+    // ==============================
+    // DELETE MODE TOGGLE - ACTIONS TAB
+    // ==============================
+    $('#toggleDeleteModeActions').on('click', function(){
+        const isActive = $(this).hasClass('btn-danger');
+        if (isActive) {
+            $(this).removeClass('btn-danger').addClass('btn-outline-danger').text('Delete Mode');
+            $('.action-item .action-delete-btn').hide();
+        } else {
+            $(this).removeClass('btn-outline-danger').addClass('btn-danger').text('Exit Delete Mode');
+            $('.action-item .action-delete-btn').show();
+        }
+    });
 
     // ==============================
     // COLLAPSIBLE (Modules & Roles)
@@ -1010,7 +1030,6 @@ $(function(){
     // CARD CLICK HANDLERS - OPEN MODAL
     // ==============================
     $(document).on('click', '.module-item', function(e){
-        // Skip if clicking button, toggle, or editable label
         if ($(e.target).closest('button').length > 0) return;
         if ($(e.target).is('.toggle-module')) return;
         if ($(e.target).is('.editable-label')) return;
@@ -1018,13 +1037,9 @@ $(function(){
         const moduleId = $(this).find('.editable-label').data('id');
         const moduleName = $(this).find('.editable-label').text();
         if (moduleId) {
-            // Trigger the modal as if edit button was clicked
-            $('[data-action="editModule"]').trigger('click');
-            // Manually set values since button doesn't exist anymore
             $('#modalAction').val('editModule');
             $('#modalModule').val(moduleId);
             
-            // Setup module modal
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('Module Name');
             $('#modalInput').val(moduleName.trim()).attr('disabled', true);
@@ -1047,7 +1062,6 @@ $(function(){
                 });
             }
 
-            // Add search functionality for module actions
             setTimeout(() => {
                 $(document).off('keyup', '#searchModuleActionsEdit').on('keyup', '#searchModuleActionsEdit', function(){
                     const query = $(this).val().toLowerCase();
@@ -1061,7 +1075,6 @@ $(function(){
             const modalDialog = $('#accessTypeModal .modal-dialog');
             modalDialog.removeClass('modal-sm modal-md modal-lg modal-xl').addClass('modal-xl');
             
-            // Attach listeners for summary updates
             setTimeout(() => {
                 $(document).off('change', '.module-action-checkbox').on('change', '.module-action-checkbox', updateModalSummary);
                 updateModalSummary();
@@ -1072,7 +1085,6 @@ $(function(){
     });
 
     $(document).on('click', '.role-item', function(e){
-        // Skip if clicking button, toggle, or editable label
         if ($(e.target).closest('button').length > 0) return;
         if ($(e.target).is('.toggle-role')) return;
         if ($(e.target).is('.editable-label')) return;
@@ -1110,7 +1122,6 @@ $(function(){
 
                 const moduleActions = moduleAssignments[mid] || [];
 
-                // Show ONLY actions assigned to this module
                 moduleActions.forEach(function(actionId){
                     const actionItem = $(`.action-item`).find(`[data-id="${actionId}"]`).closest('.action-item');
 
@@ -1152,7 +1163,6 @@ $(function(){
                 });
             }
 
-            // Add search functionality for role modules
             setTimeout(() => {
                 $(document).off('keyup', '#searchRoleModulesEdit').on('keyup', '#searchRoleModulesEdit', function(){
                     const query = $(this).val().toLowerCase();
@@ -1162,7 +1172,6 @@ $(function(){
                     });
                 });
                 
-                // Attach listeners for summary updates
                 $(document).off('change', '.role-permission-checkbox').on('change', '.role-permission-checkbox', updateModalSummary);
                 updateModalSummary();
             }, 100);
@@ -1172,7 +1181,6 @@ $(function(){
     });
 
     $(document).on('click', '.system-item', function(e){
-        // Skip if clicking button, toggle, or editable label
         if ($(e.target).closest('button').length > 0) return;
         if ($(e.target).is('.toggle-system-roles')) return;
         if ($(e.target).is('.editable-label')) return;
@@ -1208,7 +1216,6 @@ $(function(){
             html += '</div>';
             $('#permissionsContainer').html(html);
 
-            // Add search functionality for system roles
             setTimeout(() => {
                 $(document).off('keyup', '#searchSystemRolesEdit').on('keyup', '#searchSystemRolesEdit', function(){
                     const query = $(this).val().toLowerCase();
@@ -1218,7 +1225,6 @@ $(function(){
                     });
                 });
                 
-                // Attach listeners for summary updates
                 $(document).off('change', '.system-role-checkbox').on('change', '.system-role-checkbox', updateModalSummary);
                 updateModalSummary();
             }, 100);
@@ -1243,7 +1249,6 @@ $(function(){
         $(this).attr('contenteditable', 'true');
         $(this).focus();
 
-        // Select all text - fixed for compatibility
         setTimeout(() => {
             const range = document.createRange();
             const elem = $(this)[0];
@@ -1253,7 +1258,6 @@ $(function(){
                 sel.removeAllRanges();
                 sel.addRange(range);
             } else {
-                // Fallback for empty or text-only nodes
                 document.execCommand('selectAll', false, null);
             }
         }, 10);
@@ -1269,12 +1273,10 @@ $(function(){
             }
 
             if (newText === originalText) {
-                // No changes made - just remove contenteditable without saving
                 $(this).attr('contenteditable', 'false');
                 return;
             }
 
-            // Changes were made - now show highlight and save
             hasChanges = true;
             $(this).attr('contenteditable', 'false');
 
@@ -1402,13 +1404,9 @@ $(function(){
         console.log('Button clicked! Action:', action);
         const modalDialog = $('#accessTypeModal .modal-dialog');
 
-        // Remove all size classes
         modalDialog.removeClass('modal-sm modal-md modal-lg modal-xl');
-        
-        // Force reflow to ensure class removal takes effect
         void modalDialog[0].offsetWidth;
         
-        // Add new size class
         if(action.includes('Action')) {
             modalDialog.addClass('modal-sm');
         }
@@ -1454,7 +1452,6 @@ $(function(){
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('Module Name');
             $('#modalInput').val(name.trim());
-            // Disable for edit, enable for add
             if(action === 'editModule') {
                 $('#modalInput').attr('disabled', true);
             } else {
@@ -1480,7 +1477,6 @@ $(function(){
                 });
             }
 
-            // Add search functionality for module actions
             setTimeout(() => {
                 $(document).off('keyup', '#searchModuleActions').on('keyup', '#searchModuleActions', function(){
                     const query = $(this).val().toLowerCase();
@@ -1490,12 +1486,10 @@ $(function(){
                     });
                 });
                 
-                // Add change listener for module action checkboxes
                 $('#permissionsContainer').off('change', '.module-action-checkbox').on('change', '.module-action-checkbox', function(){
                     updateModalSummary();
                 });
                 
-                // Initial summary update
                 updateModalSummary();
             }, 100);
         }
@@ -1507,7 +1501,6 @@ $(function(){
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('Role Name');
             $('#modalInput').val(name.trim());
-            // Disable for edit, enable for add
             if(action === 'editRole') {
                 $('#modalInput').attr('disabled', true);
             } else {
@@ -1535,7 +1528,6 @@ $(function(){
 
                 const moduleActions = moduleAssignments[mid] || [];
 
-                // Show ONLY actions assigned to this module
                 moduleActions.forEach(function(actionId){
                     const actionItem = $(`.action-item`).find(`[data-id="${actionId}"]`).closest('.action-item');
 
@@ -1579,12 +1571,10 @@ $(function(){
                 });
             }
 
-            // Add change listener for role permission checkboxes IMMEDIATELY
             $('#permissionsContainer').off('change', '.role-permission-checkbox').on('change', '.role-permission-checkbox', function(){
                 updateModalSummary();
             });
 
-            // Add search functionality for role modules
             setTimeout(() => {
                 $(document).off('keyup', '#searchRoleModules').on('keyup', '#searchRoleModules', function(){
                     const query = $(this).val().toLowerCase();
@@ -1594,7 +1584,6 @@ $(function(){
                     });
                 });
                 
-                // Initial summary update
                 updateModalSummary();
             }, 100);
         }
@@ -1606,7 +1595,6 @@ $(function(){
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('System Name');
             $('#modalInput').val(name.trim());
-            // Disable for edit, enable for add
             if(action === 'editSystem') {
                 $('#modalInput').attr('disabled', true);
             } else {
@@ -1633,7 +1621,6 @@ $(function(){
             html += '</div>';
             $('#permissionsContainer').html(html);
 
-            // Add search functionality for system roles
             setTimeout(() => {
                 $(document).off('keyup', '#searchSystemRoles').on('keyup', '#searchSystemRoles', function(){
                     const query = $(this).val().toLowerCase();
@@ -1643,12 +1630,10 @@ $(function(){
                     });
                 });
                 
-                // Add change listener for system role checkboxes
                 $('#permissionsContainer').off('change', '.system-role-checkbox').on('change', '.system-role-checkbox', function(){
                     updateModalSummary();
                 });
                 
-                // Initial summary update
                 updateModalSummary();
             }, 100);
         }
@@ -1674,7 +1659,6 @@ $(function(){
                             </select>
                         </div>`;
 
-            // Collect current selections
             const selectedSystems = [];
             const selectedDepts = [];
             if (userId && approverAssignments[userId]) {
@@ -1684,7 +1668,6 @@ $(function(){
                 });
             }
 
-            // Systems checklist
             html += `<div class="mt-3 system-department-selectors" style="display:none;">
                         <label class="form-label">System(s)</label>
                         <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">`;
@@ -1702,12 +1685,10 @@ $(function(){
 
             html += `</div></div>`;
 
-            // Departments checklist
             html += `<div class="mt-3 system-department-selectors" style="display:none;">
                         <label class="form-label">Department/Store(s)</label>
                         <div class="border rounded p-2 bg-light" style="max-height: 200px; overflow-y: auto;">`;
             
-            // Populate from JavaScript data
             const departmentsData = <?= json_encode($departments) ?>;
             departmentsData.forEach(dept => {
                 const dId = dept.id;
@@ -1724,7 +1705,6 @@ $(function(){
 
             $('#permissionsContainer').html(html);
 
-            // Update visibility based on user type
             const updateSelectors = () => {
                 const type = $('.user-type-select').val();
                 const selectors = $('.system-department-selectors');
@@ -1743,7 +1723,6 @@ $(function(){
 
         modal.show();
         
-        // Focus user input after modal is shown
         if($('#modalAction').val().includes('User')){
             setTimeout(() => {
                 $('#modalInput').focus();
@@ -1758,38 +1737,26 @@ $(function(){
         const action = $('#modalAction').val();
         const modalDialog = $('#accessTypeModal .modal-dialog');
         
-        console.log('Modal showing, action:', action);
-        
-        // Remove all size classes
         modalDialog.removeClass('modal-sm modal-md modal-lg modal-xl');
         
-        // Add correct size
         if(action.includes('Action')) {
-            console.log('Setting modal-sm');
             modalDialog.addClass('modal-sm');
         }
         else if(action.includes('Role')) {
-            console.log('Setting modal-xl');
             modalDialog.addClass('modal-xl');
         }
         else if(action.includes('Module')) {
-            console.log('Setting modal-xl');
             modalDialog.addClass('modal-xl');
         }
         else if(action.includes('System')) {
-            console.log('Setting modal-xl');
             modalDialog.addClass('modal-xl');
         }
         else if(action.includes('User')) {
-            console.log('Setting modal-lg');
             modalDialog.addClass('modal-lg');
         }
         else {
-            console.log('Setting modal-md');
             modalDialog.addClass('modal-md');
         }
-        
-        console.log('Modal-dialog classes:', modalDialog.attr('class'));
     });
 
     // ==============================
@@ -1817,7 +1784,6 @@ $(function(){
                 return;
             }
 
-            // Build HTML for new system
             const sourceRoles = systemRoles[sourceSystemId] || [];
             let rolesHtml = '';
 
@@ -1880,104 +1846,108 @@ $(function(){
             $('.systems-list').append(html);
             systemRoles[res.id] = sourceRoles;
             
-            // Show success message
             alert('System duplicated successfully: ' + newSystemName);
         }, 'json');
     });
 
     // ==============================
-    // SUMMARY UPDATE FUNCTION
+    // CHECKBOX CHANGE LISTENERS FOR SUMMARY
     // ==============================
-    function updateModalSummary() {
-        const action = $('#modalAction').val();
-        const summary = $('#modalSummary');
-        const summaryColumn = $('#summaryColumn');
-
-        if (!action.includes('Module') && !action.includes('Role') && !action.includes('System')) {
-            summaryColumn.hide();
-            return;
-        }
-
-        summaryColumn.show();
-        let html = '';
-
-        if (action.includes('Module')) {
-            // Module modal - show selected actions
-            const selected = $('.module-action-checkbox:checked');
-            if (selected.length === 0) {
-                html = '<em>No actions selected</em>';
-            } else {
-                html = '<strong>Actions:</strong><br>';
-                selected.each(function() {
-                    const name = $(this).closest('label').find('span').text();
-                    html += `<div style="margin-left: 10px;">• ${htmlEscape(name)}</div>`;
-                });
-            }
-        }
-
-        if (action.includes('Role')) {
-            // Role modal - show selected modules & actions
-            const modules = new Map();
-            $('.role-permission-checkbox:checked').each(function() {
-                const moduleId = $(this).data('module');
-                // Find the module name from the card header
-                const moduleCard = $(`.role-modal-module-card`).has(`.module-master-checkbox[data-module="${moduleId}"]`);
-                const moduleLabel = moduleCard.find('.role-modal-module-header strong').text().trim() || `Module ${moduleId}`;
-                // Get the text content of the label (which contains the action name)
-                const actionName = $(this).closest('label').text().trim();
-                
-                if (!modules.has(moduleLabel)) {
-                    modules.set(moduleLabel, []);
-                }
-                if (actionName) {
-                    modules.get(moduleLabel).push(actionName);
-                }
-            });
-
-            if (modules.size === 0) {
-                html = '<em>No modules selected</em>';
-            } else {
-                html = '<strong>Modules & Actions:</strong><br>';
-                modules.forEach((actions, moduleName) => {
-                    html += `<div style="margin-left: 10px; margin-top: 8px;"><u>${htmlEscape(moduleName)}</u></div>`;
-                    actions.forEach(action => {
-                        html += `<div style="margin-left: 20px;">• ${htmlEscape(action)}</div>`;
-                    });
-                });
-            }
-        }
-
-        if (action.includes('System')) {
-            // System modal - show selected roles
-            const selected = $('.system-role-checkbox:checked');
-            if (selected.length === 0) {
-                html = '<em>No roles selected</em>';
-            } else {
-                html = '<strong>Roles:</strong><br>';
-                selected.each(function() {
-                    const name = $(this).closest('label').find('span').text();
-                    html += `<div style="margin-left: 10px;">• ${htmlEscape(name)}</div>`;
-                });
-            }
-        }
-
-        summary.html(html || '<em>Nothing selected</em>');
-    }
-
-    // Helper function to escape HTML
-    function htmlEscape(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-    }
+    $(document).on('change', '.module-action-checkbox', updateModalSummary);
+    $(document).on('change', '.system-role-checkbox', updateModalSummary);
 
     // ==============================
-    // FORM SUBMIT - OPTIMIZED
+    // MODULE MASTER CHECKBOX
+    // ==============================
+    $(document).on('change', '.module-master-checkbox', function(){
+        const moduleId = $(this).data('module');
+        const isChecked = $(this).is(':checked');
+        $(`.role-permission-checkbox[data-module="${moduleId}"]`).prop('checked', isChecked);
+        updateModalSummary();
+    });
+
+    $(document).on('change', '.role-permission-checkbox', function(){
+        const moduleId = $(this).data('module');
+        const total = $(`.role-permission-checkbox[data-module="${moduleId}"]`).length;
+        const checked = $(`.role-permission-checkbox[data-module="${moduleId}"]:checked`).length;
+        $(`.module-master-checkbox[data-module="${moduleId}"]`).prop('checked', checked > 0);
+        updateModalSummary();
+    });
+
+    $(document).on('change', '.system-role-checkbox', function(){
+        updateModalSummary();
+    });
+
+    // ==============================
+    // SEARCH FUNCTIONALITY
+    // ==============================
+    $(document).on('keyup', '#searchActions', function(){
+        const query = $(this).val().toLowerCase();
+        $('.action-item').each(function(){
+            const text = $(this).find('.editable-label').text().toLowerCase();
+            $(this).toggle(text.includes(query));
+        });
+    });
+
+    $(document).on('keyup', '#searchModules', function(){
+        const query = $(this).val().toLowerCase();
+        $('.module-item').each(function(){
+            const text = $(this).find('.editable-label').text().toLowerCase();
+            $(this).toggle(text.includes(query));
+        });
+    });
+
+    $(document).on('keyup', '#searchRoles', function(){
+        const query = $(this).val().toLowerCase();
+        $('.role-item').each(function(){
+            const text = $(this).find('.editable-label').text().toLowerCase();
+            $(this).toggle(text.includes(query));
+        });
+    });
+
+    $(document).on('keyup', '#searchSystems', function(){
+        const query = $(this).val().toLowerCase();
+        $('.system-item').each(function(){
+            const text = $(this).find('.editable-label').text().toLowerCase();
+            $(this).toggle(text.includes(query));
+        });
+    });
+
+    $(document).on('keyup', '#searchUsers', function(){
+        const query = $(this).val().toLowerCase();
+        $('.user-item').each(function(){
+            const text = $(this).find('strong').first().text().toLowerCase();
+            $(this).toggle(text.includes(query));
+        });
+    });
+
+    // ==============================
+    // EXPLICIT MODAL CLOSE HANDLERS
+    // ==============================
+    $(document).on('click', '[data-bs-dismiss="modal"]', function(){
+        modal.hide();
+    });
+    
+    $(document).on('click', '.btn-close', function(){
+        modal.hide();
+    });
+
+    // ==============================
+    // RESET MODAL AFTER HIDE
+    // ==============================
+    $('#accessTypeModal').on('hidden.bs.modal', function () {
+        const form = $('#accessTypeForm')[0];
+        form.reset();
+        $('#permissionsContainer').empty();
+        $('#modalWarning, #modalInputGroup').hide();
+        $('#modalSummary').html('<em>None selected</em>');
+        $('#summaryColumn').hide();
+        $('#modalInput').attr('placeholder', 'Enter name');
+        $(document).off('change', '.user-type-select');
+    });
+
+    // ==============================
+    // FORM SUBMIT
     // ==============================
     $('#accessTypeForm').submit(function(e){
         e.preventDefault();
@@ -1986,7 +1956,6 @@ $(function(){
         const submitBtn = $('#submitBtn');
         const originalText = submitBtn.text();
         
-        // Show loading state
         submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
 
         let url = '', data = { action };
@@ -2042,12 +2011,10 @@ $(function(){
             data.system_ids = [];
             data.department_ids = [];
 
-            // Collect checked systems
             $('#permissionsContainer .system-checkbox:checked').each(function(){
                 data.system_ids.push($(this).val().toString());
             });
 
-            // Collect checked departments
             $('#permissionsContainer .department-checkbox:checked').each(function(){
                 data.department_ids.push($(this).val().toString());
             });
@@ -2065,18 +2032,20 @@ $(function(){
                 return;
             }
 
-            // ---- DYNAMIC ADD/UPDATE LOGIC ----
-
             if(action === 'addAction'){
                 const html = `<div class="action-item card p-3 mb-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <strong class="editable-label" data-type="action" data-id="${res.id}">${res.name}</strong>
                         <div>
-                            <button class="btn btn-sm btn-danger" data-action="deleteAction" data-id="${res.id}">×</button>
+                            <button class="btn btn-sm btn-danger action-delete-btn" data-action="deleteAction" data-id="${res.id}">×</button>
                         </div>
                     </div>
                 </div>`;
                 $('.actions-grid').append(html);
+                // If delete mode is active, show the new button immediately
+                if ($('#toggleDeleteModeActions').hasClass('btn-danger')) {
+                    $('.actions-grid .action-item:last .action-delete-btn').show();
+                }
             }
 
             if(action === 'editAction'){
@@ -2108,7 +2077,7 @@ $(function(){
                     <div class="d-flex justify-content-between align-items-center mb-2 module-item-header">
                         <div class="title d-flex align-items-center flex-shrink-1 overflow-hidden">
                             <button class="btn btn-sm btn-outline-secondary me-2 toggle-module flex-shrink-0">+</button>
-                            <strong class="editable-label flex-grow-1" data-type="module" data-id="${res.id}">${res.name}</strong>
+                            <strong class="editable-label flex-grow-1" data-type="module" data-id="${res.id}">${res.name || data.name}</strong>
                         </div>
                         <div class="btn-group flex-shrink-0">
                             <button class="btn btn-sm btn-danger" data-action="deleteModule" data-module-id="${res.id}">×</button>
@@ -2191,7 +2160,7 @@ $(function(){
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center">
                             <button class="btn btn-sm btn-outline-secondary me-2 toggle-role">+</button>
-                            <strong class="editable-label" data-type="role" data-id="${res.id}">${res.name}</strong>
+                            <strong class="editable-label" data-type="role" data-id="${res.id}">${res.name || data.name}</strong>
                         </div>
                         <div>
                             <button class="btn btn-sm btn-danger" data-action="deleteRole" data-role-id="${res.id}">×</button>
@@ -2256,7 +2225,7 @@ $(function(){
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center flex-grow-1">
                             <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-roles">+</button>
-                            <strong class="editable-label flex-grow-1" data-type="system" data-id="${res.id}">${res.name}</strong>
+                            <strong class="editable-label flex-grow-1" data-type="system" data-id="${res.id}">${res.name || data.name}</strong>
                         </div>
                         <div class="btn-group" role="group">
                             <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="${res.id}" data-system-name="${res.name}">Duplicate</button>
@@ -2306,11 +2275,9 @@ $(function(){
                 $(`.system-item .editable-label[data-id="${res.id}"]`).text(res.name);
                 $(`.system-item [data-action="duplicateSystem"][data-system-id="${res.id}"]`).data('system-name', res.name);
                 
-                // Update systemRoles with the new role assignments
                 if(res.roles && res.roles.length > 0) {
                     systemRoles[res.id] = res.roles;
                     
-                    // Rebuild the roles display
                     let rolesHtml = '<strong class="d-block mb-2">▼ Roles</strong><div class="ps-3">';
                     
                     res.roles.forEach(function(sysRole){
@@ -2359,16 +2326,13 @@ $(function(){
                 let toggleHtml = '';
                 let approvalsHtml = '';
                 
-                // Add toggle button if user type is Approver
                 if(res.user_type === 'Approver') {
                     toggleHtml = '<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>';
                     
-                    // Build approvals content from the assignments
                     let approvalsContent = '';
                     if (res.assignments && res.assignments.length > 0) {
                         approvalsContent = '<div class="ps-2">';
                         
-                        // Group by system
                         const systemDeptMap = {};
                         res.assignments.forEach(a => {
                             if (!systemDeptMap[a.system_id]) {
@@ -2377,11 +2341,9 @@ $(function(){
                             systemDeptMap[a.system_id].push(a.department_id);
                         });
                         
-                        // Build HTML for each system with its departments
                         Object.keys(systemDeptMap).forEach(sysId => {
                             const deptIds = systemDeptMap[sysId];
                             
-                            // Find system name
                             let sysName = '';
                             <?php foreach ($systems as $sys): ?>
                                 if (<?= $sys['id'] ?> == sysId) {
@@ -2389,7 +2351,6 @@ $(function(){
                                 }
                             <?php endforeach; ?>
                             
-                            // Find department names
                             const deptNames = [];
                             <?php foreach ($departments as $dept): ?>
                                 if (deptIds.includes(<?= $dept['id'] ?>)) {
@@ -2440,30 +2401,23 @@ $(function(){
 
             if(action === 'editUser'){
                 const item = $(`.user-item[data-user-id="${res.id}"]`);
-                const nameDisplay = `${res.name} (${res.employee_id})`;
                 item.find('strong').text(res.name);
                 item.find('small.text-muted').first().text(`(${res.employee_id})`);
                 item.find('[data-action="editUser"]').data('name', res.employee_id).data('user-role', res.user_type);
                 
-                // Update the approverAssignments with the new data
                 approverAssignments[res.id] = res.assignments || [];
                 
-                // Rebuild for user type changes
                 if (res.user_type === 'Approver') {
-                    // Ensure toggle button exists
                     if (item.find('.toggle-user-approvals').length === 0) {
                         item.find('.d-flex.align-items-center').prepend('<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>');
                     }
                     
-                    // Always rebuild the user-approvals div with latest data
                     item.find('.user-approvals').remove();
                     
-                    // Build approvals content from the assignments
                     let approvalsContent = '';
                     if (res.assignments && res.assignments.length > 0) {
                         approvalsContent = '<small class="text-muted d-block mb-1">Assigned to:</small><div class="ps-2">';
                         
-                        // Group by system
                         const systemDeptMap = {};
                         res.assignments.forEach(a => {
                             if (!systemDeptMap[a.system_id]) {
@@ -2472,11 +2426,9 @@ $(function(){
                             systemDeptMap[a.system_id].push(a.department_id);
                         });
                         
-                        // Build HTML for each system with its departments
                         Object.keys(systemDeptMap).forEach(sysId => {
                             const deptIds = systemDeptMap[sysId];
                             
-                            // Find system name
                             let sysName = '';
                             <?php foreach ($systems as $sys): ?>
                                 if (<?= $sys['id'] ?> == sysId) {
@@ -2484,7 +2436,6 @@ $(function(){
                                 }
                             <?php endforeach; ?>
                             
-                            // Find department names
                             const deptNames = [];
                             <?php foreach ($departments as $dept): ?>
                                 if (deptIds.includes(<?= $dept['id'] ?>)) {
@@ -2510,13 +2461,11 @@ $(function(){
                                         </div>`;
                     item.find('.d-flex.align-items-center').after(approvalsDiv);
                 } else {
-                    // Remove toggle and approvals if not approver
                     item.find('.toggle-user-approvals').remove();
                     item.find('.user-approvals').remove();
                 }
             }
 
-            // Explicitly close modal and reset form
             modal.hide();
             $('#accessTypeForm')[0].reset();
             $('#permissionsContainer').html('');
@@ -2529,201 +2478,6 @@ $(function(){
             alert('Error: ' + error + '\n\nCheck browser console for details');
             submitBtn.prop('disabled', false).text(originalText);
         });
-    });
-
-    // ==============================
-    // EXPLICIT MODAL CLOSE HANDLERS
-    // ==============================
-    $(document).on('click', '[data-bs-dismiss="modal"]', function(){
-        modal.hide();
-    });
-    
-    $(document).on('click', '.btn-close', function(){
-        modal.hide();
-    });
-
-    // ==============================
-    // CHECKBOX CHANGE LISTENERS FOR SUMMARY
-    // ==============================
-    $(document).on('change', '.module-action-checkbox', updateModalSummary);
-    $(document).on('change', '.system-role-checkbox', updateModalSummary);
-
-    // ==============================
-    // UPDATE MODAL SUMMARY
-    // ==============================
-    function updateModalSummary() {
-        const action = $('#modalAction').val();
-        const summary = $('#modalSummary');
-        const summaryColumn = $('#summaryColumn');
-        
-        if(action.includes('Module')){
-            const checked = $('.module-action-checkbox:checked');
-            if(checked.length === 0){
-                summary.html('<em>No actions selected</em>');
-                summaryColumn.hide();
-            } else {
-                let html = '';
-                checked.each(function(){
-                    const name = $(this).closest('label').find('span').text();
-                    html += `<div class="mb-2">• ${name}</div>`;
-                });
-                summary.html(html);
-                summaryColumn.show();
-            }
-        }
-        else if(action.includes('Role')){
-            const checked = $('.role-permission-checkbox:checked');
-            if(checked.length === 0){
-                summary.html('<em>No permissions selected</em>');
-                summaryColumn.hide();
-            } else {
-                let grouped = {};
-                checked.each(function(){
-                    const module = $(this).closest('.role-modal-module-card').find('strong').text();
-                    const action = $(this).closest('label').find('span').text();
-                    if(!grouped[module]) grouped[module] = [];
-                    grouped[module].push(action);
-                });
-                
-                let html = '';
-                for(let module in grouped){
-                    html += `<strong class="d-block mb-1">${module}</strong>`;
-                    grouped[module].forEach(act => {
-                        html += `<div style="margin-left: 10px; margin-bottom: 5px;">• ${act}</div>`;
-                    });
-                    html += `<div class="mb-2"></div>`;
-                }
-                summary.html(html);
-                summaryColumn.show();
-            }
-        }
-        else if(action.includes('System')){
-            const checked = $('.system-role-checkbox:checked');
-            if(checked.length === 0){
-                summary.html('<em>No roles selected</em>');
-                summaryColumn.hide();
-            } else {
-                let html = '';
-                checked.each(function(){
-                    const name = $(this).closest('label').find('span').text();
-                    html += `<div class="mb-2">• ${name}</div>`;
-                });
-                summary.html(html);
-                summaryColumn.show();
-            }
-        }
-        else {
-            summaryColumn.hide();
-        }
-    }
-
-    // ==============================
-    // MODULE MASTER CHECKBOX
-    // ==============================
-    $(document).on('change', '.module-master-checkbox', function(){
-        const moduleId = $(this).data('module');
-        const isChecked = $(this).is(':checked');
-        $(`.role-permission-checkbox[data-module="${moduleId}"]`).prop('checked', isChecked);
-        updateModalSummary();
-    });
-
-    $(document).on('change', '.role-permission-checkbox', function(){
-        const moduleId = $(this).data('module');
-        const total = $(`.role-permission-checkbox[data-module="${moduleId}"]`).length;
-        const checked = $(`.role-permission-checkbox[data-module="${moduleId}"]:checked`).length;
-        $(`.module-master-checkbox[data-module="${moduleId}"]`).prop('checked', checked > 0);
-        updateModalSummary();
-    });
-
-    $(document).on('change', '.system-role-checkbox', function(){
-        updateModalSummary();
-    });
-
-    // ==============================
-    // SEARCH FUNCTIONALITY
-    // ==============================
-    $(document).on('keyup', '#searchActions', function(){
-        const query = $(this).val().toLowerCase();
-        $('.action-item').each(function(){
-            const text = $(this).find('.editable-label').text().toLowerCase();
-            $(this).toggle(text.includes(query));
-        });
-    });
-
-    $(document).on('keyup', '#searchModules', function(){
-        const query = $(this).val().toLowerCase();
-        $('.module-item').each(function(){
-            const text = $(this).find('.editable-label').text().toLowerCase();
-            $(this).toggle(text.includes(query));
-        });
-    });
-
-    $(document).on('keyup', '#searchRoles', function(){
-        const query = $(this).val().toLowerCase();
-        $('.role-item').each(function(){
-            const text = $(this).find('.editable-label').text().toLowerCase();
-            $(this).toggle(text.includes(query));
-        });
-    });
-
-    $(document).on('keyup', '#searchSystems', function(){
-        const query = $(this).val().toLowerCase();
-        $('.system-item').each(function(){
-            const text = $(this).find('.editable-label').text().toLowerCase();
-            $(this).toggle(text.includes(query));
-        });
-    });
-
-    $(document).on('keyup', '#searchUsers', function(){
-        const query = $(this).val().toLowerCase();
-        $('.user-item').each(function(){
-            const text = $(this).find('strong').first().text().toLowerCase();
-            $(this).toggle(text.includes(query));
-        });
-    });
-
-    // ==============================
-    // RESET MODAL AFTER HIDE
-    // ==============================
-    $('#accessTypeModal').on('hidden.bs.modal', function () {
-        const form = $('#accessTypeForm')[0];
-        form.reset();
-        $('#permissionsContainer').empty();
-        $('#modalWarning, #modalInputGroup').hide();
-        $('#modalSummary').html('<em>None selected</em>');
-        $('#summaryColumn').hide();
-        $(document).off('change', '.user-type-select');
-    });
-
-    // ==============================
-    // RE-APPLY SIZE ON SHOW
-    // ==============================
-    $('#accessTypeModal').on('show.bs.modal', function () {
-        const action = $('#modalAction').val();
-        const modalDialog = $('#accessTypeModal .modal-dialog');
-        
-        // Remove all size classes
-        modalDialog.removeClass('modal-sm modal-md modal-lg modal-xl');
-        
-        // Re-apply the correct size based on action
-        if(action.includes('Action')) {
-            modalDialog.addClass('modal-sm');
-        }
-        else if(action.includes('Role')) {
-            modalDialog.addClass('modal-xl');
-        }
-        else if(action.includes('Module')) {
-            modalDialog.addClass('modal-xl');
-        }
-        else if(action.includes('System')) {
-            modalDialog.addClass('modal-xl');
-        }
-        else if(action.includes('User')) {
-            modalDialog.addClass('modal-lg');
-        }
-        else {
-            modalDialog.addClass('modal-md');
-        }
     });
 
 });
