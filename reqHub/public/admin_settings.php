@@ -201,12 +201,12 @@ foreach ($actions as $act) {
                 <?php foreach ($actions as $action): ?>
                     <div class="action-item card p-3 mb-2">
                         <div class="d-flex justify-content-between align-items-center">
-                            <strong class="editable-label" 
+                            <span class="editable-label" 
                                     data-type="action" 
                                     data-id="<?= $action['id'] ?>" 
                                     title="Click to edit">
                                 <?= htmlspecialchars($action['name']) ?>
-                            </strong>
+                            </span>
                             <div>
                                 <button class="btn btn-sm btn-danger action-delete-btn" data-action="deleteAction" data-id="<?= $action['id'] ?>">×</button>
                             </div>
@@ -228,12 +228,12 @@ foreach ($actions as $act) {
                         <div class="d-flex justify-content-between align-items-center mb-2 module-item-header">
                             <div class="title d-flex align-items-center flex-shrink-1 overflow-hidden">
                                 <button class="btn btn-sm btn-outline-secondary me-2 toggle-module flex-shrink-0">+</button>
-                                <strong class="editable-label flex-grow-1"
+                                <span class="editable-label flex-grow-1"
                                         data-type="module"
                                         data-id="<?= $module['id'] ?>"
                                         title="Click to edit">
                                     <?= htmlspecialchars($module['name']) ?>
-                                </strong>
+                                </span>
                             </div>
                             <div class="btn-group flex-shrink-0">
                                 <button class="btn btn-sm btn-danger" data-action="deleteModule" data-module-id="<?= $module['id'] ?>">×</button>
@@ -272,12 +272,12 @@ foreach ($actions as $act) {
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div class="d-flex align-items-center">
                                 <button class="btn btn-sm btn-outline-secondary me-2 toggle-role">+</button>
-                                <strong class="editable-label"
+                                <span class="editable-label"
                                         data-type="role"
                                         data-id="<?= $role['id'] ?>"
                                         title="Click to edit">
                                     <?= htmlspecialchars($role['name']) ?>
-                                </strong>
+                                </span>
                             </div>
                             <div class="btn-group">
                                 <button class="btn btn-sm btn-danger" data-action="deleteRole" data-role-id="<?= $role['id'] ?>">×</button>
@@ -332,12 +332,12 @@ foreach ($actions as $act) {
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div class="d-flex align-items-center flex-grow-1">
                                 <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-roles">+</button>
-                                <strong class="editable-label flex-grow-1"
+                                <span class="editable-label flex-grow-1"
                                         data-type="system"
                                         data-id="<?= $system['id'] ?>"
                                         title="Click to edit">
                                     <?= htmlspecialchars($system['full_name'] ?? $system['name']) ?>
-                                </strong>
+                                </span>
                             </div>
                             <div class="btn-group" role="group">
                                 <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="<?= $system['id'] ?>" data-system-name="<?= htmlspecialchars($system['full_name'] ?? $system['name'], ENT_QUOTES) ?>">Duplicate</button>
@@ -685,6 +685,7 @@ foreach ($actions as $act) {
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
     transition: background-color 0.2s;
+    font-weight: normal;
 }
 
 .editable-label:hover {
@@ -815,10 +816,6 @@ foreach ($actions as $act) {
     }
 }
 
-/* ============================= */
-/* MODULE MODAL CUSTOM WIDTH - REMOVED (use Bootstrap classes instead) */
-/* ============================= */
-
 /* Explicit modal sizes since Bootstrap classes aren't applying */
 #accessTypeModal .modal-dialog.modal-sm {
     max-width: 300px !important;
@@ -855,13 +852,12 @@ foreach ($actions as $act) {
     overflow: hidden;
     overflow-y: auto;
     padding-right: 10px;
-    /* Hide scrollbar but allow scrolling if needed */
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 #summaryColumn::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
+    display: none;
 }
 
 #summaryColumn h6 {
@@ -898,8 +894,6 @@ $(function(){
 
     let duplicateSystemCounter = {};
 
-    // Do NOT set a default modal size - let the click handler set it
-
     // ==============================
     // HELPER FUNCTIONS
     // ==============================
@@ -911,7 +905,7 @@ $(function(){
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        return String(text).replace(/[&<>"']/g, m => map[m]);
     }
 
     function updateModalSummary() {
@@ -1047,10 +1041,10 @@ $(function(){
             let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong class="d-block">Select Actions</strong><input type="text" class="form-control search-modal-input" id="searchModuleActionsEdit" placeholder="Search actions..." style="max-width: 250px;"></div><div class="module-modal-grid">';
             $('.action-item').each(function(){
                 const aid = $(this).find('.editable-label').data('id');
-                const aname = $(this).find('.editable-label').text();
+                const aname = $(this).find('.editable-label').text().trim();
                 html += `<label class="role-modal-action-item" data-action-name="${aname.toLowerCase()}">
                             <input type="checkbox" class="module-action-checkbox" value="${aid}">
-                            <span>${aname}</span>
+                            <span>${htmlEscape(aname)}</span>
                         </label>`;
             });
             html += '</div>';
@@ -1105,7 +1099,7 @@ $(function(){
 
             $('.module-item').each(function(){
                 const mid = $(this).find('.editable-label').data('id');
-                const mname = $(this).find('.editable-label').text();
+                const mname = $(this).find('.editable-label').text().trim();
 
                 html += `
                 <div class="role-modal-module-card">
@@ -1114,7 +1108,7 @@ $(function(){
                             <input type="checkbox"
                                 class="module-master-checkbox"
                                 data-module="${mid}">
-                            <strong>${mname}</strong>
+                            <strong>${htmlEscape(mname)}</strong>
                         </label>
                     </div>
                     <div class="d-flex flex-wrap gap-2 ps-3">
@@ -1126,7 +1120,7 @@ $(function(){
                     const actionItem = $(`.action-item`).find(`[data-id="${actionId}"]`).closest('.action-item');
 
                     if(actionItem.length){
-                        const actionName = actionItem.find('.editable-label').text();
+                        const actionName = actionItem.find('.editable-label').text().trim();
 
                         html += `
                             <label class="badge bg-light text-dark">
@@ -1134,7 +1128,7 @@ $(function(){
                                     class="role-permission-checkbox"
                                     data-module="${mid}"
                                     value="${actionId}" class="me-1">
-                                <span>${actionName}</span>
+                                <span>${htmlEscape(actionName)}</span>
                             </label>
                         `;
                     }
@@ -1204,12 +1198,12 @@ $(function(){
 
             $('.role-item').each(function(){
                 const rid = $(this).find('.editable-label').data('id');
-                const rname = $(this).find('.editable-label').text();
+                const rname = $(this).find('.editable-label').text().trim();
                 const isAssigned = assignedRoles.includes(parseInt(rid));
 
                 html += `<label class="role-modal-action-item" data-role-name="${rname.toLowerCase()}">
                             <input type="checkbox" class="system-role-checkbox" value="${rid}" ${isAssigned ? 'checked' : ''}>
-                            <span>${rname}</span>
+                            <span>${htmlEscape(rname)}</span>
                         </label>`;
             });
 
@@ -1442,7 +1436,7 @@ $(function(){
         if(action.includes('Action')){
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('Action Name');
-            $('#modalInput').val(name).focus();
+            $('#modalInput').val(name).attr('placeholder', 'Enter name').focus();
         }
 
         // ==============================
@@ -1451,7 +1445,7 @@ $(function(){
         if(action.includes('Module')){
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('Module Name');
-            $('#modalInput').val(name.trim());
+            $('#modalInput').val(name.trim()).attr('placeholder', 'Enter name');
             if(action === 'editModule') {
                 $('#modalInput').attr('disabled', true);
             } else {
@@ -1461,10 +1455,10 @@ $(function(){
             let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong class="d-block">Select Actions</strong><input type="text" class="form-control search-modal-input" id="searchModuleActions" placeholder="Search actions..." style="max-width: 250px;"></div><div class="module-modal-grid">';
             $('.action-item').each(function(){
                 const aid = $(this).find('.editable-label').data('id');
-                const aname = $(this).find('.editable-label').text();
+                const aname = $(this).find('.editable-label').text().trim();
                 html += `<label class="role-modal-action-item" data-action-name="${aname.toLowerCase()}">
                             <input type="checkbox" class="module-action-checkbox" value="${aid}">
-                            <span>${aname}</span>
+                            <span>${htmlEscape(aname)}</span>
                         </label>`;
             });
             html += '</div>';
@@ -1500,7 +1494,7 @@ $(function(){
         if(action.includes('Role')){
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('Role Name');
-            $('#modalInput').val(name.trim());
+            $('#modalInput').val(name.trim()).attr('placeholder', 'Enter name');
             if(action === 'editRole') {
                 $('#modalInput').attr('disabled', true);
             } else {
@@ -1511,7 +1505,7 @@ $(function(){
 
             $('.module-item').each(function(){
                 const mid = $(this).find('.editable-label').data('id');
-                const mname = $(this).find('.editable-label').text();
+                const mname = $(this).find('.editable-label').text().trim();
 
                 html += `
                 <div class="role-modal-module-card">
@@ -1520,7 +1514,7 @@ $(function(){
                             <input type="checkbox"
                                 class="module-master-checkbox"
                                 data-module="${mid}">
-                            <strong>${mname}</strong>
+                            <strong>${htmlEscape(mname)}</strong>
                         </label>
                     </div>
                     <div class="d-flex flex-wrap gap-2 ps-3">
@@ -1532,7 +1526,7 @@ $(function(){
                     const actionItem = $(`.action-item`).find(`[data-id="${actionId}"]`).closest('.action-item');
 
                     if(actionItem.length){
-                        const actionName = actionItem.find('.editable-label').text();
+                        const actionName = actionItem.find('.editable-label').text().trim();
 
                         html += `
                             <label class="badge bg-light text-dark">
@@ -1540,7 +1534,7 @@ $(function(){
                                     class="role-permission-checkbox"
                                     data-module="${mid}"
                                     value="${actionId}" class="me-1">
-                                <span>${actionName}</span>
+                                <span>${htmlEscape(actionName)}</span>
                             </label>
                         `;
                     }
@@ -1594,7 +1588,7 @@ $(function(){
         if(action.includes('System')){
             $('#modalInputGroup').show();
             $('#modalInputLabel').text('System Name');
-            $('#modalInput').val(name.trim());
+            $('#modalInput').val(name.trim()).attr('placeholder', 'Enter name');
             if(action === 'editSystem') {
                 $('#modalInput').attr('disabled', true);
             } else {
@@ -1609,12 +1603,12 @@ $(function(){
 
             $('.role-item').each(function(){
                 const rid = $(this).find('.editable-label').data('id');
-                const rname = $(this).find('.editable-label').text();
+                const rname = $(this).find('.editable-label').text().trim();
                 const isAssigned = assignedRoles.includes(parseInt(rid));
 
                 html += `<label class="role-modal-action-item" data-role-name="${rname.toLowerCase()}">
                             <input type="checkbox" class="system-role-checkbox" value="${rid}" ${isAssigned ? 'checked' : ''}>
-                            <span>${rname}</span>
+                            <span>${htmlEscape(rname)}</span>
                         </label>`;
             });
 
@@ -1674,12 +1668,12 @@ $(function(){
             
             $('.system-item').each(function(){
                 const sysId = $(this).data('system-id');
-                const sysName = $(this).find('.editable-label').text();
+                const sysName = $(this).find('.editable-label').text().trim();
                 const isSelected = selectedSystems.includes(parseInt(sysId));
                 const checkId = `system-${sysId}`;
                 html += `<div class="form-check">
                             <input type="checkbox" class="form-check-input system-checkbox" id="${checkId}" value="${sysId}" ${isSelected ? 'checked' : ''}>
-                            <label class="form-check-label" for="${checkId}">${sysName}</label>
+                            <label class="form-check-label" for="${checkId}">${htmlEscape(sysName)}</label>
                         </div>`;
             });
 
@@ -1697,7 +1691,7 @@ $(function(){
                 const checkIdDept = `dept-${dId}`;
                 html += `<div class="form-check">
                             <input type="checkbox" class="form-check-input department-checkbox" id="${checkIdDept}" value="${dId}" ${isDeptSelected ? 'checked' : ''}>
-                            <label class="form-check-label" for="${checkIdDept}">${dName}</label>
+                            <label class="form-check-label" for="${checkIdDept}">${htmlEscape(dName)}</label>
                         </div>`;
             });
 
@@ -1785,64 +1779,9 @@ $(function(){
             }
 
             const sourceRoles = systemRoles[sourceSystemId] || [];
-            let rolesHtml = '';
+            const rolesHtml = buildRolesHtml(sourceRoles);
 
-            if (sourceRoles.length > 0) {
-                rolesHtml = '<strong class="d-block mb-2">▼ Roles</strong><div class="ps-3">';
-                sourceRoles.forEach(function(sysRole){
-                    const roleId = sysRole.role_id;
-                    const roleName = sysRole.role_name;
-                    const perms = roleAssignments[roleId] || [];
-
-                    rolesHtml += `<div class="system-role-item mb-3">
-                                    <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
-                                    <strong>${roleName}</strong>
-                                    <div class="system-role-modules mt-2 ps-3" style="display:none;">`;
-
-                    const modulesByName = {};
-                    perms.forEach(p => {
-                        if (!modulesByName[p.module_id]) {
-                            modulesByName[p.module_id] = { name: p.module_name, actions: [] };
-                        }
-                        if (p.action_name) {
-                            modulesByName[p.module_id].actions.push(p.action_name);
-                        }
-                    });
-
-                    Object.keys(modulesByName).forEach(modId => {
-                        const modData = modulesByName[modId];
-                        rolesHtml += `<div class="system-module-item mb-2">
-                                        <strong>${modData.name}</strong>
-                                        <div class="mt-1 ps-3">`;
-                        modData.actions.forEach(actName => {
-                            rolesHtml += `<span class="badge bg-light text-dark me-2 mb-2">• ${actName}</span>`;
-                        });
-                        rolesHtml += `</div></div>`;
-                    });
-
-                    rolesHtml += `</div></div>`;
-                });
-                rolesHtml += '</div>';
-            } else {
-                rolesHtml = '<span class="text-muted">No roles assigned</span>';
-            }
-
-            const html = `<div class="system-item card p-3 mb-3" data-system-id="${res.id}">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-center flex-grow-1">
-                                    <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-roles">+</button>
-                                    <strong class="editable-label flex-grow-1" data-type="system" data-id="${res.id}">${res.name}</strong>
-                                </div>
-                                <div class="btn-group" role="group">
-                                    <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="${res.id}" data-system-name="${res.name}">Duplicate</button>
-                                    <button class="btn btn-sm btn-danger" data-action="deleteSystem" data-system-id="${res.id}">×</button>
-                                </div>
-                            </div>
-                            <div class="system-roles-container mt-3" style="display:none;">
-                                ${rolesHtml}
-                            </div>
-                        </div>`;
-
+            const html = buildSystemCardHtml(res.id, res.name || newSystemName, rolesHtml);
             $('.systems-list').append(html);
             systemRoles[res.id] = sourceRoles;
             
@@ -1942,9 +1881,76 @@ $(function(){
         $('#modalWarning, #modalInputGroup').hide();
         $('#modalSummary').html('<em>None selected</em>');
         $('#summaryColumn').hide();
+        // FIX: reset placeholder so User modal's placeholder doesn't bleed into other modals
         $('#modalInput').attr('placeholder', 'Enter name');
         $(document).off('change', '.user-type-select');
     });
+
+    // ==============================
+    // SHARED HTML BUILDER FUNCTIONS
+    // ==============================
+
+    // FIX: buildRolesHtml uses p.module_name and p.action_name which are now
+    // stored in roleAssignments (seeded by addRole/editRole with names captured from DOM)
+    function buildRolesHtml(roles) {
+        if (!roles || roles.length === 0) {
+            return '<span class="text-muted">No roles assigned</span>';
+        }
+        let html = '<strong class="d-block mb-2">▼ Roles</strong><div class="ps-3">';
+        roles.forEach(function(sysRole) {
+            const roleId   = sysRole.role_id;
+            const roleName = sysRole.role_name;
+            const perms    = roleAssignments[roleId] || [];
+
+            html += `<div class="system-role-item mb-3">
+                        <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
+                        <strong>${htmlEscape(roleName)}</strong>
+                        <div class="system-role-modules mt-2 ps-3" style="display:none;">`;
+
+            const modulesByName = {};
+            perms.forEach(p => {
+                if (!modulesByName[p.module_id]) {
+                    modulesByName[p.module_id] = { name: p.module_name || '', actions: [] };
+                }
+                if (p.action_name) {
+                    modulesByName[p.module_id].actions.push(p.action_name);
+                }
+            });
+
+            Object.keys(modulesByName).forEach(modId => {
+                const modData = modulesByName[modId];
+                html += `<div class="system-module-item mb-2">
+                            <strong>${htmlEscape(modData.name)}</strong>
+                            <div class="mt-1 ps-3">`;
+                modData.actions.forEach(actName => {
+                    html += `<span class="badge bg-light text-dark me-2 mb-2">• ${htmlEscape(actName)}</span>`;
+                });
+                html += `</div></div>`;
+            });
+
+            html += `</div></div>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function buildSystemCardHtml(id, name, rolesHtml) {
+        return `<div class="system-item card p-3 mb-3" data-system-id="${id}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-roles">+</button>
+                            <span class="editable-label flex-grow-1" data-type="system" data-id="${id}">${htmlEscape(name)}</span>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="${id}" data-system-name="${htmlEscape(name)}">Duplicate</button>
+                            <button class="btn btn-sm btn-danger" data-action="deleteSystem" data-system-id="${id}">×</button>
+                        </div>
+                    </div>
+                    <div class="system-roles-container mt-3" style="display:none;">
+                        ${rolesHtml}
+                    </div>
+                </div>`;
+    }
 
     // ==============================
     // FORM SUBMIT
@@ -1972,10 +1978,19 @@ $(function(){
         if(action.includes('Role')){
             data.role_id = $('#modalRole').val();
             data.permissions = [];
+            // FIX: capture module_name and action_name from the DOM while the modal
+            // is still open, so roleAssignments can store them for system card rendering
             $('.role-permission-checkbox:checked').each(function(){
+                const moduleId   = $(this).data('module');
+                const actionId   = $(this).val();
+                const moduleCard = $(`.role-modal-module-card`).has(`.module-master-checkbox[data-module="${moduleId}"]`);
+                const moduleName = moduleCard.find('.role-modal-module-header strong').text().trim();
+                const actionName = $(this).closest('label').find('span').text().trim();
                 data.permissions.push({
-                    module_id: $(this).data('module'),
-                    action_id: $(this).val()
+                    module_id:   moduleId,
+                    action_id:   actionId,
+                    module_name: moduleName,
+                    action_name: actionName
                 });
             });
             url='/zen/reqHub/actions/role_action.php';
@@ -2033,39 +2048,35 @@ $(function(){
             }
 
             if(action === 'addAction'){
+                const displayName = res.name || data.name;
                 const html = `<div class="action-item card p-3 mb-2">
                     <div class="d-flex justify-content-between align-items-center">
-                        <strong class="editable-label" data-type="action" data-id="${res.id}">${res.name}</strong>
+                        <span class="editable-label" data-type="action" data-id="${res.id}">${htmlEscape(displayName)}</span>
                         <div>
                             <button class="btn btn-sm btn-danger action-delete-btn" data-action="deleteAction" data-id="${res.id}">×</button>
                         </div>
                     </div>
                 </div>`;
                 $('.actions-grid').append(html);
-                // If delete mode is active, show the new button immediately
                 if ($('#toggleDeleteModeActions').hasClass('btn-danger')) {
                     $('.actions-grid .action-item:last .action-delete-btn').show();
                 }
             }
 
             if(action === 'editAction'){
-                $(`.action-item .editable-label[data-id="${res.id}"]`).text(res.name);
+                $(`.action-item .editable-label[data-id="${res.id}"]`).text(res.name || data.name);
             }
 
             if(action === 'addModule'){
+                const displayName = res.name || data.name;
                 let moduleActionsHtml = '';
                 if(data.selected_actions && data.selected_actions.length > 0){
                     moduleActionsHtml = '<div class="d-flex flex-wrap gap-2">';
                     data.selected_actions.forEach(function(actionId){
                         const actionItem = $(`.action-item .editable-label[data-id="${actionId}"]`).closest('.action-item');
                         if(actionItem.length){
-                            const actionName = actionItem.find('.editable-label').text();
-                            moduleActionsHtml += `
-                                <span class="badge bg-light text-dark">
-                                    <input type="checkbox" checked disabled class="me-1">
-                                    ${actionName}
-                                </span>
-                            `;
+                            const actionName = actionItem.find('.editable-label').text().trim();
+                            moduleActionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actionName)}</span>`;
                         }
                     });
                     moduleActionsHtml += '</div>';
@@ -2077,15 +2088,13 @@ $(function(){
                     <div class="d-flex justify-content-between align-items-center mb-2 module-item-header">
                         <div class="title d-flex align-items-center flex-shrink-1 overflow-hidden">
                             <button class="btn btn-sm btn-outline-secondary me-2 toggle-module flex-shrink-0">+</button>
-                            <strong class="editable-label flex-grow-1" data-type="module" data-id="${res.id}">${res.name || data.name}</strong>
+                            <span class="editable-label flex-grow-1" data-type="module" data-id="${res.id}">${htmlEscape(displayName)}</span>
                         </div>
                         <div class="btn-group flex-shrink-0">
                             <button class="btn btn-sm btn-danger" data-action="deleteModule" data-module-id="${res.id}">×</button>
                         </div>
                     </div>
-                    <div class="module-actions mt-2" style="display:none;">
-                        ${moduleActionsHtml}
-                    </div>
+                    <div class="module-actions mt-2" style="display:none;">${moduleActionsHtml}</div>
                 </div>`;
 
                 $('.modules-grid').append(html);
@@ -2094,8 +2103,7 @@ $(function(){
 
             if(action === 'editModule'){
                 const card = $(`.module-item .editable-label[data-id="${res.id}"]`).closest('.module-item');
-
-                card.find('.editable-label').text(res.name);
+                card.find('.editable-label').text(res.name || data.name);
 
                 let moduleActionsHtml = '';
                 if(data.selected_actions && data.selected_actions.length > 0){
@@ -2103,13 +2111,8 @@ $(function(){
                     data.selected_actions.forEach(function(actionId){
                         const actionItem = $(`.action-item .editable-label[data-id="${actionId}"]`).closest('.action-item');
                         if(actionItem.length){
-                            const actionName = actionItem.find('.editable-label').text();
-                            moduleActionsHtml += `
-                                <span class="badge bg-light text-dark">
-                                    <input type="checkbox" checked disabled class="me-1">
-                                    ${actionName}
-                                </span>
-                            `;
+                            const actionName = actionItem.find('.editable-label').text().trim();
+                            moduleActionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actionName)}</span>`;
                         }
                     });
                     moduleActionsHtml += '</div>';
@@ -2122,35 +2125,30 @@ $(function(){
             }
 
             if(action === 'addRole'){
+                const displayName = res.name || data.name;
+                // FIX: store permissions WITH names so system card buildRolesHtml can render them
+                roleAssignments[res.id] = (data.permissions || []).map(p => ({
+                    module_id:   parseInt(p.module_id),
+                    action_id:   parseInt(p.action_id),
+                    module_name: p.module_name || '',
+                    action_name: p.action_name || ''
+                }));
+
                 let rolePermissionsHtml = '';
                 if(data.permissions && data.permissions.length > 0){
                     const byModule = {};
                     data.permissions.forEach(function(p){
-                        if(!byModule[p.module_id]) byModule[p.module_id] = [];
-                        byModule[p.module_id].push(p.action_id);
+                        if(!byModule[p.module_id]) byModule[p.module_id] = { name: p.module_name || '', actions: [] };
+                        byModule[p.module_id].actions.push(p.action_name || '');
                     });
 
                     Object.keys(byModule).forEach(function(moduleId){
-                        const moduleCard = $(`.module-item .editable-label[data-id="${moduleId}"]`).closest('.module-item');
-                        if(moduleCard.length){
-                            const moduleName = moduleCard.find('.editable-label').text();
-                            rolePermissionsHtml += `<strong class="d-block mt-2 ps-3">${moduleName}</strong><div class="d-flex flex-wrap gap-2 ps-3">`;
-                            
-                            byModule[moduleId].forEach(function(actionId){
-                                const actionCard = $(`.action-item .editable-label[data-id="${actionId}"]`).closest('.action-item');
-                                if(actionCard.length){
-                                    const actionName = actionCard.find('.editable-label').text();
-                                    rolePermissionsHtml += `
-                                        <span class="badge bg-light text-dark">
-                                            <input type="checkbox" checked disabled class="me-1">
-                                            ${actionName}
-                                        </span>
-                                    `;
-                                }
-                            });
-                            
-                            rolePermissionsHtml += '</div>';
-                        }
+                        const mod = byModule[moduleId];
+                        rolePermissionsHtml += `<strong class="d-block mt-2 ps-3">${htmlEscape(mod.name)}</strong><div class="d-flex flex-wrap gap-2 ps-3">`;
+                        mod.actions.forEach(function(actName){
+                            rolePermissionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actName)}</span>`;
+                        });
+                        rolePermissionsHtml += '</div>';
                     });
                 } else {
                     rolePermissionsHtml = '<span class="text-muted">No permissions assigned</span>';
@@ -2160,166 +2158,72 @@ $(function(){
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center">
                             <button class="btn btn-sm btn-outline-secondary me-2 toggle-role">+</button>
-                            <strong class="editable-label" data-type="role" data-id="${res.id}">${res.name || data.name}</strong>
+                            <span class="editable-label" data-type="role" data-id="${res.id}">${htmlEscape(displayName)}</span>
                         </div>
                         <div>
                             <button class="btn btn-sm btn-danger" data-action="deleteRole" data-role-id="${res.id}">×</button>
                         </div>
                     </div>
-                    <div class="role-permissions mt-2" style="display:none;">
-                        ${rolePermissionsHtml}
-                    </div>
+                    <div class="role-permissions mt-2" style="display:none;">${rolePermissionsHtml}</div>
                 </div>`;
 
                 $('.roles-grid').append(html);
-                roleAssignments[res.id] = (data.permissions || []).map(p => ({
-                    module_id: parseInt(p.module_id),
-                    action_id: parseInt(p.action_id)
-                }));
             }
 
             if(action === 'editRole'){
                 const card = $(`.role-item .editable-label[data-id="${res.id}"]`).closest('.role-item');
-                card.find('.editable-label').text(res.name);
+                card.find('.editable-label').text(res.name || data.name);
+
+                // FIX: store permissions WITH names
+                roleAssignments[res.id] = (data.permissions || []).map(p => ({
+                    module_id:   parseInt(p.module_id),
+                    action_id:   parseInt(p.action_id),
+                    module_name: p.module_name || '',
+                    action_name: p.action_name || ''
+                }));
 
                 let rolePermissionsHtml = '';
                 if(data.permissions && data.permissions.length > 0){
                     const byModule = {};
                     data.permissions.forEach(function(p){
-                        if(!byModule[p.module_id]) byModule[p.module_id] = [];
-                        byModule[p.module_id].push(p.action_id);
+                        if(!byModule[p.module_id]) byModule[p.module_id] = { name: p.module_name || '', actions: [] };
+                        byModule[p.module_id].actions.push(p.action_name || '');
                     });
 
                     Object.keys(byModule).forEach(function(moduleId){
-                        const moduleCard = $(`.module-item .editable-label[data-id="${moduleId}"]`).closest('.module-item');
-                        if(moduleCard.length){
-                            const moduleName = moduleCard.find('.editable-label').text();
-                            rolePermissionsHtml += `<strong class="d-block mt-2 ps-3">${moduleName}</strong><div class="d-flex flex-wrap gap-2 ps-3">`;
-                            
-                            byModule[moduleId].forEach(function(actionId){
-                                const actionCard = $(`.action-item .editable-label[data-id="${actionId}"]`).closest('.action-item');
-                                if(actionCard.length){
-                                    const actionName = actionCard.find('.editable-label').text();
-                                    rolePermissionsHtml += `
-                                        <span class="badge bg-light text-dark">
-                                            <input type="checkbox" checked disabled class="me-1">
-                                            ${actionName}
-                                        </span>
-                                    `;
-                                }
-                            });
-                            
-                            rolePermissionsHtml += '</div>';
-                        }
+                        const mod = byModule[moduleId];
+                        rolePermissionsHtml += `<strong class="d-block mt-2 ps-3">${htmlEscape(mod.name)}</strong><div class="d-flex flex-wrap gap-2 ps-3">`;
+                        mod.actions.forEach(function(actName){
+                            rolePermissionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actName)}</span>`;
+                        });
+                        rolePermissionsHtml += '</div>';
                     });
                 } else {
                     rolePermissionsHtml = '<span class="text-muted">No permissions assigned</span>';
                 }
 
                 card.find('.role-permissions').html(rolePermissionsHtml);
-                roleAssignments[res.id] = data.permissions ? [...data.permissions] : [];
             }
 
             if(action === 'addSystem'){
-                const html = `<div class="system-item card p-3 mb-3" data-system-id="${res.id}">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="d-flex align-items-center flex-grow-1">
-                            <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-roles">+</button>
-                            <strong class="editable-label flex-grow-1" data-type="system" data-id="${res.id}">${res.name || data.name}</strong>
-                        </div>
-                        <div class="btn-group" role="group">
-                            <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="${res.id}" data-system-name="${res.name}">Duplicate</button>
-                            <button class="btn btn-sm btn-danger" data-action="deleteSystem" data-system-id="${res.id}">×</button>
-                        </div>
-                    </div>
-                    <div class="system-roles-container mt-3" style="display:none;">
-                        <strong class="d-block mb-2">▼ Roles</strong>
-                        <div class="ps-3">
-                            ${res.roles && res.roles.length > 0 ? res.roles.map(role => `
-                                <div class="system-role-item mb-3">
-                                    <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
-                                    <strong>${role.role_name}</strong>
-                                    <div class="system-role-modules mt-2 ps-3" style="display:none;">
-                                        ${(() => {
-                                            const perms = roleAssignments[role.role_id] || [];
-                                            const modulesByName = {};
-                                            perms.forEach(p => {
-                                                if (!modulesByName[p.module_id]) {
-                                                    modulesByName[p.module_id] = { name: p.module_name, actions: [] };
-                                                }
-                                                if (p.action_name) {
-                                                    modulesByName[p.module_id].actions.push(p.action_name);
-                                                }
-                                            });
-                                            return Object.keys(modulesByName).map(modId => {
-                                                const modData = modulesByName[modId];
-                                                return `<div class="system-module-item mb-2">
-                                                    <strong>${modData.name}</strong>
-                                                    <div class="mt-1 ps-3">
-                                                        ${modData.actions.map(actName => `<span class="badge bg-light text-dark me-2 mb-2">• ${actName}</span>`).join('')}
-                                                    </div>
-                                                </div>`;
-                                            }).join('');
-                                        })()}
-                                    </div>
-                                </div>
-                            `).join('') : '<span class="text-muted">No roles assigned</span>'}
-                        </div>
-                    </div>
-                </div>`;
-                $('.systems-list').append(html);
-                systemRoles[res.id] = res.roles || [];
+                const displayName = res.name || data.name;
+                const newRoles = res.roles || [];
+                systemRoles[res.id] = newRoles;
+                const rolesHtml = buildRolesHtml(newRoles);
+                $('.systems-list').append(buildSystemCardHtml(res.id, displayName, rolesHtml));
             }
 
             if(action === 'editSystem'){
-                $(`.system-item .editable-label[data-id="${res.id}"]`).text(res.name);
-                $(`.system-item [data-action="duplicateSystem"][data-system-id="${res.id}"]`).data('system-name', res.name);
+                const displayName = res.name || data.name;
+                $(`.system-item .editable-label[data-id="${res.id}"]`).text(displayName);
+                $(`.system-item [data-action="duplicateSystem"][data-system-id="${res.id}"]`).data('system-name', displayName);
                 
-                if(res.roles && res.roles.length > 0) {
-                    systemRoles[res.id] = res.roles;
-                    
-                    let rolesHtml = '<strong class="d-block mb-2">▼ Roles</strong><div class="ps-3">';
-                    
-                    res.roles.forEach(function(sysRole){
-                        const roleId = sysRole.role_id;
-                        const roleName = sysRole.role_name;
-                        const perms = roleAssignments[roleId] || [];
-                        
-                        rolesHtml += `<div class="system-role-item mb-3">
-                                        <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
-                                        <strong>${roleName}</strong>
-                                        <div class="system-role-modules mt-2 ps-3" style="display:none;">`;
-                        
-                        const modulesByName = {};
-                        perms.forEach(p => {
-                            if (!modulesByName[p.module_id]) {
-                                modulesByName[p.module_id] = { name: p.module_name, actions: [] };
-                            }
-                            if (p.action_name) {
-                                modulesByName[p.module_id].actions.push(p.action_name);
-                            }
-                        });
-                        
-                        Object.keys(modulesByName).forEach(modId => {
-                            const modData = modulesByName[modId];
-                            rolesHtml += `<div class="system-module-item mb-2">
-                                            <strong>${modData.name}</strong>
-                                            <div class="mt-1 ps-3">`;
-                            modData.actions.forEach(actName => {
-                                rolesHtml += `<span class="badge bg-light text-dark me-2 mb-2">• ${actName}</span>`;
-                            });
-                            rolesHtml += `</div></div>`;
-                        });
-                        
-                        rolesHtml += `</div></div>`;
-                    });
-                    
-                    rolesHtml += '</div>';
-                    $(`.system-item[data-system-id="${res.id}"] .system-roles-container`).html(rolesHtml);
-                } else {
-                    systemRoles[res.id] = [];
-                    $(`.system-item[data-system-id="${res.id}"] .system-roles-container`).html('<span class="text-muted">No roles assigned</span>');
-                }
+                const newRoles = res.roles || [];
+                systemRoles[res.id] = newRoles;
+                const rolesHtml = newRoles.length > 0
+                    ? buildRolesHtml(newRoles)
+                    : '<span class="text-muted">No roles assigned</span>';
+                $(`.system-item[data-system-id="${res.id}"] .system-roles-container`).html(rolesHtml);
             }
 
             if(action === 'addUser'){
@@ -2382,15 +2286,15 @@ $(function(){
                             <div class="d-flex align-items-center">
                                 ${toggleHtml}
                                 <div>
-                                    <strong>${res.name}</strong> <small class="text-muted">(${res.employee_id})</small>
+                                    <strong>${htmlEscape(res.name || data.name)}</strong> <small class="text-muted">(${htmlEscape(res.employee_id || '')})</small>
                                     <br>
-                                    <small class="text-muted">${res.user_type}</small>
+                                    <small class="text-muted">${htmlEscape(res.user_type || '')}</small>
                                 </div>
                             </div>
                             ${approvalsHtml}
                         </div>
                         <div class="ms-3">
-                            <button class="btn btn-sm btn-secondary me-2" data-action="editUser" data-user-id="${res.id}" data-name="${res.employee_id}" data-user-role="${res.user_type}">Edit</button>
+                            <button class="btn btn-sm btn-secondary me-2" data-action="editUser" data-user-id="${res.id}" data-name="${htmlEscape(res.employee_id || '')}" data-user-role="${htmlEscape(res.user_type || '')}">Edit</button>
                             <button class="btn btn-sm btn-danger" data-action="deleteUser" data-user-id="${res.id}">×</button>
                         </div>
                     </div>
@@ -2401,9 +2305,9 @@ $(function(){
 
             if(action === 'editUser'){
                 const item = $(`.user-item[data-user-id="${res.id}"]`);
-                item.find('strong').text(res.name);
-                item.find('small.text-muted').first().text(`(${res.employee_id})`);
-                item.find('[data-action="editUser"]').data('name', res.employee_id).data('user-role', res.user_type);
+                item.find('strong').first().text(res.name || data.name);
+                item.find('small.text-muted').first().text(`(${res.employee_id || ''})`);
+                item.find('[data-action="editUser"]').data('name', res.employee_id || '').data('user-role', res.user_type || '');
                 
                 approverAssignments[res.id] = res.assignments || [];
                 
