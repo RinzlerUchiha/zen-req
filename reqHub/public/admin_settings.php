@@ -246,7 +246,7 @@ foreach ($actions as $act) {
                                 <div class="d-flex flex-wrap gap-2">
                                     <?php foreach($moduleActions[$module['id']] as $action): ?>
                                         <span class="badge bg-light text-dark">
-                                            <input type="checkbox" checked disabled class="me-1">
+                                            <span class="dot-indicator me-1"></span>
                                             <?= htmlspecialchars($action['name']) ?>
                                         </span>
                                     <?php endforeach; ?>
@@ -294,12 +294,12 @@ foreach ($actions as $act) {
                                     if ($item['module_name'] !== $currentModule):
                                         if ($currentModule !== '') echo '</div>';
                                         $currentModule = $item['module_name'];
-                                        echo '<strong class="d-block mt-2 ps-3">' . htmlspecialchars($currentModule) . '</strong>';
+                                        echo '<div class="d-block mt-2 ps-3">' . htmlspecialchars($currentModule) . '</div>';
                                         echo '<div class="d-flex flex-wrap gap-2 ps-3">';
                                     endif;
                                     if ($item['action_name']):
                                         echo '<span class="badge bg-light text-dark">';
-                                        echo '<input type="checkbox" checked disabled class="me-1"> ';
+                                        echo '<span class="dot-indicator me-1"></span>';
                                         echo htmlspecialchars($item['action_name']);
                                         echo '</span>';
                                     endif;
@@ -359,7 +359,7 @@ foreach ($actions as $act) {
                                         ?>
                                         <div class="system-role-item mb-3">
                                             <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
-                                            <strong><?= htmlspecialchars($roleName) ?></strong>
+                                            <span class="admin-text"><?= htmlspecialchars($roleName) ?></span>
                                             
                                             <!-- Collapsible modules for this role -->
                                             <div class="system-role-modules mt-2 ps-3" style="display:none;">
@@ -380,7 +380,7 @@ foreach ($actions as $act) {
                                                 foreach ($modulesByName as $modId => $modData):
                                                     ?>
                                                     <div class="system-module-item mb-2">
-                                                        <strong><?= htmlspecialchars($modData['name']) ?></strong>
+                                                        <span class="admin-text"><?= htmlspecialchars($modData['name']) ?></span>
                                                         <div class="mt-1 ps-3">
                                                             <?php foreach ($modData['actions'] as $actName): ?>
                                                                 <span class="badge bg-light text-dark me-2 mb-2">• <?= htmlspecialchars($actName) ?></span>
@@ -427,7 +427,7 @@ foreach ($actions as $act) {
                                         <button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>
                                     <?php endif; ?>
                                     <div>
-                                        <strong><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></strong> <small class="text-muted">(<?= htmlspecialchars($user['employee_id']) ?>)</small>
+                                        <span class="admin-text"><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></span> <small class="text-muted">(<?= htmlspecialchars($user['employee_id']) ?>)</small>
                                         <br>
                                         <small class="text-muted"><?= htmlspecialchars($user['reqhub_role']) ?></small>
                                     </div>
@@ -541,6 +541,21 @@ foreach ($actions as $act) {
 </div>
 
 <style>
+
+.admin-text {
+    font-weight: normal !important;
+}
+
+.dot-indicator {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: #6c757d;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
 /* ============================= */
 /* ACTIONS TAB */
 /* ============================= */
@@ -1896,7 +1911,7 @@ $(function(){
         if (!roles || roles.length === 0) {
             return '<span class="text-muted">No roles assigned</span>';
         }
-        let html = '<strong class="d-block mb-2">▼ Roles</strong><div class="ps-3">';
+        let html = '<div class="d-block mb-2">▼ Roles</div><div class="ps-3">';
         roles.forEach(function(sysRole) {
             const roleId   = sysRole.role_id;
             const roleName = sysRole.role_name;
