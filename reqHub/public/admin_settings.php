@@ -245,9 +245,8 @@ foreach ($actions as $act) {
                             <?php if(!empty($moduleActions[$module['id']])): ?>
                                 <div class="d-flex flex-wrap gap-2">
                                     <?php foreach($moduleActions[$module['id']] as $action): ?>
-                                        <span class="badge bg-light text-dark">
-                                            <span class="dot-indicator me-1"></span>
-                                            <?= htmlspecialchars($action['name']) ?>
+                                        <span class="badge bg-light text-dark" style="font-weight: normal;">
+                                            • <?= htmlspecialchars($action['name']) ?>
                                         </span>
                                     <?php endforeach; ?>
                                 </div>
@@ -294,12 +293,12 @@ foreach ($actions as $act) {
                                     if ($item['module_name'] !== $currentModule):
                                         if ($currentModule !== '') echo '</div>';
                                         $currentModule = $item['module_name'];
-                                        echo '<div class="d-block mt-2 ps-3">' . htmlspecialchars($currentModule) . '</div>';
+                                        echo '<span class="d-block mt-2 ps-3" style="font-weight: normal;">' . htmlspecialchars($currentModule) . '</span>';
                                         echo '<div class="d-flex flex-wrap gap-2 ps-3">';
                                     endif;
                                     if ($item['action_name']):
-                                        echo '<span class="badge bg-light text-dark">';
-                                        echo '<span class="dot-indicator me-1"></span>';
+                                        echo '<span class="badge bg-light text-dark" style="font-weight: normal;">';
+                                        echo '• ';
                                         echo htmlspecialchars($item['action_name']);
                                         echo '</span>';
                                     endif;
@@ -359,7 +358,7 @@ foreach ($actions as $act) {
                                         ?>
                                         <div class="system-role-item mb-3">
                                             <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
-                                            <span class="admin-text"><?= htmlspecialchars($roleName) ?></span>
+                                            <span><?= htmlspecialchars($roleName) ?></span>
                                             
                                             <!-- Collapsible modules for this role -->
                                             <div class="system-role-modules mt-2 ps-3" style="display:none;">
@@ -380,7 +379,7 @@ foreach ($actions as $act) {
                                                 foreach ($modulesByName as $modId => $modData):
                                                     ?>
                                                     <div class="system-module-item mb-2">
-                                                        <span class="admin-text"><?= htmlspecialchars($modData['name']) ?></span>
+                                                        <span><?= htmlspecialchars($modData['name']) ?></span>
                                                         <div class="mt-1 ps-3">
                                                             <?php foreach ($modData['actions'] as $actName): ?>
                                                                 <span class="badge bg-light text-dark me-2 mb-2">• <?= htmlspecialchars($actName) ?></span>
@@ -427,7 +426,7 @@ foreach ($actions as $act) {
                                         <button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>
                                     <?php endif; ?>
                                     <div>
-                                        <span class="admin-text"><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></span> <small class="text-muted">(<?= htmlspecialchars($user['employee_id']) ?>)</small>
+                                        <strong><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></strong> <small class="text-muted">(<?= htmlspecialchars($user['employee_id']) ?>)</small>
                                         <br>
                                         <small class="text-muted"><?= htmlspecialchars($user['reqhub_role']) ?></small>
                                     </div>
@@ -541,21 +540,6 @@ foreach ($actions as $act) {
 </div>
 
 <style>
-
-.admin-text {
-    font-weight: normal !important;
-}
-
-.dot-indicator {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    background-color: #6c757d;
-    border-radius: 50%;
-    margin-right: 4px;
-    vertical-align: middle;
-}
-
 /* ============================= */
 /* ACTIONS TAB */
 /* ============================= */
@@ -1911,7 +1895,7 @@ $(function(){
         if (!roles || roles.length === 0) {
             return '<span class="text-muted">No roles assigned</span>';
         }
-        let html = '<div class="d-block mb-2">▼ Roles</div><div class="ps-3">';
+        let html = '<strong class="d-block mb-2">▼ Roles</strong><div class="ps-3">';
         roles.forEach(function(sysRole) {
             const roleId   = sysRole.role_id;
             const roleName = sysRole.role_name;
@@ -1919,7 +1903,7 @@ $(function(){
 
             html += `<div class="system-role-item mb-3">
                         <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
-                        <strong>${htmlEscape(roleName)}</strong>
+                        <span>${htmlEscape(roleName)}</span>
                         <div class="system-role-modules mt-2 ps-3" style="display:none;">`;
 
             const modulesByName = {};
@@ -1935,7 +1919,7 @@ $(function(){
             Object.keys(modulesByName).forEach(modId => {
                 const modData = modulesByName[modId];
                 html += `<div class="system-module-item mb-2">
-                            <strong>${htmlEscape(modData.name)}</strong>
+                            <span>${htmlEscape(modData.name)}</span>
                             <div class="mt-1 ps-3">`;
                 modData.actions.forEach(actName => {
                     html += `<span class="badge bg-light text-dark me-2 mb-2">• ${htmlEscape(actName)}</span>`;
@@ -2091,7 +2075,7 @@ $(function(){
                         const actionItem = $(`.action-item .editable-label[data-id="${actionId}"]`).closest('.action-item');
                         if(actionItem.length){
                             const actionName = actionItem.find('.editable-label').text().trim();
-                            moduleActionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actionName)}</span>`;
+                            moduleActionsHtml += `<span class="badge bg-light text-dark" style="font-weight: normal;">• ${htmlEscape(actionName)}</span>`;
                         }
                     });
                     moduleActionsHtml += '</div>';
@@ -2127,7 +2111,7 @@ $(function(){
                         const actionItem = $(`.action-item .editable-label[data-id="${actionId}"]`).closest('.action-item');
                         if(actionItem.length){
                             const actionName = actionItem.find('.editable-label').text().trim();
-                            moduleActionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actionName)}</span>`;
+                            moduleActionsHtml += `<span class="badge bg-light text-dark" style="font-weight: normal;">• ${htmlEscape(actionName)}</span>`;
                         }
                     });
                     moduleActionsHtml += '</div>';
@@ -2159,9 +2143,9 @@ $(function(){
 
                     Object.keys(byModule).forEach(function(moduleId){
                         const mod = byModule[moduleId];
-                        rolePermissionsHtml += `<strong class="d-block mt-2 ps-3">${htmlEscape(mod.name)}</strong><div class="d-flex flex-wrap gap-2 ps-3">`;
+                        rolePermissionsHtml += `<span class="d-block mt-2 ps-3" style="font-weight: normal;">${htmlEscape(mod.name)}</span><div class="d-flex flex-wrap gap-2 ps-3">`;
                         mod.actions.forEach(function(actName){
-                            rolePermissionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actName)}</span>`;
+                            rolePermissionsHtml += `<span class="badge bg-light text-dark" style="font-weight: normal;">• ${htmlEscape(actName)}</span>`;
                         });
                         rolePermissionsHtml += '</div>';
                     });
@@ -2207,9 +2191,9 @@ $(function(){
 
                     Object.keys(byModule).forEach(function(moduleId){
                         const mod = byModule[moduleId];
-                        rolePermissionsHtml += `<strong class="d-block mt-2 ps-3">${htmlEscape(mod.name)}</strong><div class="d-flex flex-wrap gap-2 ps-3">`;
+                        rolePermissionsHtml += `<span class="d-block mt-2 ps-3" style="font-weight: normal;">${htmlEscape(mod.name)}</span><div class="d-flex flex-wrap gap-2 ps-3">`;
                         mod.actions.forEach(function(actName){
-                            rolePermissionsHtml += `<span class="badge bg-light text-dark"><input type="checkbox" checked disabled class="me-1">${htmlEscape(actName)}</span>`;
+                            rolePermissionsHtml += `<span class="badge bg-light text-dark" style="font-weight: normal;">• ${htmlEscape(actName)}</span>`;
                         });
                         rolePermissionsHtml += '</div>';
                     });

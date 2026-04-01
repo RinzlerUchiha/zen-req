@@ -126,6 +126,56 @@ $totalCount = count($derivedNotifications) + count($eventNotifications);
 <!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
 
+<style>
+body,
+.container,
+.table,
+.table th,
+.table td,
+.nav-tabs,
+.nav-tabs .nav-link,
+.modal-content {
+    background-color: #e9ecf3 !important;
+}
+.navbar {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.navbar-brand {
+    color: #5d2502 !important; /* change to any color */
+}
+
+/* ===== TAB STYLING IMPROVEMENTS ===== */
+
+/* Darker bottom border of tab container */
+.nav-tabs {
+    border-bottom: 1px solid #6c757d !important;
+}
+
+/* Default tab look */
+.nav-tabs .nav-link {
+    border: 1px solid #6c757d !important;
+    color: #0d6efd;
+    transition: all 0.2s ease;
+}
+
+/* Active tab (stronger contrast) */
+.nav-tabs .nav-link.active {
+    background-color: #cfd4da !important;
+    border-color: #6c757d #6c757d #cfd4da !important;
+    color: #000 !important;
+    font-weight: 600;
+}
+
+/* Hover effect (darker + more interactive) */
+.nav-tabs .nav-link:hover {
+    background-color: #dee2e6 !important;
+    border-color: #6c757d !important;
+    color: #000 !important;
+}
+
+
+</style>
+
 <!-- Select2 JS (requires jQuery) -->
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
 
@@ -158,12 +208,12 @@ function switchRole(newRole) {
 }
 </script>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-3">
+<nav class="navbar navbar-expand-lg navbar-light bg-white px-3">
     <a class="navbar-brand" href="/zen/reqHub/dashboard">Access Portal</a>
-    <a class="btn btn-outline-light btn-sm" href="/zen/dashboard">Return to ZenHub</a>
+    <a class="btn btn-outline-dark btn-sm" href="/zen/dashboard">Return to ZenHub</a>
 
     <div class="ms-auto dropdown">
-        <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">
+        <button class="btn btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">
             🔔 <?= $totalCount ?>
         </button>
 
@@ -210,7 +260,7 @@ function switchRole(newRole) {
         </ul>
     </div>
 
-    <div class="ms-3 text-light">
+    <div class="ms-3 text-dark">
         Hello, <?= htmlspecialchars($user['name']) ?>
     </div>
 </nav>
