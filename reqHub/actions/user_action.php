@@ -86,23 +86,36 @@ try {
             $systemIds = $_POST['system_ids'] ?? [];
             $departmentIds = $_POST['department_ids'] ?? [];
 
-            if (!empty($systemIds) && !empty($departmentIds)) {
+            if (!empty($systemIds)) {
                 $insertStmt = $pdo->prepare("
                     INSERT INTO user_approver_assignments (user_id, system_id, department_id)
-                    VALUES (?, ?, ?)
+                    VALUES (?, ?, NULL)
                     ON DUPLICATE KEY UPDATE id = id
                 ");
 
                 foreach ($systemIds as $sysId) {
-                    foreach ($departmentIds as $deptId) {
-                        $insertStmt->execute([$userId, $sysId, $deptId]);
-                        $assignments[] = [
-                            'system_id' => (int)$sysId,
-                            'department_id' => (int)$deptId
-                        ];
-                    }
+                    $insertStmt->execute([$userId, $sysId]);
+                    $assignments[] = ['system_id' => (int)$sysId];
                 }
             }
+
+            // if (!empty($systemIds) && !empty($departmentIds)) {
+            //     $insertStmt = $pdo->prepare("
+            //         INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+            //         VALUES (?, ?, ?)
+            //         ON DUPLICATE KEY UPDATE id = id
+            //     ");
+
+            //     foreach ($systemIds as $sysId) {
+            //         foreach ($departmentIds as $deptId) {
+            //             $insertStmt->execute([$userId, $sysId, $deptId]);
+            //             $assignments[] = [
+            //                 'system_id' => (int)$sysId,
+            //                 'department_id' => (int)$deptId
+            //             ];
+            //         }
+            //     }
+            // }
         }
 
         echo json_encode([
@@ -184,22 +197,34 @@ try {
             $systemIds = $_POST['system_ids'] ?? [];
             $departmentIds = $_POST['department_ids'] ?? [];
 
-            if (!empty($systemIds) && !empty($departmentIds)) {
+            if (!empty($systemIds)) {
                 $insertStmt = $pdo->prepare("
                     INSERT INTO user_approver_assignments (user_id, system_id, department_id)
-                    VALUES (?, ?, ?)
+                    VALUES (?, ?, NULL)
                 ");
 
                 foreach ($systemIds as $sysId) {
-                    foreach ($departmentIds as $deptId) {
-                        $insertStmt->execute([$userId, $sysId, $deptId]);
-                        $assignments[] = [
-                            'system_id' => (int)$sysId,
-                            'department_id' => (int)$deptId
-                        ];
-                    }
+                    $insertStmt->execute([$userId, $sysId]);
+                    $assignments[] = ['system_id' => (int)$sysId];
                 }
             }
+
+            // if (!empty($systemIds) && !empty($departmentIds)) {
+            //     $insertStmt = $pdo->prepare("
+            //         INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+            //         VALUES (?, ?, ?)
+            //     ");
+
+            //     foreach ($systemIds as $sysId) {
+            //         foreach ($departmentIds as $deptId) {
+            //             $insertStmt->execute([$userId, $sysId, $deptId]);
+            //             $assignments[] = [
+            //                 'system_id' => (int)$sysId,
+            //                 'department_id' => (int)$deptId
+            //             ];
+            //         }
+            //     }
+            // }
         } else {
             // Clear approver assignments if not approver
             $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");

@@ -104,40 +104,49 @@ if ($userRecord) {
     error_log("Mapped emp_no=$userId to users.id=$actual_user_id");
     
     if ($role === 'Requestor') {
-        error_log("Filter: Requestor - showing only own requests");
-        $sql .= " AND r.user_id = :uid";
-        $params[':uid'] = $actual_user_id;
-        error_log("Added Requestor filter: r.user_id = $actual_user_id");
+    $sql .= " AND r.user_id = ?";
+    $params[] = $actual_user_id;
     }
     
     if ($role === 'Approver') {
-        error_log("Filter: Approver - fetching assigned systems");
-        try {
-            $stmt2 = $pdo->prepare("
-                SELECT system_id, department_id
-                FROM users
-                WHERE id = :id AND reqhub_role = 'Approver'
-            ");
-            $stmt2->execute([':id' => $actual_user_id]);
-            $approverData = $stmt2->fetch(PDO::FETCH_ASSOC);
-            
-            error_log("Approver data: " . json_encode($approverData));
+    error_log("Filter: Approver - fetching assigned systems from user_approver_assignments");
+    try {
+        $stmt2 = $pdo->prepare("
+            SELECT DISTINCT system_id, department_id
+            FROM user_approver_assignments
+            WHERE user_id = :id
+        ");
+        $stmt2->execute([':id' => $actual_user_id]);
+        $approverAssignments = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
-            if (!empty($approverData) && !empty($approverData['system_id']) && !empty($approverData['department_id'])) {
-                $sql .= " AND r.system_id = :system_id 
-                          AND r.department_id = :department_id";
-                $params[':system_id'] = $approverData['system_id'];
-                $params[':department_id'] = $approverData['department_id'];
-                error_log("Added approver filters: system_id=" . $approverData['system_id'] . ", dept_id=" . $approverData['department_id']);
-            } else {
-                error_log("WARNING: No approver assignment found for user id=$actual_user_id");
-            }
-        } catch (Exception $e) {
-            error_log("ERROR: Failed to fetch approver data - " . $e->getMessage());
+        error_log("Approver assignments: " . json_encode($approverAssignments));
+
+        if (!empty($approverAssignments)) {
+            $systemIds = array_unique(array_column($approverAssignments, 'system_id'));
+            $deptIds   = array_unique(array_column($approverAssignments, 'department_id'));
+
+            $systemPlaceholders = implode(',', array_fill(0, count($systemIds), '?'));
+            $deptPlaceholders   = implode(',', array_fill(0, count($deptIds), '?'));
+
+            $sql .= " AND r.system_id IN ($systemPlaceholders)
+                      AND r.department_id IN ($deptPlaceholders)";
+
+            // Switch params to positional — merge system and dept IDs
+            // First flush existing named params into positional
+            $params = array_values($params);
+            foreach ($systemIds as $sid) $params[] = $sid;
+            foreach ($deptIds   as $did) $params[] = $did;
+
+            error_log("Approver filter: system_ids=" . implode(',', $systemIds) . ", dept_ids=" . implode(',', $deptIds));
+        } else {
+            // Approver has no assignments — show nothing
+            $sql .= " AND 1=0";
+            error_log("WARNING: No approver assignments found for user id=$actual_user_id");
         }
+    } catch (Exception $e) {
+        error_log("ERROR: Failed to fetch approver assignments - " . $e->getMessage());
     }
-} else {
-    error_log("WARNING: User with emp_no=$userId not found in users table");
+    }
 }
 
 $sql .= " GROUP BY r.id ORDER BY r.id DESC";

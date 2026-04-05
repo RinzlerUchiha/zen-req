@@ -128,6 +128,53 @@ if (!$currentUser['is_active']) {
 
 error_log("✓ User is active");
 
+
+// ============================================================================
+// No Access Check
+// ============================================================================
+
+$userRole = $currentUser['reqhub_role'] ?? '';
+$currentUri = $_SERVER['REQUEST_URI'] ?? '';
+
+// Only block if user is actually trying to access a ReqHub page
+if (($userRole === 'No Access' || $userRole === '') && strpos($currentUri, '/reqHub') !== false) {
+    error_log("❌ AUTH FAILED - User has No Access role: " . $currentUser['emp_no']);
+    echo '
+    <div style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        text-align: center;
+        font-family: sans-serif;
+    ">
+        <div style="
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 2rem 3rem;
+            max-width: 480px;
+        ">
+            <h3 style="color: #856404; margin-bottom: 1rem;">⛔ Access Restricted</h3>
+            <p style="color: #856404; margin-bottom: 1.5rem;">
+                You do not have access to the Access Portal.<br>
+                Please contact your administrator.
+            </p>
+            <a href="/zen" style="
+                background: #5d2502;
+                color: white;
+                padding: 0.5rem 1.5rem;
+                border-radius: 4px;
+                text-decoration: none;
+                font-size: 0.95rem;
+            ">← Back to ZenHub</a>
+        </div>
+    </div>
+    ';
+    exit;
+}
+
 // ============================================================================
 // Session Storage
 // ============================================================================
