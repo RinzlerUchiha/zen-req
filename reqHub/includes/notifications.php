@@ -1,182 +1,104 @@
 <?php
-
 /**
- * Get all user IDs by role
+ * Notification Helper
+ * File: /zen/reqHub/includes/notifications.php
  */
-function getUsersByRole(PDO $pdo, string $role): array
+
+function createNotification(PDO $pdo, int $userId, string $type, ?int $requestId, string $message): void
 {
-    $stmt = $pdo->prepare("
-        SELECT id 
-        FROM users 
-        WHERE role = :role
-    ");
-
-    $stmt->execute([':role' => $role]);
-
-    return $stmt->fetchAll(PDO::FETCH_COLUMN);
-}
-
-
-/**
- * Refresh a user's notification based on their role
- * This recalculates what the notification SHOULD be.
- *
- * - If there is something actionable → update/insert notification
- * - If nothing actionable → delete notification row
- */
-function refreshNotification(PDO $pdo, int $userId): void
-{
-    // Get user role and system
-    $stmt = $pdo->prepare("
-        SELECT reqhub_role, system_assigned 
-        FROM users 
-        WHERE id = :id
-    ");
-
-    $stmt->execute([':id' => $userId]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$user) {
-        return;
-    }
-
-    $role = strtolower($user['reqhub_role'] ?? '');
-    $system = $user['system_assigned'] ?? null;
-
-    $message = null;
-
-    /*
-    |--------------------------------------------------------------------------
-    | APPROVER LOGIC
-    |--------------------------------------------------------------------------
-    */
-    if ($role === 'approver') {
-
-    // Get approver's system_id and department_id
-    $stmt = $pdo->prepare("
-        SELECT system_id, department_id
-        FROM users
-        WHERE id = :id
-    ");
-    $stmt->execute([':id' => $userId]);
-    $approver = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($approver) {
-
+    try {
         $stmt = $pdo->prepare("
-            SELECT COUNT(*)
-            FROM requests
-            WHERE status = 'pending'
-              AND system_id = :system_id
-              AND department_id = :department_id
+            INSERT INTO notifications (user_id, type, request_id, message, is_read, created_at)
+            VALUES (:user_id, :type, :request_id, :message, 0, NOW())
         ");
-
         $stmt->execute([
-            ':system_id' => $approver['system_id'],
-            ':department_id' => $approver['department_id']
+            ':user_id'    => $userId,
+            ':type'       => $type,
+            ':request_id' => $requestId,
+            ':message'    => $message
         ]);
-
-        $count = (int)$stmt->fetchColumn();
-
-        if ($count > 0) {
-            $message = "You have {$count} pending request(s) that need approval.";
-        }
+    } catch (Exception $e) {
+        error_log("createNotification error: " . $e->getMessage());
     }
 }
 
+function notifyApproversForSystem(PDO $pdo, int $systemId, int $requestId): void
+{
+    // Get all approvers assigned to this system
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT u.id
+        FROM users u
+        INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+        WHERE uaa.system_id = :system_id
+        AND u.reqhub_role = 'Approver'
+    ");
+    $stmt->execute([':system_id' => $systemId]);
+    $approvers = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    /*
-    |--------------------------------------------------------------------------
-    | ADMIN LOGIC
-    |--------------------------------------------------------------------------
-    */
-    elseif ($role === 'admin') {
+    foreach ($approvers as $approverId) {
+        createNotification(
+            $pdo,
+            (int)$approverId,
+            'pending_approval',
+            $requestId,
+            "A new request has been submitted and needs your approval."
+        );
+    }
+}
 
-        $stmt = $pdo->query("
-            SELECT COUNT(*)
-            FROM requests
-            WHERE status = 'approved'
-              AND admin_status = 'pending'
-        ");
+function notifyAdmins(PDO $pdo, int $requestId, string $message): void
+{
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Admin'");
+    $stmt->execute();
+    $admins = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-        $count = (int) $stmt->fetchColumn();
+    foreach ($admins as $adminId) {
+        createNotification($pdo, (int)$adminId, 'serve_reminder', $requestId, $message);
+    }
+}
 
-        if ($count > 0) {
-            $message = "You have {$count} approved request(s) waiting to be served.";
+function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): void
+{
+    // Get request owner
+    $stmt = $pdo->prepare("SELECT user_id, system_id FROM requests WHERE id = :id");
+    $stmt->execute([':id' => $requestId]);
+    $request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$request) return;
+
+    $recipients = [];
+
+    // Add requestor if not the sender
+    if ((int)$request['user_id'] !== $senderUserId) {
+        $recipients[] = (int)$request['user_id'];
+    }
+
+    // Add approvers of the system if not the sender
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT u.id
+        FROM users u
+        INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+        WHERE uaa.system_id = :system_id
+        AND u.reqhub_role = 'Approver'
+    ");
+    $stmt->execute([':system_id' => $request['system_id']]);
+    $approvers = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    foreach ($approvers as $approverId) {
+        if ((int)$approverId !== $senderUserId) {
+            $recipients[] = (int)$approverId;
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | REQUESTOR LOGIC
-    |--------------------------------------------------------------------------
-    */
-    elseif ($role === 'requestor') {
-
-        // Check served first (highest priority)
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*)
-            FROM requests
-            WHERE user_id = :uid
-              AND admin_status = 'served'
-        ");
-
-        $stmt->execute([':uid' => $userId]);
-        $served = (int) $stmt->fetchColumn();
-
-        if ($served > 0) {
-            $message = "Your request has been approved and served.";
-        } else {
-
-            // Check approved but not yet served
-            $stmt = $pdo->prepare("
-                SELECT COUNT(*)
-                FROM requests
-                WHERE user_id = :uid
-                  AND status = 'approved'
-                  AND admin_status = 'pending'
-            ");
-
-            $stmt->execute([':uid' => $userId]);
-            $approved = (int) $stmt->fetchColumn();
-
-            if ($approved > 0) {
-                $message = "Your request has been approved.";
-            }
-        }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | STORE OR DELETE NOTIFICATION
-    |--------------------------------------------------------------------------
-    */
-
-    if ($message) {
-
-        // UPSERT (since user_id is PRIMARY KEY)
-        $stmt = $pdo->prepare("
-            INSERT INTO notifications (user_id, message, is_read)
-            VALUES (:uid, :msg, 0)
-            ON DUPLICATE KEY UPDATE
-                message = VALUES(message),
-                is_read = 0
-        ");
-
-        $stmt->execute([
-            ':uid' => $userId,
-            ':msg' => $message
-        ]);
-
-    } else {
-
-        // Nothing actionable → remove notification
-        $stmt = $pdo->prepare("
-            DELETE FROM notifications
-            WHERE user_id = :uid
-        ");
-
-        $stmt->execute([':uid' => $userId]);
+    // Deduplicate and notify
+    foreach (array_unique($recipients) as $recipientId) {
+        createNotification(
+            $pdo,
+            $recipientId,
+            'chat',
+            $requestId,
+            "There is a new message on a request."
+        );
     }
 }
 ?>

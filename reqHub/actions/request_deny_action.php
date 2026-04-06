@@ -22,7 +22,6 @@ if (!$request_id) {
 $pdo = ReqHubDatabase::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
-// Get the actual user id from users table
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
 $stmt->execute([$currentUser['emp_no']]);
 $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -35,7 +34,6 @@ if (!$userRow) {
 $denier_id = $userRow['id'];
 
 try {
-    // Get requestor and system — allow both pending and needs_revision
     $stmt = $pdo->prepare("
         SELECT user_id, system_id
         FROM requests
@@ -51,10 +49,9 @@ try {
 
     $requestorId = $request['user_id'];
 
-    // Deny the request
     $stmt = $pdo->prepare("
-        UPDATE requests 
-        SET 
+        UPDATE requests
+        SET
             status = 'denied',
             denied_by = :denied_by,
             denied_at = NOW(),
@@ -62,15 +59,14 @@ try {
         WHERE id = :id
     ");
     $stmt->execute([
-        ':id' => $request_id,
+        ':id'        => $request_id,
         ':denied_by' => $denier_id
     ]);
 
     error_log("Request $request_id denied by " . $currentUser['emp_no']);
 
-    // Notify requestor
-    refreshNotification($pdo, (int)$requestorId);
-    refreshNotification($pdo, (int)$denier_id);
+    // Notifications
+    createNotification($pdo, (int)$requestorId, 'status_change', (int)$request_id, "Your request has been denied.");
 
     header('Location: /zen/reqHub/dashboard?status=pending');
     exit;

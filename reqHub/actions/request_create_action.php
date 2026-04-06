@@ -16,14 +16,13 @@ if (!userHasRoleIn('Requestor', 'Approver')) {
 $currentUser = getCurrentUser();
 $userRole = $currentUser['reqhub_role'];
 
-// Get POST data safely
 $system_id     = $_POST['system_id'] ?? null;
 $department_id = $_POST['department_id'] ?? null;
-$request_for   = $_POST['request_for'] ?? null;  // This is ZenHub U_ID
+$request_for   = $_POST['request_for'] ?? null;
 $access_types  = $_POST['access_types'] ?? [];
 $remove_from   = trim($_POST['remove_from'] ?? '') ?: null;
 $description   = trim($_POST['description'] ?? '');
-$chosen_role   = $_POST['chosen_role'] ?? null;  // NEW: capture chosen role
+$chosen_role   = $_POST['chosen_role'] ?? null;
 
 error_log("=== REQUEST CREATE DEBUG ===");
 error_log("request_for: " . ($request_for ?? 'NULL'));
@@ -32,7 +31,6 @@ error_log("department_id: " . ($department_id ?? 'NULL'));
 error_log("access_types: " . json_encode($access_types));
 error_log("chosen_role: " . ($chosen_role ?? 'NULL'));
 
-// Validate required fields
 if (!$system_id || !$department_id || !$request_for || empty($access_types)) {
     error_log("VALIDATION FAILED");
     http_response_code(400);
@@ -42,7 +40,6 @@ if (!$system_id || !$department_id || !$request_for || empty($access_types)) {
 $pdo = ReqHubDatabase::getConnection('reqhub');
 $zenHubDb = ReqHubDatabase::getConnection('hr');
 
-// Step 1: Get ZenHub user's info from U_ID
 $stmt = $zenHubDb->prepare("SELECT Emp_No, U_Name FROM tbl_user2 WHERE U_ID = ?");
 $stmt->execute([$request_for]);
 $zenHubUser = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -54,16 +51,13 @@ if (!$zenHubUser) {
 
 $emp_no = $zenHubUser['Emp_No'];
 
-// Step 2: Check if ReqHub user exists, if not create them
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
 $stmt->execute([$emp_no]);
 $reqHubUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($reqHubUser) {
-    // User exists
     $request_for_id = $reqHubUser['id'];
 } else {
-    // User doesn't exist - create them automatically
     try {
         $stmt = $pdo->prepare("
             INSERT INTO users (employee_id, reqhub_role, is_active, created_at, updated_at)
@@ -79,7 +73,6 @@ if ($reqHubUser) {
     }
 }
 
-// Get the actual user id from users table using emp_no
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
 $stmt->execute([$currentUser['emp_no']]);
 $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -92,51 +85,26 @@ if (!$userRow) {
 $user_id = $userRow['id'];
 
 try {
-    // Determine initial status based on user role
-    $status = ($userRole === 'Approver') ? 'approved' : 'pending';
+    $status       = ($userRole === 'Approver') ? 'approved' : 'pending';
     $admin_status = 'pending';
-    $approved_by = ($userRole === 'Approver') ? $user_id : null;
-    $approved_at = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
+    $approved_by  = ($userRole === 'Approver') ? $user_id : null;
+    $approved_at  = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
 
-    // 1️⃣ Insert into requests table
-    // IMPORTANT: Store the ZenHub U_ID ($request_for) in request_for column
-    // This is needed so the dashboard can JOIN with tbl_user2.U_ID to get requestor names
-    // We also created $request_for_id (ReqHub users.id) for notifications
     $stmt = $pdo->prepare("
         INSERT INTO requests (
-            user_id,
-            request_for,
-            system_id,
-            department_id,
-            remove_from,
-            description,
-            status,
-            admin_status,
-            approved_by,
-            approved_at,
-            chosen_role,
-            created_at,
-            updated_at
+            user_id, request_for, system_id, department_id,
+            remove_from, description, status, admin_status,
+            approved_by, approved_at, chosen_role, created_at, updated_at
         ) VALUES (
-            :user_id,
-            :request_for,
-            :system_id,
-            :department_id,
-            :remove_from,
-            :description,
-            :status,
-            :admin_status,
-            :approved_by,
-            :approved_at,
-            :chosen_role,
-            NOW(),
-            NOW()
+            :user_id, :request_for, :system_id, :department_id,
+            :remove_from, :description, :status, :admin_status,
+            :approved_by, :approved_at, :chosen_role, NOW(), NOW()
         )
     ");
 
     $stmt->execute([
         ':user_id'       => $user_id,
-        ':request_for'   => $request_for,  // Store ZenHub U_ID for proper JOIN in dashboard
+        ':request_for'   => $request_for,
         ':system_id'     => $system_id,
         ':department_id' => $department_id,
         ':remove_from'   => $remove_from,
@@ -151,7 +119,6 @@ try {
     $request_id = (int)$pdo->lastInsertId();
     error_log("Created request ID: $request_id");
 
-    // 2️⃣ Insert into request_access_types table
     foreach ($access_types as $at_id) {
         $stmt = $pdo->prepare("
             INSERT INTO request_access_types (request_id, access_type_id)
@@ -165,47 +132,16 @@ try {
 
     error_log("Added " . count($access_types) . " access types to request");
 
-    // 3️⃣ Refresh notifications based on status
+    // Notifications
     if ($status === 'pending') {
-        // Notify approvers for this system
-        $stmt = $pdo->prepare("
-            SELECT id FROM users
-            WHERE system_id = :system_id
-            AND department_id = :department_id
-            AND reqhub_role = 'Approver'
-        ");
-        $stmt->execute([
-            ':system_id' => $system_id,
-            ':department_id' => $department_id
-        ]);
-        $approvers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($approvers as $approver) {
-            refreshNotification($pdo, (int)$approver['id']);
-        }
-        
-        error_log("Notified approvers for pending request");
+        notifyApproversForSystem($pdo, (int)$system_id, $request_id);
     }
 
     if ($status === 'approved') {
-        // Notify admins
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Admin'");
-        $stmt->execute();
-        $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($admins as $admin) {
-            refreshNotification($pdo, (int)$admin['id']);
-        }
-
-        // Notify requestor
-        refreshNotification($pdo, (int)$request_for_id);
-        
-        error_log("Notified admins and requestor for approved request");
+        notifyAdmins($pdo, $request_id, "A request has been approved and is waiting to be served.");
+        createNotification($pdo, (int)$request_for_id, 'status_change', $request_id, "Your request has been approved.");
     }
 
-    error_log("Request creation successful");
-
-    // Redirect to dashboard
     header('Location: /zen/reqHub/dashboard?status=pending');
     exit;
 

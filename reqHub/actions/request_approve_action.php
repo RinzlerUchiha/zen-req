@@ -23,7 +23,6 @@ if (!$request_id) {
 $pdo = ReqHubDatabase::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
-/* Get actual ReqHub user ID */
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
 $stmt->execute([$currentUser['emp_no']]);
 $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -36,8 +35,6 @@ if (!$userRow) {
 $approver_id = $userRow['id'];
 
 try {
-
-    /* 1️⃣ Get request details — allow both pending and needs_revision */
     $stmt = $pdo->prepare("
         SELECT user_id, system_id, department_id
         FROM requests
@@ -52,11 +49,10 @@ try {
         die("Request not found or already processed");
     }
 
-    $requestorId = $request['user_id'];
-    $systemId = $request['system_id'];
+    $requestorId  = $request['user_id'];
+    $systemId     = $request['system_id'];
     $departmentId = $request['department_id'];
 
-    /* 2️⃣ Approve request — allow both pending and needs_revision */
     $stmt = $pdo->prepare("
         UPDATE requests
         SET
@@ -71,32 +67,18 @@ try {
     ");
 
     $stmt->execute([
-        ':id' => $request_id,
+        ':id'          => $request_id,
         ':approved_by' => $approver_id,
-        ':system_id' => $systemId,
+        ':system_id'   => $systemId,
         ':department_id' => $departmentId
     ]);
 
     error_log("Request $request_id approved by " . $currentUser['emp_no']);
 
-    /* 3️⃣ Notifications */
+    // Notifications
+    createNotification($pdo, (int)$requestorId, 'status_change', (int)$request_id, "Your request has been approved.");
+    notifyAdmins($pdo, (int)$request_id, "A request has been approved and is waiting to be served.");
 
-    // Notify requestor
-    refreshNotification($pdo, (int)$requestorId);
-
-    // Notify admins
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Admin'");
-    $stmt->execute();
-    $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach ($admins as $admin) {
-        refreshNotification($pdo, (int)$admin['id']);
-    }
-
-    // Notify approver (self refresh)
-    refreshNotification($pdo, (int)$approver_id);
-
-    /* 4️⃣ Redirect */
     header('Location: /zen/reqHub/dashboard?status=pending');
     exit;
 

@@ -1,6 +1,7 @@
 <?php
 require_once ($reqhub_root . '/includes/auth.php');
 require_once ($reqhub_root . '/database/db.php');
+require_once ($reqhub_root . '/includes/notifications.php');
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -8,7 +9,7 @@ if (!isAuthenticated()) {
 }
 
 $request_id = $_POST['request_id'] ?? null;
-$message = trim($_POST['message'] ?? '');
+$message    = trim($_POST['message'] ?? '');
 
 if (!$request_id || !$message) {
     http_response_code(400);
@@ -19,7 +20,6 @@ if (!$request_id || !$message) {
 $pdo = ReqHubDatabase::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
-// Get the actual user id from users table
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
 $stmt->execute([$currentUser['emp_no']]);
 $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -40,6 +40,9 @@ try {
         ':uid' => $userRow['id'],
         ':msg' => $message
     ]);
+
+    // Notify other participants
+    notifyChatParticipants($pdo, (int)$request_id, (int)$userRow['id']);
 
     echo "Message sent.";
 } catch (Exception $e) {

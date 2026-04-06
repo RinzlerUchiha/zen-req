@@ -22,7 +22,6 @@ if (!$request_id) {
 $pdo = ReqHubDatabase::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
-// Get the actual user id from users table
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
 $stmt->execute([$currentUser['emp_no']]);
 $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -35,7 +34,6 @@ if (!$userRow) {
 $admin_id = $userRow['id'];
 
 try {
-    // Get requestor
     $stmt = $pdo->prepare("
         SELECT user_id
         FROM requests
@@ -51,10 +49,9 @@ try {
 
     $requestorId = $request['user_id'];
 
-    // Mark as served
     $stmt = $pdo->prepare("
-        UPDATE requests 
-        SET 
+        UPDATE requests
+        SET
             admin_status = 'served',
             served_at = NOW(),
             served_by = :served_by,
@@ -62,21 +59,14 @@ try {
         WHERE id = :id AND status = 'approved'
     ");
     $stmt->execute([
-        ':id' => $request_id,
+        ':id'        => $request_id,
         ':served_by' => $admin_id
     ]);
 
     error_log("Request $request_id marked as served by " . $currentUser['emp_no']);
 
-    // Notify requestor and admins
-    refreshNotification($pdo, (int)$requestorId);
-
-    $adminStmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Admin'");
-    $adminStmt->execute();
-    $admins = $adminStmt->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($admins as $admin) {
-        refreshNotification($pdo, (int)$admin['id']);
-    }
+    // Notifications
+    createNotification($pdo, (int)$requestorId, 'status_change', (int)$request_id, "Your request has been approved and served.");
 
     header('Location: /zen/reqHub/dashboard?status=approved');
     exit;
