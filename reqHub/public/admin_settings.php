@@ -45,13 +45,13 @@ try {
 $deptDescriptions = [];
 try {
     $hrDeptNames = $hrPdo->query("
-        SELECT Dept_Code, Dept_Description
+        SELECT Dept_Code, Dept_Name
         FROM tbl_department
-        WHERE Dept_Description IS NOT NULL AND Dept_Description != ''
+        WHERE Dept_Name IS NOT NULL AND Dept_Name != ''
     ")->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($hrDeptNames as $d) {
-        $deptDescriptions[strtoupper(trim($d['Dept_Code']))] = trim($d['Dept_Description']);
+        $deptDescriptions[strtoupper(trim($d['Dept_Code']))] = trim($d['Dept_Name']);
     }
 } catch (Exception $e) {
     // fall back to codes if query fails
@@ -502,7 +502,7 @@ foreach ($actions as $act) {
                                     <div class="d-flex flex-column">
                                         <strong class="mb-1"><?= htmlspecialchars($user['user_name'] ?? $user['employee_id']) ?></strong>
                                         <small class="text-muted"><?= htmlspecialchars($user['employee_id']) ?></small>
-                                        <small class="text-muted"><?= htmlspecialchars($user['reqhub_role']) ?></small>
+                                        <small class="text-muted user-role-label"><?= htmlspecialchars($user['reqhub_role']) ?></small>
                                     </div>
                                 </div>
                                 
@@ -2350,102 +2350,10 @@ $(function(){
 
             if(action === 'addUser'){
                 let toggleHtml = '';
-                let approvalsHtml = '';
-                
+                let approvalsInnerHtml = '';
+
                 if(res.user_type === 'Approver') {
                     toggleHtml = '<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>';
-                    
-                    let approvalsContent = '';
-                    if (res.assignments && res.assignments.length > 0) {
-                        approvalsContent = '<div class="ps-2">';
-                        
-                        const systemDeptMap = {};
-                        res.assignments.forEach(a => {
-                            if (!systemDeptMap[a.system_id]) {
-                                systemDeptMap[a.system_id] = [];
-                            }
-                            systemDeptMap[a.system_id].push(a.department_id);
-                        });
-                        
-                        Object.keys(systemDeptMap).forEach(sysId => {
-                            const deptIds = systemDeptMap[sysId];
-                            
-                            let sysName = '';
-                            <?php foreach ($systems as $sys): ?>
-                                if (<?= $sys['id'] ?> == sysId) {
-                                    sysName = '<?= htmlspecialchars($sys['name']) ?>';
-                                }
-                            <?php endforeach; ?>
-                            
-                            const deptNames = [];
-                            <?php foreach ($departments as $dept): ?>
-                                if (deptIds.includes(<?= $dept['id'] ?>)) {
-                                    deptNames.push('<?= htmlspecialchars($dept['name']) ?>');
-                                }
-                            <?php endforeach; ?>
-                            
-                            if (deptNames.length > 0) {
-                                approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${sysName}</small>`;
-                            }
-                        });
-                        
-                        approvalsContent += '</div>';
-                    } else {
-                        approvalsContent = '<small class="text-muted">No systems assigned yet</small>';
-                    }
-                    
-                    approvalsHtml = `<div class="user-approvals mt-2" style="display:none; margin-left: 30px;">
-                                        <small class="text-muted d-block mb-1">Assigned to:</small>
-                                        <div class="ps-2">
-                                            ${approvalsContent}
-                                        </div>
-                                    </div>`;
-                }
-                
-                const newDeptIds = (data.department_ids || []).join(',');
-                const html = `<div class="user-item card p-3 mb-2" data-user-id="${res.id}" data-dept-ids="${newDeptIds}">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center">
-                                ${toggleHtml}
-                                <div>
-                                    <strong>${htmlEscape(res.name || data.name)}</strong> <small class="text-muted">(${htmlEscape(res.employee_id || '')})</small>
-                                    <br>
-                                    <small class="text-muted">${htmlEscape(res.user_type || '')}</small>
-                                </div>
-                            </div>
-                            ${approvalsHtml}
-                        </div>
-                        <div class="ms-3">
-                            <button class="btn btn-sm btn-secondary me-2" data-action="editUser" data-user-id="${res.id}" data-name="${htmlEscape(res.employee_id || '')}" data-user-role="${htmlEscape(res.user_type || '')}">Edit</button>
-                            <button class="btn btn-sm btn-danger" data-action="deleteUser" data-user-id="${res.id}">×</button>
-                        </div>
-                    </div>
-                </div>`;
-                $('.users-list').append(html);
-                approverAssignments[res.id] = res.assignments || [];
-            }
-
-            if(action === 'editUser'){
-                const item = $(`.user-item[data-user-id="${res.id}"]`);
-                // Update in-memory approverAssignments so modal re-opens with correct selections
-                approverAssignments[res.id] = res.assignments || [];
-                item.data('dept-ids', (data.department_ids || []).join(','));
-                item.attr('data-dept-ids', (data.department_ids || []).join(','));
-                item.find('strong').first().text(res.name || data.name);
-                item.find('small.text-muted').first().text(`(${res.employee_id || ''})`);
-                item.find('[data-action="editUser"]').data('name', res.employee_id || '').data('user-role', res.user_type || '');
-                
-                approverAssignments[res.id] = res.assignments || [];
-                
-                if (res.user_type === 'Approver') {
-                    // Add toggle button if not present
-                    if (item.find('.toggle-user-approvals').length === 0) {
-                        item.find('.d-flex.align-items-center').prepend('<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>');
-                    }
-
-                    // Remove existing approvals div before rebuilding
-                    item.find('.user-approvals').remove();
 
                     let approvalsContent = '';
                     if (res.assignments && res.assignments.length > 0) {
@@ -2462,21 +2370,84 @@ $(function(){
                         approvalsContent = '<small class="text-muted">No systems assigned yet</small>';
                     }
 
-                    const approvalsDiv = `<div class="user-approvals mt-2" style="display:none; margin-left: 30px;">
+                    approvalsInnerHtml = `<div class="user-approvals mt-2" style="display:none; margin-left: 30px;">
                                             <small class="text-muted d-block mb-1">Assigned to:</small>
                                             <div class="ps-2">${approvalsContent}</div>
                                         </div>`;
-                    item.find('.d-flex.align-items-center').after(approvalsDiv);
+                } else {
+                    // Always render user-approvals div for consistency
+                    approvalsInnerHtml = `<div class="user-approvals mt-2" style="display:none; margin-left: 30px;">
+                                            <small class="text-muted d-block mb-1">Assigned to:</small>
+                                            <div class="ps-2"><small class="text-muted">No systems assigned yet</small></div>
+                                        </div>`;
+                }
 
-                    // Update role label
-                    item.find('small.text-muted').eq(1).text(res.user_type);
+                const html = `<div class="user-item card p-3 mb-2" data-user-id="${res.id}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center">
+                                ${toggleHtml}
+                                <div class="d-flex flex-column">
+                                    <strong class="mb-1">${htmlEscape(res.name || data.name)}</strong>
+                                    <small class="text-muted">${htmlEscape(res.employee_id || '')}</small>
+                                    <small class="text-muted user-role-label">${htmlEscape(res.user_type || '')}</small>
+                                </div>
+                            </div>
+                            ${approvalsInnerHtml}
+                        </div>
+                        <div class="ms-3">
+                            <button class="btn btn-sm btn-secondary me-2" data-action="editUser" data-user-id="${res.id}" data-name="${htmlEscape(res.employee_id || '')}" data-user-role="${htmlEscape(res.user_type || '')}">Edit</button>
+                            <button class="btn btn-sm btn-danger" data-action="deleteUser" data-user-id="${res.id}">×</button>
+                        </div>
+                    </div>
+                </div>`;
+
+                $('.users-list').append(html);
+                approverAssignments[res.id] = res.assignments || [];
+            }
+
+            if(action === 'editUser'){
+                const item = $(`.user-item[data-user-id="${res.id}"]`);
+                // Update in-memory approverAssignments so modal re-opens with correct selections
+                approverAssignments[res.id] = res.assignments || [];
+                item.data('dept-ids', (data.department_ids || []).join(','));
+                item.attr('data-dept-ids', (data.department_ids || []).join(','));
+                item.find('[data-action="editUser"]').data('name', res.employee_id || '').data('user-role', res.user_type || '');
+                
+                approverAssignments[res.id] = res.assignments || [];
+                
+                if (res.user_type === 'Approver') {
+                    // Add toggle button if not present
+                    if (item.find('.toggle-user-approvals').length === 0) {
+                        item.find('.d-flex.align-items-center').first().prepend('<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>');
+                    }
+
+                    // Build approvals content
+                    let approvalsContent = '';
+                    if (res.assignments && res.assignments.length > 0) {
+                        res.assignments.forEach(a => {
+                            let sysName = '';
+                            <?php foreach ($systems as $sys): ?>
+                                if (<?= $sys['id'] ?> == a.system_id) {
+                                    sysName = '<?= htmlspecialchars($sys['name']) ?>';
+                                }
+                            <?php endforeach; ?>
+                            approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${sysName}</small>`;
+                        });
+                    } else {
+                        approvalsContent = '<small class="text-muted">No systems assigned yet</small>';
+                    }
+
+                    // Update existing div contents — never remove/re-append
+                    item.find('.user-approvals .ps-2').html(approvalsContent);
 
                 } else {
                     item.find('.toggle-user-approvals').remove();
-                    item.find('.user-approvals').remove();
-                    // Update role label
-                    item.find('small.text-muted').eq(1).text(res.user_type);
+                    item.find('.user-approvals .ps-2').html('<small class="text-muted">No systems assigned yet</small>');
                 }
+
+                // Update role label — works for both branches
+                item.find('.user-role-label').text(res.user_type);
             }
 
             modal.hide();

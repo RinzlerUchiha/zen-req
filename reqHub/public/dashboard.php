@@ -112,34 +112,20 @@ if ($userRecord) {
     error_log("Filter: Approver - fetching assigned systems from user_approver_assignments");
     try {
         $stmt2 = $pdo->prepare("
-            SELECT DISTINCT system_id, department_id
+            SELECT DISTINCT system_id
             FROM user_approver_assignments
             WHERE user_id = :id
         ");
         $stmt2->execute([':id' => $actual_user_id]);
-        $approverAssignments = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+        $systemIds = $stmt2->fetchAll(PDO::FETCH_COLUMN);
 
-        error_log("Approver assignments: " . json_encode($approverAssignments));
+        error_log("Approver system assignments: " . json_encode($systemIds));
 
-        if (!empty($approverAssignments)) {
-            $systemIds = array_unique(array_column($approverAssignments, 'system_id'));
-            $deptIds   = array_unique(array_column($approverAssignments, 'department_id'));
-
-            $systemPlaceholders = implode(',', array_fill(0, count($systemIds), '?'));
-            $deptPlaceholders   = implode(',', array_fill(0, count($deptIds), '?'));
-
-            $sql .= " AND r.system_id IN ($systemPlaceholders)
-                      AND r.department_id IN ($deptPlaceholders)";
-
-            // Switch params to positional — merge system and dept IDs
-            // First flush existing named params into positional
-            $params = array_values($params);
+        if (!empty($systemIds)) {
+            $placeholders = implode(',', array_fill(0, count($systemIds), '?'));
+            $sql .= " AND r.system_id IN ($placeholders)";
             foreach ($systemIds as $sid) $params[] = $sid;
-            foreach ($deptIds   as $did) $params[] = $did;
-
-            error_log("Approver filter: system_ids=" . implode(',', $systemIds) . ", dept_ids=" . implode(',', $deptIds));
         } else {
-            // Approver has no assignments — show nothing
             $sql .= " AND 1=0";
             error_log("WARNING: No approver assignments found for user id=$actual_user_id");
         }
