@@ -1,111 +1,55 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Check for reqhub_user (set by auth.php) OR user (legacy)
 if (!isset($_SESSION['reqhub_user']) && !isset($_SESSION['user'])) {
     header("Location: /zen/login");
     exit;
 }
 
-// Use reqhub_user if available, otherwise use user
 $user = $_SESSION['reqhub_user'] ?? $_SESSION['user'];
 
-// Build user array for compatibility
-if (!isset($user['id'])) {
-    $user['id'] = $user['user_id'] ?? null;
-}
-if (!isset($user['name'])) {
-    $user['name'] = $user['name'] ?? null;
-}
-if (!isset($user['role'])) {
-    $user['role'] = $user['reqhub_role'] ?? null;
-}
+if (!isset($user['id'])) $user['id'] = $user['user_id'] ?? null;
+if (!isset($user['name'])) $user['name'] = $user['name'] ?? null;
+if (!isset($user['role'])) $user['role'] = $user['reqhub_role'] ?? null;
 
 $userId = $user['id'] ?? $user['user_id'] ?? null;
-$role = $user['role'] ?? $user['reqhub_role'] ?? null;
+$role   = $user['role'] ?? $user['reqhub_role'] ?? null;
+$empNo  = $user['emp_no'] ?? null;
 
 require_once (__DIR__ . '/../database/db.php');
 
-$derivedNotifications = [];
-
-/* =========================
-   DERIVED NOTIFICATIONS
-========================= */
-
-if ($role === 'Approver' || $role === 'approver') {
-
-    $stmt = $pdo->prepare("
-        SELECT system_id, department_id
-        FROM users
-        WHERE employee_id = :uid OR id = :uid
-    ");
-    $stmt->execute([':uid' => $user['emp_no'] ?? $userId]);
-    $approverData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!empty($approverData['system_id']) && !empty($approverData['department_id'])) {
-
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) 
-            FROM requests 
-            WHERE status = 'pending'
-            AND system_id = :system_id
-            AND department_id = :department_id
-        ");
-
-        $stmt->execute([
-            ':system_id' => $approverData['system_id'],
-            ':department_id' => $approverData['department_id']
-        ]);
-
-        $pendingCount = (int)$stmt->fetchColumn();
-
-        if ($pendingCount > 0) {
-            $derivedNotifications[] = [
-                'message' => "You have {$pendingCount} pending requests to approve.",
-                'link' => 'dashboard.php?status=pending'
-            ];
-        }
-    }
-}
-
-if ($role === 'Admin' || $role === 'admin') {
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) 
-        FROM requests 
-        WHERE status = 'approved' 
-        AND admin_status = 'pending'
-    ");
-    $stmt->execute();
-    $serveCount = (int)$stmt->fetchColumn();
-
-    if ($serveCount > 0) {
-        $derivedNotifications[] = [
-            'message' => "You have {$serveCount} requests to serve.",
-            'link' => 'dashboard.php?status=approved'
-        ];
-    }
-}
-
-/* =========================
-   EVENT NOTIFICATIONS
-========================= */
-
-// Try to fetch notifications - table might not exist yet
+// Get the actual users.id from employee_id
+$actualUserId = null;
 try {
-    $stmt = $pdo->prepare("
-        SELECT message, updated_at 
-        FROM notifications 
-        WHERE user_id = :uid
-        ORDER BY updated_at DESC
-    ");
-    $stmt->execute([':uid' => $userId]);
-    $eventNotifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    // Notifications table doesn't exist or has different schema
-    $eventNotifications = [];
+    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+    $stmt->execute([$empNo]);
+    $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($userRow) $actualUserId = (int)$userRow['id'];
+} catch (Exception $e) {
+    error_log("Header: failed to get actualUserId - " . $e->getMessage());
 }
 
-$totalCount = count($derivedNotifications) + count($eventNotifications);
+// Fetch unread notifications for this user
+$notifications  = [];
+$unreadCount    = 0;
+
+if ($actualUserId) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT id, type, request_id, message, is_read, created_at
+            FROM notifications
+            WHERE user_id = :uid AND is_read = 0
+            ORDER BY created_at DESC
+            LIMIT 20
+        ");
+        $stmt->execute([':uid' => $actualUserId]);
+        $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $unreadCount   = count($notifications);
+    } catch (Exception $e) {
+        error_log("Header: failed to fetch notifications - " . $e->getMessage());
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -114,17 +58,11 @@ $totalCount = count($derivedNotifications) + count($eventNotifications);
 <meta charset="UTF-8">
 <title>Access Portal</title>
 
-<!-- jQuery (MUST be loaded first!) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<!-- Bootstrap JS (requires jQuery) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Select2 CSS -->
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
 
 <style>
 body,
@@ -141,44 +79,76 @@ body,
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .navbar-brand {
-    color: #5d2502 !important; /* change to any color */
+    color: #5d2502 !important;
 }
-
-/* ===== TAB STYLING IMPROVEMENTS ===== */
-
-/* Darker bottom border of tab container */
 .nav-tabs {
     border-bottom: 1px solid #6c757d !important;
 }
-
-/* Default tab look */
 .nav-tabs .nav-link {
     border: 1px solid #6c757d !important;
     color: #0d6efd;
     transition: all 0.2s ease;
 }
-
-/* Active tab (stronger contrast) */
 .nav-tabs .nav-link.active {
     background-color: #cfd4da !important;
     border-color: #6c757d #6c757d #cfd4da !important;
     color: #000 !important;
     font-weight: 600;
 }
-
-/* Hover effect (darker + more interactive) */
 .nav-tabs .nav-link:hover {
     background-color: #dee2e6 !important;
     border-color: #6c757d !important;
     color: #000 !important;
 }
 
+/* Notification bell badge */
+.notif-bell {
+    position: relative;
+    display: inline-block;
+}
+.notif-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: #dc3545;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
 
+/* Notification dropdown items */
+.notif-item {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.notif-item:hover {
+    background-color: #f8f9fa;
+}
+.notif-item .notif-message {
+    font-size: 0.875rem;
+    color: #212529;
+    margin-bottom: 2px;
+}
+.notif-item .notif-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+.notif-item.unread {
+    background-color: #eef4ff;
+    border-left: 3px solid #0d6efd;
+}
+.notif-item.unread:hover {
+    background-color: #dceeff;
+}
 </style>
-
-<!-- Select2 JS (requires jQuery) -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-
 </head>
 <body>
 
@@ -187,8 +157,8 @@ body,
     <span class="text-white">Dev Role:</span>
     <select onchange="switchRole(this.value)" class="form-select form-select-sm w-auto">
         <option value="Requestor" <?= $role === 'Requestor' ? 'selected' : '' ?>>Requestor</option>
-        <option value="Approver" <?= $role === 'Approver' ? 'selected' : '' ?>>Approver</option>
-        <option value="Admin" <?= $role === 'Admin' ? 'selected' : '' ?>>Admin</option>
+        <option value="Approver"  <?= $role === 'Approver'  ? 'selected' : '' ?>>Approver</option>
+        <option value="Admin"     <?= $role === 'Admin'     ? 'selected' : '' ?>>Admin</option>
     </select>
     <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($role) ?></strong></span>
 </div>
@@ -212,55 +182,115 @@ function switchRole(newRole) {
     <a class="navbar-brand" href="/zen/reqHub/dashboard">Access Portal</a>
     <a class="btn btn-outline-dark btn-sm" href="/zen/dashboard">Return to ZenHub</a>
 
-    <div class="ms-auto dropdown">
-        <button class="btn btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">
-            🔔 <?= $totalCount ?>
-        </button>
+    <div class="ms-auto d-flex align-items-center gap-3">
 
-        <ul class="dropdown-menu dropdown-menu-end" style="width: 350px;">
+        <!-- BELL DROPDOWN -->
+        <div class="dropdown">
+            <button class="btn btn-outline-dark notif-bell" 
+                    id="notifBellBtn"
+                    data-bs-toggle="dropdown" 
+                    data-bs-auto-close="outside"
+                    aria-expanded="false">
+                🔔
+                <?php if ($unreadCount > 0): ?>
+                    <span class="notif-badge"><?= $unreadCount > 9 ? '9+' : $unreadCount ?></span>
+                <?php endif; ?>
+            </button>
 
-            <?php if ($totalCount === 0): ?>
-                <li>
-                    <span class="dropdown-item text-muted">
+            <div class="dropdown-menu dropdown-menu-end p-0" 
+                 style="width: 360px; max-height: 480px; overflow-y: auto;">
+
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                    <strong style="font-size: 0.95rem;">Notifications</strong>
+                    <?php if ($unreadCount > 0): ?>
+                        <button class="btn btn-link btn-sm p-0 text-primary" id="markAllReadBtn">
+                            Mark all as read
+                        </button>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Notification items -->
+                <?php if (empty($notifications)): ?>
+                    <div class="text-center text-muted py-4" style="font-size: 0.875rem;">
                         No new notifications
-                    </span>
-                </li>
-            <?php endif; ?>
-
-            <?php foreach ($derivedNotifications as $notif): ?>
-                <li>
-                    <a href="<?= htmlspecialchars($notif['link']) ?>" 
-                       class="dropdown-item fw-semibold">
-                        <?= htmlspecialchars($notif['message']) ?>
-                    </a>
-                </li>
-            <?php endforeach; ?>
-
-            <?php foreach ($eventNotifications as $notif): ?>
-                <li>
-                    <span class="dropdown-item">
-                        <?= htmlspecialchars($notif['message']) ?>
-                        <div class="text-muted small">
-                            <?= date('M d, Y H:i', strtotime($notif['updated_at'])) ?>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($notifications as $notif): ?>
+                        <div class="notif-item unread"
+                             data-notif-id="<?= $notif['id'] ?>"
+                             data-request-id="<?= $notif['request_id'] ?? '' ?>"
+                             data-type="<?= htmlspecialchars($notif['type']) ?>">
+                            <div class="notif-message"><?= htmlspecialchars($notif['message']) ?></div>
+                            <div class="notif-time">
+                                <?= date('M d, Y H:i', strtotime($notif['created_at'])) ?>
+                            </div>
                         </div>
-                    </span>
-                </li>
-            <?php endforeach; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
 
-            <?php if (!empty($eventNotifications)): ?>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                    <button id="markAllReadBtn" 
-                            class="dropdown-item text-center text-primary">
-                        Mark all as read
-                    </button>
-                </li>
-            <?php endif; ?>
+            </div>
+        </div>
 
-        </ul>
-    </div>
-
-    <div class="ms-3 text-dark">
-        Hello, <?= htmlspecialchars($user['name']) ?>
+        <div class="text-dark">
+            Hello, <?= htmlspecialchars($user['name']) ?>
+        </div>
     </div>
 </nav>
+
+<script>
+// Mark single notification as read when clicked
+document.querySelectorAll('.notif-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+        const notifId    = this.dataset.notifId;
+        const requestId  = this.dataset.requestId;
+
+        // Mark as read
+        fetch('/zen/reqHub/notification_action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'id=' + encodeURIComponent(notifId)
+        }).then(() => {
+            this.classList.remove('unread');
+            this.style.opacity = '0.5';
+
+            // Update badge count
+            const badge = document.querySelector('.notif-badge');
+            if (badge) {
+                let count = parseInt(badge.textContent) || 0;
+                count--;
+                if (count <= 0) {
+                    badge.remove();
+                } else {
+                    badge.textContent = count > 9 ? '9+' : count;
+                }
+            }
+        });
+
+        // If it has a request_id, go to dashboard filtered to that request
+        if (requestId) {
+            window.location.href = '/zen/reqHub/dashboard';
+        }
+    });
+});
+
+// Mark all as read
+const markAllBtn = document.getElementById('markAllReadBtn');
+if (markAllBtn) {
+    markAllBtn.addEventListener('click', function() {
+        fetch('/zen/reqHub/notification_action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: ''
+        }).then(() => {
+            document.querySelectorAll('.notif-item.unread').forEach(el => {
+                el.classList.remove('unread');
+                el.style.opacity = '0.5';
+            });
+            const badge = document.querySelector('.notif-badge');
+            if (badge) badge.remove();
+            markAllBtn.remove();
+        });
+    });
+}
+</script>
