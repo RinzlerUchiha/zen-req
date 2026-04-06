@@ -102,10 +102,10 @@ body,
 }
 
 /* Notification bell badge */
-.notif-bell {
+/* .notif-bell {
     position: relative;
     display: inline-block;
-}
+} */
 .notif-badge {
     position: absolute;
     top: -6px;
@@ -186,21 +186,22 @@ function switchRole(newRole) {
 
         <!-- BELL DROPDOWN -->
         <div class="dropdown">
-            <button class="btn btn-outline-dark notif-bell" 
+            <button class="btn btn-outline-dark position-relative" 
                     id="notifBellBtn"
                     data-bs-toggle="dropdown" 
                     data-bs-auto-close="outside"
                     aria-expanded="false">
                 🔔
                 <?php if ($unreadCount > 0): ?>
-                    <span class="notif-badge"><?= $unreadCount > 9 ? '9+' : $unreadCount ?></span>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                        <?= $unreadCount > 9 ? '9+' : $unreadCount ?>
+                    </span>
                 <?php endif; ?>
             </button>
 
             <div class="dropdown-menu dropdown-menu-end p-0" 
-                 style="width: 360px; max-height: 480px; overflow-y: auto;">
+                style="width: 360px; max-height: 480px; overflow-y: auto;">
 
-                <!-- Header -->
                 <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
                     <strong style="font-size: 0.95rem;">Notifications</strong>
                     <?php if ($unreadCount > 0): ?>
@@ -210,7 +211,6 @@ function switchRole(newRole) {
                     <?php endif; ?>
                 </div>
 
-                <!-- Notification items -->
                 <?php if (empty($notifications)): ?>
                     <div class="text-center text-muted py-4" style="font-size: 0.875rem;">
                         No new notifications
@@ -218,9 +218,9 @@ function switchRole(newRole) {
                 <?php else: ?>
                     <?php foreach ($notifications as $notif): ?>
                         <div class="notif-item unread"
-                             data-notif-id="<?= $notif['id'] ?>"
-                             data-request-id="<?= $notif['request_id'] ?? '' ?>"
-                             data-type="<?= htmlspecialchars($notif['type']) ?>">
+                            data-notif-id="<?= $notif['id'] ?>"
+                            data-request-id="<?= $notif['request_id'] ?? '' ?>"
+                            data-type="<?= htmlspecialchars($notif['type']) ?>">
                             <div class="notif-message"><?= htmlspecialchars($notif['message']) ?></div>
                             <div class="notif-time">
                                 <?= date('M d, Y H:i', strtotime($notif['created_at'])) ?>
@@ -239,58 +239,95 @@ function switchRole(newRole) {
 </nav>
 
 <script>
-// Mark single notification as read when clicked
-document.querySelectorAll('.notif-item').forEach(function(item) {
-    item.addEventListener('click', function() {
-        const notifId    = this.dataset.notifId;
-        const requestId  = this.dataset.requestId;
+document.addEventListener('DOMContentLoaded', function() {
+    const bellBtn = document.getElementById('notifBellBtn');
+    if (bellBtn) {
+        const dropdown = new bootstrap.Dropdown(bellBtn);
+        bellBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.toggle();
+        });
+    }
 
-        // Mark as read
-        fetch('/zen/reqHub/notification_action', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'id=' + encodeURIComponent(notifId)
-        }).then(() => {
-            this.classList.remove('unread');
-            this.style.opacity = '0.5';
+    // Mark single notification as read when clicked
+    document.querySelectorAll('.notif-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+            const notifId   = this.dataset.notifId;
+            const requestId = this.dataset.requestId;
+            const self      = this;
 
-            // Update badge count
-            const badge = document.querySelector('.notif-badge');
-            if (badge) {
-                let count = parseInt(badge.textContent) || 0;
-                count--;
-                if (count <= 0) {
-                    badge.remove();
-                } else {
-                    badge.textContent = count > 9 ? '9+' : count;
+            fetch('/zen/reqHub/notification_action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + encodeURIComponent(notifId)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    self.remove();
+
+                    // Badge is now a Bootstrap badge span inside the button
+                    const badge = document.querySelector('#notifBellBtn .badge');
+                    if (badge) {
+                        let count = parseInt(badge.textContent) || 0;
+                        count--;
+                        if (count <= 0) {
+                            badge.remove();
+                        } else {
+                            badge.textContent = count > 9 ? '9+' : count;
+                        }
+                    }
+
+                    const remaining = document.querySelectorAll('.notif-item');
+                    if (remaining.length === 0) {
+                        const menu = document.querySelector('.dropdown-menu');
+                        const empty = document.createElement('div');
+                        empty.className = 'text-center text-muted py-4';
+                        empty.style.fontSize = '0.875rem';
+                        empty.textContent = 'No new notifications';
+                        menu.appendChild(empty);
+                        const markAllBtn = document.getElementById('markAllReadBtn');
+                        if (markAllBtn) markAllBtn.remove();
+                    }
                 }
+            })
+            .catch(err => console.error('Mark read error:', err));
+
+            if (requestId) {
+                window.location.href = '/zen/reqHub/dashboard';
             }
         });
-
-        // If it has a request_id, go to dashboard filtered to that request
-        if (requestId) {
-            window.location.href = '/zen/reqHub/dashboard';
-        }
     });
-});
 
-// Mark all as read
-const markAllBtn = document.getElementById('markAllReadBtn');
-if (markAllBtn) {
-    markAllBtn.addEventListener('click', function() {
-        fetch('/zen/reqHub/notification_action', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: ''
-        }).then(() => {
-            document.querySelectorAll('.notif-item.unread').forEach(el => {
-                el.classList.remove('unread');
-                el.style.opacity = '0.5';
-            });
-            const badge = document.querySelector('.notif-badge');
-            if (badge) badge.remove();
-            markAllBtn.remove();
+    // Mark all as read
+    const markAllBtn = document.getElementById('markAllReadBtn');
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', function() {
+            fetch('/zen/reqHub/notification_action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: ''
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.querySelectorAll('.notif-item').forEach(el => el.remove());
+
+                    const badge = document.querySelector('#notifBellBtn .badge');
+                    if (badge) badge.remove();
+
+                    markAllBtn.remove();
+
+                    const menu = document.querySelector('.dropdown-menu');
+                    const empty = document.createElement('div');
+                    empty.className = 'text-center text-muted py-4';
+                    empty.style.fontSize = '0.875rem';
+                    empty.textContent = 'No new notifications';
+                    menu.appendChild(empty);
+                }
+            })
+            .catch(err => console.error('Mark all read error:', err));
         });
-    });
-}
+    }
+});
 </script>

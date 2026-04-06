@@ -47,6 +47,9 @@ $routes = [
     '/revise_submit' => '/actions/revise_submit_action.php',
     '/request_revise' => '/public/request_revise.php',
     '/role_switch' => '/actions/role_switch_action.php',
+    '/notifications' => '/includes/notifications.php',
+    '/notification_action' => '/actions/notification_action.php',
+    '/notification_fetch' => '/includes/notification_fetch.php',
 ];
 
 // ============================================================================

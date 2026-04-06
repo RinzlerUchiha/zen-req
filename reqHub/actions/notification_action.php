@@ -13,9 +13,15 @@ try {
     $pdo = ReqHubDatabase::getConnection('reqhub');
     $currentUser = getCurrentUser();
 
+    error_log("notification_action: emp_no=" . ($currentUser['emp_no'] ?? 'NULL'));
+    error_log("notification_action: notifId=" . ($_POST['id'] ?? 'NULL'));
+    error_log("notification_action: POST=" . json_encode($_POST));
+
     $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
     $stmt->execute([$currentUser['emp_no']]);
     $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    error_log("notification_action: actualUserId=" . ($userRow['id'] ?? 'NOT FOUND'));
 
     if (!$userRow) {
         http_response_code(400);
@@ -30,13 +36,15 @@ try {
             UPDATE notifications SET is_read = 1
             WHERE id = ? AND user_id = ?
         ");
-        $stmt->execute([$notifId, $actualUserId]);
+        $result = $stmt->execute([$notifId, $actualUserId]);
+        error_log("notification_action: UPDATE single - rowCount=" . $stmt->rowCount());
     } else {
         $stmt = $pdo->prepare("
             UPDATE notifications SET is_read = 1
             WHERE user_id = ? AND is_read = 0
         ");
-        $stmt->execute([$actualUserId]);
+        $result = $stmt->execute([$actualUserId]);
+        error_log("notification_action: UPDATE all - rowCount=" . $stmt->rowCount());
     }
 
     echo json_encode(['success' => true]);
