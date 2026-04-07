@@ -1731,7 +1731,8 @@ $(function(){
         // ==============================
         // USER MODAL
         // ==============================
-        $('#modalInputGroup').show();
+        if(action.includes('User')){
+            $('#modalInputGroup').show();
             $('#modalInputLabel').text('Employee');
 
             if (action === 'addUser') {
