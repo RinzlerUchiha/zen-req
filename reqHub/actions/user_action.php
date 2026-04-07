@@ -229,6 +229,10 @@ try {
             // Clear approver assignments if not approver
             $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
             $delStmt->execute([$userId]);
+
+            // Clear any pending_approval notifications since user is no longer an Approver
+            $delNotifStmt = $pdo->prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'pending_approval'");
+            $delNotifStmt->execute([$userId]);
         }
 
         echo json_encode([

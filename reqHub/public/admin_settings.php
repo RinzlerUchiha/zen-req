@@ -205,6 +205,23 @@ foreach ($actions as $act) {
         $defaultActionIds[$act['id']] = $act['name'];
     }
 }
+
+// Fetch HR users for Add User dropdown
+$hrUsersList = [];
+try {
+    $hrUsersList = $hrPdo->query("
+        SELECT bi.bi_empno,
+               CONCAT(COALESCE(bi.bi_empfname, ''), ' ', COALESCE(bi.bi_emplname, '')) as full_name
+        FROM tbl201_basicinfo bi
+        INNER JOIN tngc_hrd2.tbl201_jobinfo ji ON ji.ji_empno = bi.bi_empno
+        WHERE bi.datastat = 'current'
+        AND ji.ji_remarks = 'Active'
+        ORDER BY bi.bi_empfname ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("HR users list fetch failed: " . $e->getMessage());
+}
+
 ?>
 
 <?php include (__DIR__ . '/../includes/header.php'); ?>
@@ -1714,10 +1731,28 @@ $(function(){
         // ==============================
         // USER MODAL
         // ==============================
-        if(action.includes('User')){
-            $('#modalInputGroup').show();
-            $('#modalInputLabel').text('Employee ID');
-            $('#modalInput').val(name.trim()).attr('disabled', false).attr('placeholder', 'e.g., 045-2026-001');
+        $('#modalInputGroup').show();
+            $('#modalInputLabel').text('Employee');
+
+            if (action === 'addUser') {
+                // Replace text input with searchable dropdown
+                $('#modalInput').replaceWith(`
+                    <select class="form-select" name="name" id="modalInput">
+                        <option value="">-- Select Employee --</option>
+                        <?php foreach ($hrUsersList as $hrUser): ?>
+                            <option value="<?= htmlspecialchars($hrUser['bi_empno']) ?>">
+                                <?= htmlspecialchars(trim($hrUser['full_name'])) ?> (<?= htmlspecialchars($hrUser['bi_empno']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                `);
+            } else {
+                // editUser — keep as disabled text showing current employee ID
+                if ($('#modalInput').is('select')) {
+                    $('#modalInput').replaceWith('<input type="text" class="form-control" name="name" id="modalInput" autocomplete="off" spellcheck="false">');
+                }
+                $('#modalInput').val(name.trim()).attr('disabled', true);
+            }
 
             const userType = $(this).data('user-role')||'Requestor';
             const userId = $(this).data('user-id')||'';
@@ -1999,11 +2034,14 @@ $(function(){
     $('#accessTypeModal').on('hidden.bs.modal', function () {
         const form = $('#accessTypeForm')[0];
         form.reset();
+        // Restore input if it was swapped to select
+        if ($('#modalInput').is('select')) {
+            $('#modalInput').replaceWith('<input type="text" class="form-control" name="name" id="modalInput" placeholder="Enter name" autocomplete="off" spellcheck="false">');
+        }
         $('#permissionsContainer').empty();
         $('#modalWarning, #modalInputGroup').hide();
         $('#modalSummary').html('<em>None selected</em>');
         $('#summaryColumn').hide();
-        // FIX: reset placeholder so User modal's placeholder doesn't bleed into other modals
         $('#modalInput').attr('placeholder', 'Enter name');
         $(document).off('change', '.user-type-select');
     });
