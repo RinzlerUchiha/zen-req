@@ -20,12 +20,16 @@ require_once (__DIR__ . '/../database/db.php');
 
 // Get the actual users.id from employee_id
 $actualUserId = null;
+$isAdminDev = false;
 try {
     $pdo = ReqHubDatabase::getConnection('reqhub');
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+    $stmt = $pdo->prepare("SELECT id, is_admin_dev FROM users WHERE employee_id = ?");
     $stmt->execute([$empNo]);
     $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($userRow) $actualUserId = (int)$userRow['id'];
+    if ($userRow) {
+        $actualUserId = (int)$userRow['id'];
+        $isAdminDev = $userRow['is_admin_dev'] === 'yes';
+    }
 } catch (Exception $e) {
     error_log("Header: failed to get actualUserId - " . $e->getMessage());
 }
@@ -152,31 +156,33 @@ body,
 </head>
 <body>
 
-<!-- DEV ROLE SWITCHER -->
-<div class="bg-secondary px-3 py-1 d-flex align-items-center gap-2" style="font-size: 0.8rem;">
-    <span class="text-white">Dev Role:</span>
-    <select onchange="switchRole(this.value)" class="form-select form-select-sm w-auto">
-        <option value="Requestor" <?= $role === 'Requestor' ? 'selected' : '' ?>>Requestor</option>
-        <option value="Approver"  <?= $role === 'Approver'  ? 'selected' : '' ?>>Approver</option>
-        <option value="Admin"     <?= $role === 'Admin'     ? 'selected' : '' ?>>Admin</option>
-    </select>
-    <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($role) ?></strong></span>
-</div>
+<?php if ($isAdminDev): ?>
+    <!-- DEV ROLE SWITCHER -->
+    <div class="bg-secondary px-3 py-1 d-flex align-items-center gap-2" style="font-size: 0.8rem;">
+        <span class="text-white">Dev Role:</span>
+        <select onchange="switchRole(this.value)" class="form-select form-select-sm w-auto">
+            <option value="Requestor" <?= $role === 'Requestor' ? 'selected' : '' ?>>Requestor</option>
+            <option value="Approver"  <?= $role === 'Approver'  ? 'selected' : '' ?>>Approver</option>
+            <option value="Admin"     <?= $role === 'Admin'     ? 'selected' : '' ?>>Admin</option>
+        </select>
+        <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($role) ?></strong></span>
+    </div>
 
-<script>
-function switchRole(newRole) {
-    fetch('/zen/reqHub/role_switch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'role=' + encodeURIComponent(newRole)
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) window.location.reload();
-        else alert('Failed: ' + (data.message || 'Unknown error'));
-    });
-}
-</script>
+    <script>
+    function switchRole(newRole) {
+        fetch('/zen/reqHub/role_switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'role=' + encodeURIComponent(newRole)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) window.location.reload();
+            else alert('Failed: ' + (data.message || 'Unknown error'));
+        });
+    }
+    </script>
+<?php endif; ?>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white px-3">
     <a class="navbar-brand" href="/zen/reqHub/dashboard">Access Portal</a>

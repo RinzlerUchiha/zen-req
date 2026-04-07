@@ -523,37 +523,35 @@ try {
                                     </div>
                                 </div>
                                 
-                                <!-- Approver assignments (collapsible) -->
-                                <?php if($user['reqhub_role'] === 'Approver'): ?>
-                                    <div class="user-approvals mt-2" style="display:none; margin-left: 30px;">
-                                        <small class="text-muted d-block mb-1">Assigned to:</small>
-                                        <div class="ps-2">
-                                            <?php if(!empty($userApprovals)): ?>
-                                                <?php
-                                                $systemDeptMap = [];
-                                                foreach ($userApprovals as $approval) {
-                                                    $sysId = $approval['system_id'];
-                                                    if (!isset($systemDeptMap[$sysId])) {
-                                                        $systemDeptMap[$sysId] = [];
+                                <!-- Approver assignments (collapsible) — always rendered so JS toggle works after role change -->
+                                <div class="user-approvals mt-2" style="display:none; margin-left: 30px;">
+                                    <small class="text-muted d-block mb-1">Assigned to:</small>
+                                    <div class="ps-2">
+                                        <?php if($user['reqhub_role'] === 'Approver' && !empty($userApprovals)): ?>
+                                            <?php
+                                            $systemDeptMap = [];
+                                            foreach ($userApprovals as $approval) {
+                                                $sysId = $approval['system_id'];
+                                                if (!isset($systemDeptMap[$sysId])) {
+                                                    $systemDeptMap[$sysId] = [];
+                                                }
+                                            }
+                                            foreach ($systemDeptMap as $sysId => $_) {
+                                                $sysName = '';
+                                                foreach ($systems as $s) {
+                                                    if ($s['id'] == $sysId) {
+                                                        $sysName = $s['name'];
+                                                        break;
                                                     }
                                                 }
-                                                foreach ($systemDeptMap as $sysId => $_) {
-                                                    $sysName = '';
-                                                    foreach ($systems as $s) {
-                                                        if ($s['id'] == $sysId) {
-                                                            $sysName = $s['name'];
-                                                            break;
-                                                        }
-                                                    }
-                                                    echo '<small class="d-block mb-1"><strong>System:</strong> ' . htmlspecialchars($sysName) . '</small>';
-                                                }
-                                                ?>
-                                            <?php else: ?>
-                                                <small class="text-muted">No systems assigned yet</small>
-                                            <?php endif; ?>
-                                        </div>
+                                                echo '<small class="d-block mb-1"><strong>System:</strong> ' . htmlspecialchars($sysName) . '</small>';
+                                            }
+                                            ?>
+                                        <?php else: ?>
+                                            <small class="text-muted">No systems assigned yet</small>
+                                        <?php endif; ?>
                                     </div>
-                                <?php endif; ?>
+                                </div>
                             </div>
                             
                             <div class="ms-3">
@@ -2447,45 +2445,32 @@ $(function(){
 
             if(action === 'editUser'){
                 const item = $(`.user-item[data-user-id="${res.id}"]`);
-                // Update in-memory approverAssignments so modal re-opens with correct selections
                 approverAssignments[res.id] = res.assignments || [];
-                item.data('dept-ids', (data.department_ids || []).join(','));
-                item.attr('data-dept-ids', (data.department_ids || []).join(','));
                 item.find('[data-action="editUser"]').data('name', res.employee_id || '').data('user-role', res.user_type || '');
-                
-                approverAssignments[res.id] = res.assignments || [];
-                
-                if (res.user_type === 'Approver') {
-                    // Add toggle button if not present
-                    if (item.find('.toggle-user-approvals').length === 0) {
-                        item.find('.d-flex.align-items-center').first().prepend('<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>');
-                    }
 
-                    // Build approvals content
+                if (res.user_type === 'Approver') {
+                    if (item.find('.toggle-user-approvals').length === 0) {
+                        item.find('.flex-grow-1 > .d-flex.align-items-center').first()
+                            .prepend('<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>');
+                    }
                     let approvalsContent = '';
                     if (res.assignments && res.assignments.length > 0) {
                         res.assignments.forEach(a => {
                             let sysName = '';
                             <?php foreach ($systems as $sys): ?>
-                                if (<?= $sys['id'] ?> == a.system_id) {
-                                    sysName = '<?= htmlspecialchars($sys['name']) ?>';
-                                }
+                                if (<?= $sys['id'] ?> == a.system_id) { sysName = '<?= htmlspecialchars($sys['name']) ?>'; }
                             <?php endforeach; ?>
                             approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${sysName}</small>`;
                         });
                     } else {
                         approvalsContent = '<small class="text-muted">No systems assigned yet</small>';
                     }
-
-                    // Update existing div contents — never remove/re-append
                     item.find('.user-approvals .ps-2').html(approvalsContent);
-
                 } else {
                     item.find('.toggle-user-approvals').remove();
-                    item.find('.user-approvals .ps-2').html('<small class="text-muted">No systems assigned yet</small>');
+                    item.find('.user-approvals').hide().find('.ps-2').html('<small class="text-muted">No systems assigned yet</small>');
                 }
 
-                // Update role label — works for both branches
                 item.find('.user-role-label').text(res.user_type);
             }
 
