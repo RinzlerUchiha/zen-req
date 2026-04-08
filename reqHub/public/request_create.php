@@ -71,35 +71,51 @@ foreach ($accessTypes as $type) {
         <input type="hidden" name="chosen_role" id="chosenRoleInput" value="">
 
         <div class="mb-3">
-            <label class="form-label">System</label>
+            
+        </div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <label class="form-label">System</label>
             <select name="system_id" id="systemSelect" class="form-select" required>
                 <option value="">Select System</option>
                 <?php foreach ($systems as $system): ?>
                     <option value="<?= $system['id'] ?>"><?= htmlspecialchars($system['name']) ?></option>
                 <?php endforeach; ?>
             </select>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Request For</label>
-            <select name="request_for" id="requestForSelect" class="form-select" required>
-                <option value="">Select User</option>
-                <?php foreach ($users as $u): ?>
-                    <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>">
-                        <?= htmlspecialchars($u['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Department</label>
+            </div>
+            <div class="col">
+                <label class="form-label">Request For</label>
+                <select name="request_for" id="requestForSelect" class="form-select" required>
+                    <option value="">Select User</option>
+                    <?php foreach ($users as $u): ?>
+                        <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>">
+                            <?= htmlspecialchars($u['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label">Department</label>
             <select name="department_id" id="departmentSelect" class="form-select" required>
                 <option value="">Select Department</option>
                 <?php foreach ($departments as $dept): ?>
                     <option value="<?= $dept['id'] ?>"><?= htmlspecialchars($dept['name']) ?></option>
                 <?php endforeach; ?>
             </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Remove From <span class="text-muted" style="font-weight:normal;">(leave blank if new request)</span></label>
+                <select name="remove_from" id="removeFromSelect" class="form-select">
+                    <option value="">-- Leave blank if new request --</option>
+                    <?php foreach ($users as $u): ?>
+                        <option value="<?= $u['id'] ?>">
+                            <?= htmlspecialchars($u['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
         </div>
 
         <div class="mb-3" id="storeContainer" style="display: none;">
@@ -144,10 +160,17 @@ foreach ($accessTypes as $type) {
             </div>
         </div>
 
-        <div class="mb-3">
+        <!-- <div class="mb-3">
             <label class="form-label">Remove From (leave blank if new request)</label>
-            <input type="text" name="remove_from" class="form-control">
-        </div>
+            <select name="remove_from" id="removeFromSelect" class="form-select">
+                <option value="">-- New request --</option>
+                <?php foreach ($users as $u): ?>
+                    <option value="<?= $u['id'] ?>">
+                        <?= htmlspecialchars($u['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div> -->
 
         <div class="mb-3">
             <label class="form-label">Description / Purpose</label>
@@ -164,14 +187,50 @@ foreach ($accessTypes as $type) {
 document.addEventListener("DOMContentLoaded", function() {
 
     const requestForm = document.getElementById('requestForm');
-    requestForm.addEventListener('submit', function(e) {
-        const disabledSelects = this.querySelectorAll('select:disabled');
-        disabledSelects.forEach(select => select.disabled = false);
-    });
+        requestForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const selectedAccessTypes = Array.from(document.querySelectorAll('.access-checkbox:checked'));
+            if (selectedAccessTypes.length === 0) {
+                alert('Please select one access type');
+                return;
+            }
+
+            const disabledSelects = this.querySelectorAll('select:disabled');
+            disabledSelects.forEach(select => select.disabled = false);
+
+            const formData = new FormData(this);
+
+            const departmentSelect = document.getElementById('departmentSelect');
+            if (departmentSelect.disabled && departmentSelect.value) {
+                formData.set('department_id', departmentSelect.value);
+            }
+
+            fetch('/zen/reqHub/request_create_action', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Unknown error');
+                    });
+                }
+                // Success — server redirected, follow the redirect
+                return response.text().then(() => {
+                    window.location.href = '/zen/reqHub/dashboard?status=pending';
+                });
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+            });
+        });
 
     new Choices('#systemSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const requestForChoices = new Choices('#requestForSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const departmentChoices = new Choices('#departmentSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
+    new Choices('#removeFromSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
 
     const systemSelect = document.getElementById("systemSelect");
     const roleSelect = document.getElementById("roleSelect");
@@ -193,7 +252,13 @@ document.addEventListener("DOMContentLoaded", function() {
     // Render modules based on search
     function renderModules(prioritizeAutoSelected = false) {
         modulesDisplay.innerHTML = "";
-        let toDisplay = allAccessTypesList;
+        
+        // Filter by selected system first
+        const selectedSystemId = systemSelect.value;
+        const selectedSystemName = selectedSystemId ? systemNameMap[selectedSystemId] : null;
+        let toDisplay = selectedSystemName
+            ? allAccessTypesList.filter(type => type.system === selectedSystemName)
+            : [];
 
         // Apply search filter
         if (currentSearch) {
@@ -333,8 +398,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 actionCheckboxes.push(checkbox);
 
                 checkbox.addEventListener("change", function() {
-                    if (!this.checked && autoSelectedItems.has(this.value)) {
+                    if (!this.checked) {
                         autoSelectedItems.delete(this.value);
+                    } else {
+                        // Re-check if this action belongs to the currently selected role
+                        const role = roleSelect.value;
+                        const systemName = systemNameMap[systemSelect.value];
+                        const type = allAccessTypesList.find(t => t.id.toString() === this.value);
+                        if (type && type.role === role && type.system === systemName) {
+                            autoSelectedItems.add(this.value);
+                        }
                     }
                     
                     // Update module checkbox state
@@ -364,10 +437,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // Handle module checkbox click
             moduleCheckbox.addEventListener("change", function() {
+                const role = roleSelect.value;
+                const systemName = systemNameMap[systemSelect.value];
                 actionCheckboxes.forEach(cb => {
                     cb.checked = this.checked;
-                    if (!this.checked && autoSelectedItems.has(cb.value)) {
+                    if (!this.checked) {
                         autoSelectedItems.delete(cb.value);
+                    } else {
+                        // Restore to autoSelectedItems if it belongs to the current role
+                        const type = allAccessTypesList.find(t => t.id.toString() === cb.value);
+                        if (type && type.role === role && type.system === systemName) {
+                            autoSelectedItems.add(cb.value);
+                        }
                     }
                 });
                 updateSummary();
@@ -396,16 +477,17 @@ document.addEventListener("DOMContentLoaded", function() {
     systemSelect.addEventListener("change", function() {
         const systemId = this.value;
         
-        document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
-        document.querySelectorAll('.module-checkbox').forEach(cb => cb.checked = false);
         autoSelectedItems.clear();
         autoSelectedModules.clear();
         updateSummary();
         
         roleSelect.value = '';
+        document.getElementById('chosenRoleInput').value = '';
         
         if (!systemId) {
             roleSelect.innerHTML = '<option value="">-- Choose a role --</option>';
+            renderModules(false);
+            updateSummary();
             return;
         }
 
@@ -418,6 +500,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 } else {
                     roleSelect.innerHTML = '<option value="">No roles found</option>';
                 }
+                renderModules(false);
+                updateSummary();
             })
             .catch(error => {
                 console.error("Error:", error);
@@ -438,15 +522,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     roleSelect.addEventListener("change", function() {
         const role = this.value;
-        console.log('Role selected:', role);
         
         document.getElementById('chosenRoleInput').value = role;
-        console.log('Stored chosen_role:', role);
         
         if (!role) {
-            document.querySelectorAll('.access-checkbox').forEach(cb => cb.checked = false);
             autoSelectedItems.clear();
             autoSelectedModules.clear();
+            renderModules(false);
             updateSummary();
             return;
         }
