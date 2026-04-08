@@ -153,6 +153,24 @@ try {
     $roleAccessTypeIds = [];
     $manuallyAddedAccessTypeIds = [];
 }
+
+// Fetch approver's revision comment
+$revisionComment = '';
+try {
+    $stmt = $pdo->prepare("
+        SELECT message FROM request_chats 
+        WHERE request_id = ? AND message LIKE '[REVISION REQUESTED]%'
+        ORDER BY created_at DESC 
+        LIMIT 1
+    ");
+    $stmt->execute([$request_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row) {
+        $revisionComment = trim(preg_replace('/^\[REVISION REQUESTED\]:\s*/s', '', $row['message']));
+    }
+} catch (PDOException $e) {
+    error_log("Error fetching revision comment: " . $e->getMessage());
+}
 ?>
 
 <?php include ($reqhub_root . "/includes/header.php"); ?>
@@ -162,6 +180,18 @@ try {
 <style>
     .choices__list--dropdown { z-index: 1000 !important; }
     .choices[data-type*="select-one"] .choices__button { z-index: 999 !important; }
+
+    /* Keep disabled department readable */
+    .choices.is-disabled .choices__item--selectable,
+    .choices.is-disabled .choices__inner {
+        color: #212529 !important;
+        opacity: 1 !important;
+        background-color: #e9ecef !important;
+        cursor: not-allowed;
+    }
+    .choices.is-disabled {
+        opacity: 1 !important;
+    }
 </style>
 
 <div class="container-fluid mt-4 px-3 px-lg-5">
@@ -174,60 +204,84 @@ try {
         <input type="hidden" name="request_id" value="<?= $request_id ?>">
         <input type="hidden" name="chosen_role" id="chosenRoleInput" value="<?= htmlspecialchars($originalRole ?? '') ?>">
 
-        <div class="row mb-3">
-            <div class="col">
-                <label class="form-label">System</label>
-                <select name="system_id" id="systemSelect" class="form-select" required>
-                    <option value="">Select System</option>
-                    <?php foreach ($systems as $system): ?>
-                        <option value="<?= $system['id'] ?>" <?= $request['system_id'] == $system['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($system['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col">
-                <label class="form-label">Request For</label>
-                <select name="request_for" id="requestForSelect" class="form-select" required>
-                    <option value="">Select User</option>
-                    <?php foreach ($users as $u): ?>
-                        <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>"
-                                <?= $request['request_for'] == $u['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($u['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col">
-                <label class="form-label">Department</label>
-                <select name="department_id" id="departmentSelect" class="form-select" required>
-                    <option value="">Select Department</option>
-                    <?php foreach ($departments as $dept): ?>
-                        <option value="<?= $dept['id'] ?>" <?= $request['department_id'] == $dept['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($dept['name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
+        <!-- Top section: form fields on left, approver comments on right -->
+        <div class="row g-4 mb-3">
 
-        <div class="mb-3">
-            <label class="form-label">Remove From <span class="text-muted" style="font-weight:normal;">(leave blank if new request)</span></label>
-            <select name="remove_from" id="removeFromSelect" class="form-select">
-                <option value="">-- Leave blank if new request --</option>
-                <?php foreach ($users as $u): ?>
-                    <option value="<?= $u['id'] ?>" <?= $request['remove_from'] == $u['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($u['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
+            <!-- LEFT: form fields -->
+            <div class="col-md-9">
 
-        <div class="mb-3" id="storeContainer" style="display: none;">
-            <label class="form-label">Store</label>
-            <input type="text" name="store" id="storeInput" class="form-control" placeholder="Enter store name"
-                   value="<?= htmlspecialchars($request['store'] ?? '') ?>">
-        </div>
+                <div class="row mb-3">
+                    <div class="col">
+                        <label class="form-label">System</label>
+                        <select name="system_id" id="systemSelect" class="form-select" required>
+                            <option value="">Select System</option>
+                            <?php foreach ($systems as $system): ?>
+                                <option value="<?= $system['id'] ?>" <?= $request['system_id'] == $system['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($system['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="form-label">Request For</label>
+                        <select name="request_for" id="requestForSelect" class="form-select" required>
+                            <option value="">Select User</option>
+                            <?php foreach ($users as $u): ?>
+                                <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>"
+                                        <?= $request['request_for'] == $u['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($u['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="form-label">Department</label>
+                        <select name="department_id" id="departmentSelect" class="form-select" required>
+                            <option value="">Select Department</option>
+                            <?php foreach ($departments as $dept): ?>
+                                <option value="<?= $dept['id'] ?>" <?= $request['department_id'] == $dept['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($dept['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Remove From <span class="text-muted" style="font-weight:normal;">(leave blank if new request)</span></label>
+                    <select name="remove_from" id="removeFromSelect" class="form-select">
+                        <option value="">-- Leave blank if new request --</option>
+                        <?php foreach ($users as $u): ?>
+                            <option value="<?= $u['id'] ?>" <?= $request['remove_from'] == $u['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($u['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="storeContainer" style="display: none;">
+                    <label class="form-label">Store</label>
+                    <input type="text" name="store" id="storeInput" class="form-control" placeholder="Enter store name"
+                           value="<?= htmlspecialchars($request['store'] ?? '') ?>">
+                </div>
+
+            </div>
+
+            <!-- RIGHT: approver's comments -->
+            <div class="col-md-3">
+                <label class="form-label fw-bold" style="color: #842029;">Approver's Comments</label>
+                <div class="border rounded p-3" style="
+                    background-color: #fff8f8;
+                    border-color: #f5c6cb !important;
+                    min-height: 180px;
+                    white-space: pre-wrap;
+                    font-size: 0.875rem;
+                    color: #842029;
+                    line-height: 1.5;
+                "><?php if ($revisionComment): ?><?= htmlspecialchars($revisionComment) ?><?php else: ?><em style="color: #aaa;">No comments from approver.</em><?php endif; ?></div>
+            </div>
+
+        </div><!-- end top row -->
 
         <div class="mb-4">
             <label class="form-label fw-bold">Access Types</label>
@@ -246,7 +300,7 @@ try {
                         <input type="text" id="searchModules" class="form-control form-control-sm" placeholder="Search modules..." style="font-size: 0.9rem;">
                     </div>
                     <div id="modulesContainer" class="border rounded p-2" style="max-height: 600px; overflow-y: auto; background-color: #fafafa; min-height: 200px;">
-                        <div id="modulesDisplay" style="font-size: 0.85rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
+                        <div id="modulesDisplay" style="font-size: 0.85rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;"></div>
                     </div>
                 </div>
 
@@ -313,7 +367,6 @@ document.addEventListener("DOMContentLoaded", function() {
                     return data;
                 });
             }
-            // Non-JSON (redirect) — treat as success
             return { success: true, redirect: '/zen/reqHub/dashboard?status=pending' };
         })
         .then(data => {
@@ -366,7 +419,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderModules(prioritizeAutoSelected = false) {
         modulesDisplay.innerHTML = "";
 
-        // Filter by selected system first
         const selectedSystemId = systemSelect.value;
         const selectedSystemName = selectedSystemId ? systemNameMap[selectedSystemId] : null;
         let toDisplay = selectedSystemName
@@ -621,7 +673,6 @@ document.addEventListener("DOMContentLoaded", function() {
         updateSummary();
     }
 
-    // Restore department for pre-selected user
     if (requestForSelect.value) {
         const employeeId = requestForSelect.options[requestForSelect.selectedIndex]?.getAttribute('data-employee-id');
         if (employeeId) {

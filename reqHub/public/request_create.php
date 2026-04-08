@@ -61,6 +61,19 @@ foreach ($accessTypes as $type) {
 <style>
     .choices__list--dropdown { z-index: 1000 !important; }
     .choices[data-type*="select-one"] .choices__button { z-index: 999 !important; }
+
+    /* Keep disabled department readable */
+.choices.is-disabled .choices__item--selectable,
+.choices.is-disabled .choices__inner {
+    color: #212529 !important;
+    opacity: 1 !important;
+    background-color: #e9ecef !important;
+    cursor: not-allowed;
+}
+
+.choices.is-disabled {
+    opacity: 1 !important;
+}
 </style>
 
 <div class="container-fluid mt-4 px-3 px-lg-5">
@@ -145,8 +158,8 @@ foreach ($accessTypes as $type) {
                     </div>
                     
                     <!-- Modules Container -->
-                    <div id="modulesContainer" class="border rounded p-2" style="max-height: 600px; overflow-y: auto; background-color: #fafafa; min-height: 200px;">
-                        <div id="modulesDisplay" style="font-size: 0.85rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
+                    <div id="modulesContainer" class="border rounded p-2" style="max-height: 600px; overflow-y: auto; overflow-x: auto; background-color: #fafafa; min-height: 200px;">
+                        <div id="modulesDisplay" style="font-size: 0.85rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;" justify-content: start;"></div>
                     </div>
                 </div>
 
@@ -308,7 +321,7 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCard.style.backgroundColor = "#fffcfc";
             moduleCard.style.minHeight = "250px";
             moduleCard.style.display = "flex";
-            moduleCard.style.flexDirection = "column";
+            moduleCard.style.flexDirection = "column";  
 
             // Module header with checkbox and name and action count
             const headerDiv = document.createElement("div");
