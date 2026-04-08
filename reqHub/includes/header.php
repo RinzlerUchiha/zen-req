@@ -238,8 +238,30 @@ body,
             </div>
         </div>
 
-        <div class="text-dark">
-            Hello, <?= htmlspecialchars($user['name']) ?>
+        <div class="text-dark d-flex flex-column align-items-end" style="font-size: 18px; line-height: 1.2;">
+            <span>Hello, <?= htmlspecialchars($user['name']) ?></span>
+            <span class="text-muted" style="font-size: 1rem;"><?= htmlspecialchars($role) ?></span>
+            <?php if ($role === 'Approver' && $actualUserId): ?>
+                <?php
+                try {
+                    $stmtSys = $pdo->prepare("
+                        SELECT s.name 
+                        FROM user_approver_assignments uaa
+                        JOIN systems s ON uaa.system_id = s.id
+                        WHERE uaa.user_id = ?
+                    ");
+                    $stmtSys->execute([$actualUserId]);
+                    $assignedSystems = $stmtSys->fetchAll(PDO::FETCH_COLUMN);
+                } catch (Exception $e) {
+                    $assignedSystems = [];
+                }
+                ?>
+                <?php if (!empty($assignedSystems)): ?>
+                    <span class="text-muted" style="font-size: 0.82rem;">
+                        <?= htmlspecialchars(implode(', ', $assignedSystems)) ?>
+                    </span>
+                <?php endif; ?>
+            <?php endif; ?>
         </div>
     </div>
 </nav>
