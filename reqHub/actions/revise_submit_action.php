@@ -31,20 +31,21 @@ error_log("revise_submit_action: Auth passed");
 // Log all POST data for debugging
 error_log("revise_submit_action: Full \$_POST: " . json_encode($_POST));
 
-$request_id = $_POST['request_id'] ?? null;
-$system_id = $_POST['system_id'] ?? null;
-$department_id = $_POST['department_id'] ?? null;
-$request_for = $_POST['request_for'] ?? null;
-$remove_from = $_POST['remove_from'] ?? null;
-$description = $_POST['description'] ?? null;
-$access_types = $_POST['access_types[]'] ?? $_POST['access_types'] ?? [];
-
-error_log("revise_submit_action: Parsed - request_id=$request_id, system_id=$system_id, dept=$department_id, req_for=$request_for");
-error_log("revise_submit_action: access_types raw = " . json_encode($access_types));
-
-// Handle access_types as comma-separated string or array
+$request_id    = isset($_POST['request_id'])    ? (int)$_POST['request_id']    : null;
+$system_id     = isset($_POST['system_id'])     ? (int)$_POST['system_id']     : null;
+$department_id = isset($_POST['department_id']) ? (int)$_POST['department_id'] : null;
+$request_for   = isset($_POST['request_for'])   ? (int)$_POST['request_for']   : null;
+$remove_from   = isset($_POST['remove_from'])   && $_POST['remove_from'] !== '' ? (int)$_POST['remove_from'] : null;
+$description   = trim($_POST['description'] ?? '');
+$access_types  = $_POST['access_types'] ?? [];
+if (empty($access_types) && isset($_POST['access_types[]'])) {
+    $access_types = $_POST['access_types[]'];
+}
 if (is_string($access_types)) {
     $access_types = array_filter(explode(',', $access_types));
+}
+if (!is_array($access_types)) {
+    $access_types = [];
 }
 
 error_log("revise_submit_action: request_id=$request_id, system_id=$system_id, dept=$department_id, req_for=$request_for, access_types=" . json_encode($access_types));
@@ -110,9 +111,18 @@ try {
     error_log("revise_submit_action: Executing UPDATE");
     
     $chosen_role = $_POST['chosen_role'] ?? null;
-    $stmt->execute([$system_id, $department_id, $request_for, $remove_from, $description, $chosen_role, $request_id]);
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        (int)$system_id,
+        (int)$department_id,
+        (int)$request_for,
+        $remove_from,
+        $description,
+        $chosen_role,
+        (int)$request_id
+    ]);
     
-    error_log("revise_submit_action: UPDATE result: " . ($result ? 'true' : 'false') . ", rowCount: " . $stmt->rowCount());
+    error_log("revise_submit_action: UPDATE rowCount: " . $stmt->rowCount());
     
     // Delete old access types
     $stmt = $pdo->prepare("DELETE FROM request_access_types WHERE request_id = ?");

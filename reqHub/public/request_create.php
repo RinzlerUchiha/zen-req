@@ -70,9 +70,9 @@ foreach ($accessTypes as $type) {
 
         <input type="hidden" name="chosen_role" id="chosenRoleInput" value="">
 
-        <div class="mb-3">
+        <!-- <div class="mb-3">
             
-        </div>
+        </div> -->
 
         <div class="row mb-3">
             <div class="col">

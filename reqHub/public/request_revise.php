@@ -105,23 +105,11 @@ try {
         ) ASC
     ")->fetchAll();
     
-    error_log("Loaded " . count($systems) . " systems, " . count($departments) . " departments, " . count($users) . " users");
+    $accessTypes = $pdo->query("SELECT id, system, role, module, actions FROM access_types ORDER BY role, module, actions")->fetchAll(PDO::FETCH_ASSOC);
+    
+    error_log("Loaded " . count($systems) . " systems, " . count($departments) . " departments, " . count($users) . " users, " . count($accessTypes) . " access types");
 } catch (PDOException $e) {
     error_log("Error fetching dropdown data: " . $e->getMessage());
-    die("Database error: " . htmlspecialchars($e->getMessage()));
-}
-
-// Fetch access types
-try {
-    $accessTypes = $pdo->query("
-        SELECT id, system, role, module, actions
-        FROM access_types
-        ORDER BY role, module, actions
-    ")->fetchAll(PDO::FETCH_ASSOC);
-    
-    error_log("Fetched " . count($accessTypes) . " access types");
-} catch (PDOException $e) {
-    error_log("Error fetching access types: " . $e->getMessage());
     die("Database error: " . htmlspecialchars($e->getMessage()));
 }
 
@@ -186,38 +174,50 @@ try {
         <input type="hidden" name="request_id" value="<?= $request_id ?>">
         <input type="hidden" name="chosen_role" id="chosenRoleInput" value="<?= htmlspecialchars($originalRole ?? '') ?>">
 
-        <div class="mb-3">
-            <label class="form-label">System</label>
-            <select name="system_id" id="systemSelect" class="form-select" required>
-                <option value="">Select System</option>
-                <?php foreach ($systems as $system): ?>
-                    <option value="<?= $system['id'] ?>" <?= $request['system_id'] == $system['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($system['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
+        <div class="row mb-3">
+            <div class="col">
+                <label class="form-label">System</label>
+                <select name="system_id" id="systemSelect" class="form-select" required>
+                    <option value="">Select System</option>
+                    <?php foreach ($systems as $system): ?>
+                        <option value="<?= $system['id'] ?>" <?= $request['system_id'] == $system['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($system['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label">Request For</label>
+                <select name="request_for" id="requestForSelect" class="form-select" required>
+                    <option value="">Select User</option>
+                    <?php foreach ($users as $u): ?>
+                        <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>"
+                                <?= $request['request_for'] == $u['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($u['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label">Department</label>
+                <select name="department_id" id="departmentSelect" class="form-select" required>
+                    <option value="">Select Department</option>
+                    <?php foreach ($departments as $dept): ?>
+                        <option value="<?= $dept['id'] ?>" <?= $request['department_id'] == $dept['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($dept['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
 
         <div class="mb-3">
-            <label class="form-label">Request For</label>
-            <select name="request_for" id="requestForSelect" class="form-select" required>
-                <option value="">Select User</option>
+            <label class="form-label">Remove From <span class="text-muted" style="font-weight:normal;">(leave blank if new request)</span></label>
+            <select name="remove_from" id="removeFromSelect" class="form-select">
+                <option value="">-- Leave blank if new request --</option>
                 <?php foreach ($users as $u): ?>
-                    <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>"
-                            <?= $request['request_for'] == $u['id'] ? 'selected' : '' ?>>
+                    <option value="<?= $u['id'] ?>" <?= $request['remove_from'] == $u['id'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($u['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Department</label>
-            <select name="department_id" id="departmentSelect" class="form-select" required>
-                <option value="">Select Department</option>
-                <?php foreach ($departments as $dept): ?>
-                    <option value="<?= $dept['id'] ?>" <?= $request['department_id'] == $dept['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($dept['name']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -232,7 +232,6 @@ try {
         <div class="mb-4">
             <label class="form-label fw-bold">Access Types</label>
 
-            <!-- Roles Dropdown -->
             <div class="mb-3">
                 <label class="form-label">Select Role (Auto-selects all its modules)</label>
                 <select id="roleSelect" class="form-select">
@@ -241,22 +240,16 @@ try {
             </div>
 
             <div class="row g-3">
-                <!-- COLUMN 2: Modules & Actions (62% width) -->
                 <div style="flex: 0 0 62.333333%; max-width: 62.333333%;">
                     <h6>Modules & Actions</h6>
-                    
-                    <!-- Search Bar -->
                     <div class="mb-2">
                         <input type="text" id="searchModules" class="form-control form-control-sm" placeholder="Search modules..." style="font-size: 0.9rem;">
                     </div>
-                    
-                    <!-- Modules Container -->
                     <div id="modulesContainer" class="border rounded p-2" style="max-height: 600px; overflow-y: auto; background-color: #fafafa; min-height: 200px;">
                         <div id="modulesDisplay" style="font-size: 0.85rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
                     </div>
                 </div>
 
-                <!-- COLUMN 3: Summary (38% width, 2-column grid) -->
                 <div style="flex: 0 0 37.666667%; max-width: 37.666667%;">
                     <h6>Selected Access</h6>
                     <div id="summaryContainer" class="border rounded p-3" style="max-height: 639px; overflow-y: auto; background-color: #fafafa; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; align-content: start;">
@@ -264,11 +257,6 @@ try {
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Remove From (leave blank if not applicable)</label>
-            <input type="text" name="remove_from" class="form-control" value="<?= htmlspecialchars($request['remove_from'] ?? '') ?>">
         </div>
 
         <div class="mb-3">
@@ -291,48 +279,55 @@ document.addEventListener("DOMContentLoaded", function() {
     const requestForm = document.getElementById('requestForm');
     requestForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const selectedAccessTypes = Array.from(document.querySelectorAll('.access-checkbox:checked'));
         if (selectedAccessTypes.length === 0) {
-            alert('Please select at least one access type');
+            alert('Please select one access type');
             return;
         }
-        
-        const disabledSelects = this.querySelectorAll('select:disabled');
-        disabledSelects.forEach(select => select.disabled = false);
-        
+
         const formData = new FormData(this);
-        
+
+        const disabledSelects = this.querySelectorAll('select:disabled');
+        disabledSelects.forEach(select => {
+            select.disabled = false;
+            formData.set(select.name, select.value);
+        });
+
         const departmentSelect = document.getElementById('departmentSelect');
         if (departmentSelect.disabled && departmentSelect.value) {
             formData.set('department_id', departmentSelect.value);
         }
-        
+
         fetch('/zen/reqHub/revise_submit', {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message || 'Request revisions submitted successfully!');
-                if (data.redirect) {
-                    window.location.href = data.redirect;
-                } else {
-                    window.location.href = '/zen/reqHub/dashboard?status=pending';
-                }
-            } else {
-                alert('Error: ' + (data.message || 'Unknown error'));
+        .then(response => {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(data => {
+                    if (!data.success) {
+                        throw new Error(data.message || 'Unknown error');
+                    }
+                    return data;
+                });
             }
+            // Non-JSON (redirect) — treat as success
+            return { success: true, redirect: '/zen/reqHub/dashboard?status=pending' };
+        })
+        .then(data => {
+            window.location.href = data.redirect || '/zen/reqHub/dashboard?status=pending';
         })
         .catch(error => {
-            alert('Error submitting revisions: ' + error.message);
+            alert('Error: ' + error.message);
         });
     });
 
     new Choices('#systemSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const requestForChoices = new Choices('#requestForSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const departmentChoices = new Choices('#departmentSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
+    new Choices('#removeFromSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
 
     const systemSelect = document.getElementById("systemSelect");
     const roleSelect = document.getElementById("roleSelect");
@@ -358,7 +353,6 @@ document.addEventListener("DOMContentLoaded", function() {
     let autoSelectedItems = new Set();
     let autoSelectedModules = new Set();
 
-    // ─── Helper: wipe all checkbox state in the DOM ───────────────────────────
     function clearAllCheckboxes() {
         document.querySelectorAll('.access-checkbox').forEach(cb => {
             cb.checked = false;
@@ -371,7 +365,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function renderModules(prioritizeAutoSelected = false) {
         modulesDisplay.innerHTML = "";
-        let toDisplay = allAccessTypesList;
+
+        // Filter by selected system first
+        const selectedSystemId = systemSelect.value;
+        const selectedSystemName = selectedSystemId ? systemNameMap[selectedSystemId] : null;
+        let toDisplay = selectedSystemName
+            ? allAccessTypesList.filter(type => type.system === selectedSystemName)
+            : [];
 
         if (currentSearch) {
             toDisplay = toDisplay.filter(type =>
@@ -380,7 +380,6 @@ document.addEventListener("DOMContentLoaded", function() {
             );
         }
 
-        // Group by module — store ALL entries per action to preserve all IDs
         const grouped = {};
         toDisplay.forEach(type => {
             if (!grouped[type.module]) grouped[type.module] = {};
@@ -471,7 +470,6 @@ document.addEventListener("DOMContentLoaded", function() {
             const actionCheckboxes = [];
 
             actions.forEach(types => {
-                // Find the best matching type variant: prefer role-selected, then any saved, then first
                 const matchedType =
                     types.find(t => autoSelectedItems.has(t.id.toString())) ||
                     types.find(t => currentAccessTypeIdsSet.has(t.id)) ||
@@ -498,11 +496,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.style.flexShrink = "0";
                 checkbox.style.cursor = "pointer";
 
-                // Only check if autoSelectedItems contains this ID.
-                // currentAccessTypeIdsSet is intentionally NOT used here after a role/system
-                // change — clearAllCheckboxes() + autoSelectedItems rebuild handles that case.
-                // On initial page load, autoSelectedItems is seeded from roleAccessTypeIds AND
-                // currentAccessTypeIdsSet is used as a fallback via initFromDatabase logic below.
                 if (autoSelectedItems.has(matchedType.id.toString()) || currentAccessTypeIdsSet.has(matchedType.id)) {
                     checkbox.checked = true;
                 }
@@ -510,8 +503,15 @@ document.addEventListener("DOMContentLoaded", function() {
                 actionCheckboxes.push(checkbox);
 
                 checkbox.addEventListener("change", function() {
-                    if (!this.checked && autoSelectedItems.has(this.value)) {
+                    if (!this.checked) {
                         autoSelectedItems.delete(this.value);
+                    } else {
+                        const role = roleSelect.value;
+                        const systemName = systemNameMap[systemSelect.value];
+                        const type = allAccessTypesList.find(t => t.id.toString() === this.value);
+                        if (type && type.role === role && type.system === systemName) {
+                            autoSelectedItems.add(this.value);
+                        }
                     }
 
                     const allChecked = actionCheckboxes.every(cb => cb.checked);
@@ -539,19 +539,19 @@ document.addEventListener("DOMContentLoaded", function() {
             });
 
             moduleCheckbox.addEventListener("change", function() {
+                const role = roleSelect.value;
+                const systemName = systemNameMap[systemSelect.value];
                 actionCheckboxes.forEach(cb => {
                     cb.checked = this.checked;
-                    if (!this.checked && autoSelectedItems.has(cb.value)) {
+                    if (!this.checked) {
                         autoSelectedItems.delete(cb.value);
+                    } else {
+                        const type = allAccessTypesList.find(t => t.id.toString() === cb.value);
+                        if (type && type.role === role && type.system === systemName) {
+                            autoSelectedItems.add(cb.value);
+                        }
                     }
                 });
-
-                if (this.checked) {
-                    autoSelectedModules.add(moduleName);
-                } else {
-                    autoSelectedModules.delete(moduleName);
-                }
-
                 updateSummary();
             });
 
@@ -570,20 +570,15 @@ document.addEventListener("DOMContentLoaded", function() {
         renderModules(true);
     });
 
-    // Department auto-fill variables
     const requestForSelect = document.getElementById('requestForSelect');
     const departmentSelect = document.getElementById('departmentSelect');
     const storeContainer = document.getElementById('storeContainer');
     const storeInput = document.getElementById('storeInput');
 
-    // Seed autoSelectedItems from role-based IDs only on initial load.
-    // Manually-added saved items are restored via currentAccessTypeIdsSet in renderModules,
-    // but NOT added to autoSelectedItems so summary correctly marks them as "added".
     function initFromDatabase() {
         autoSelectedItems.clear();
         autoSelectedModules.clear();
 
-        // Primary: use server-computed roleAccessTypeIds
         allAccessTypesList.forEach(type => {
             if (roleAccessTypeIds.includes(type.id)) {
                 autoSelectedItems.add(type.id.toString());
@@ -591,8 +586,6 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
 
-        // Fallback: if server gave empty roleAccessTypeIds but we have a chosen role,
-        // derive from allAccessTypesList directly (handles mismatched system name lookups)
         if (autoSelectedItems.size === 0 && originalRole && originalSystem) {
             allAccessTypesList.forEach(type => {
                 if (type.role === originalRole && type.system === originalSystem) {
@@ -605,7 +598,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     initFromDatabase();
 
-    // Load roles for the pre-selected system first, THEN render with saved state intact.
     if (systemSelect.value) {
         fetch(`/zen/reqHub/system_roles_action?system_id=${systemSelect.value}`)
             .then(response => response.json())
@@ -617,7 +609,6 @@ document.addEventListener("DOMContentLoaded", function() {
                         document.getElementById('chosenRoleInput').value = originalRole;
                     }
                 }
-                // Render AFTER roles are loaded, with autoSelectedItems still intact
                 renderModules(true);
                 updateSummary();
             })
@@ -626,11 +617,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 updateSummary();
             });
     } else {
-        renderModules(true);
+        renderModules(false);
         updateSummary();
     }
 
-    // Restore department for pre-selected user without firing the full change handler
+    // Restore department for pre-selected user
     if (requestForSelect.value) {
         const employeeId = requestForSelect.options[requestForSelect.selectedIndex]?.getAttribute('data-employee-id');
         if (employeeId) {
@@ -655,12 +646,9 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // ─── System change: clear everything, reload roles ────────────────────────
     systemSelect.addEventListener("change", function() {
         const systemId = this.value;
 
-        // FIX: clear autoSelectedItems, autoSelectedModules, AND currentAccessTypeIdsSet
-        // so renderModules does not re-check stale saved IDs from the old system/request.
         currentAccessTypeIdsSet.clear();
         autoSelectedItems.clear();
         autoSelectedModules.clear();
@@ -673,7 +661,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (!systemId) {
             roleSelect.innerHTML = '<option value="">-- Choose a role --</option>';
-            renderModules();
+            renderModules(false);
+            updateSummary();
             return;
         }
 
@@ -685,12 +674,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 } else {
                     roleSelect.innerHTML = '<option value="">No roles found</option>';
                 }
-                renderModules();
+                renderModules(false);
+                updateSummary();
             })
             .catch(error => {
                 console.error("Error:", error);
                 roleSelect.innerHTML = '<option value="">Error loading roles</option>';
-                renderModules();
+                renderModules(false);
+                updateSummary();
             });
     });
 
@@ -705,17 +696,15 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // ─── Role change: clear everything, select new role's modules ────────────
     roleSelect.addEventListener("change", function() {
         const role = this.value;
 
         document.getElementById('chosenRoleInput').value = role;
 
         if (!role) {
-            // FIX: also clear module checkboxes and indeterminate states
             autoSelectedItems.clear();
             autoSelectedModules.clear();
-            clearAllCheckboxes();
+            renderModules(false);
             updateSummary();
             return;
         }
@@ -728,8 +717,6 @@ document.addEventListener("DOMContentLoaded", function() {
         autoSelectedItems.clear();
         autoSelectedModules.clear();
 
-        // FIX: wipe all existing checkbox DOM state AND clear currentAccessTypeIdsSet
-        // so stale saved IDs from the original request do not survive the role switch.
         currentAccessTypeIdsSet.clear();
         clearAllCheckboxes();
 
@@ -815,7 +802,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // ─── Department auto-fill logic ───────────────────────────────────────────
     requestForSelect.addEventListener('change', async function() {
         const employeeId = this.options[this.selectedIndex].getAttribute('data-employee-id');
         if (!employeeId) {
