@@ -583,12 +583,24 @@ document.addEventListener("DOMContentLoaded", function() {
         autoSelectedItems.clear();
         autoSelectedModules.clear();
 
+        // Primary: use server-computed roleAccessTypeIds
         allAccessTypesList.forEach(type => {
             if (roleAccessTypeIds.includes(type.id)) {
                 autoSelectedItems.add(type.id.toString());
                 autoSelectedModules.add(type.module);
             }
         });
+
+        // Fallback: if server gave empty roleAccessTypeIds but we have a chosen role,
+        // derive from allAccessTypesList directly (handles mismatched system name lookups)
+        if (autoSelectedItems.size === 0 && originalRole && originalSystem) {
+            allAccessTypesList.forEach(type => {
+                if (type.role === originalRole && type.system === originalSystem) {
+                    autoSelectedItems.add(type.id.toString());
+                    autoSelectedModules.add(type.module);
+                }
+            });
+        }
     }
 
     initFromDatabase();

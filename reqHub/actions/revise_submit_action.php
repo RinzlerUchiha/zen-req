@@ -97,19 +97,20 @@ try {
     
     // Update the request with new values and set status back to 'pending'
     $sql = "UPDATE requests SET 
-            system_id = ?, 
-            department_id = ?, 
-            request_for = ?, 
-            remove_from = ?, 
-            description = ?, 
-            status = 'pending',
-            updated_at = NOW()
-            WHERE id = ?";
+        system_id = ?, 
+        department_id = ?, 
+        request_for = ?, 
+        remove_from = ?, 
+        description = ?, 
+        chosen_role = ?,
+        status = 'pending',
+        updated_at = NOW()
+        WHERE id = ?";
     
     error_log("revise_submit_action: Executing UPDATE");
     
-    $stmt = $pdo->prepare($sql);
-    $result = $stmt->execute([$system_id, $department_id, $request_for, $remove_from, $description, $request_id]);
+    $chosen_role = $_POST['chosen_role'] ?? null;
+    $stmt->execute([$system_id, $department_id, $request_for, $remove_from, $description, $chosen_role, $request_id]);
     
     error_log("revise_submit_action: UPDATE result: " . ($result ? 'true' : 'false') . ", rowCount: " . $stmt->rowCount());
     
