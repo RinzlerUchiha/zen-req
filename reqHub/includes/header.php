@@ -357,5 +357,112 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(err => console.error('Mark all read error:', err));
         });
     }
+
+    // Dynamic notification polling
+(function() {
+    const bellBtn = document.getElementById('notifBellBtn');
+    if (!bellBtn) return;
+
+    function fetchNotifications() {
+        fetch('/zen/reqHub/notification_fetch_live')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) return;
+
+                const count = data.count;
+                const items = data.notifications;
+
+                // Update badge
+                let badge = bellBtn.querySelector('.badge');
+                if (count > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger';
+                        badge.style.fontSize = '0.65rem';
+                        bellBtn.appendChild(badge);
+                    }
+                    badge.textContent = count > 9 ? '9+' : count;
+                } else {
+                    if (badge) badge.remove();
+                }
+
+                // Rebuild dropdown items
+                const menu = bellBtn.closest('.dropdown').querySelector('.dropdown-menu');
+                const header = menu.querySelector('.d-flex.justify-content-between');
+
+                // Remove old notif items and empty state
+                menu.querySelectorAll('.notif-item, .text-center.text-muted').forEach(el => el.remove());
+
+                // Update "Mark all read" button visibility
+                let markAllBtn = document.getElementById('markAllReadBtn');
+                if (count > 0) {
+                    if (!markAllBtn && header) {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-link btn-sm p-0 text-primary';
+                        btn.id = 'markAllReadBtn';
+                        btn.textContent = 'Mark all as read';
+                        header.appendChild(btn);
+                        attachMarkAllListener(btn);
+                    }
+                } else {
+                    if (markAllBtn) markAllBtn.remove();
+                }
+
+                if (items.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'text-center text-muted py-4';
+                    empty.style.fontSize = '0.875rem';
+                    empty.textContent = 'No new notifications';
+                    menu.appendChild(empty);
+                } else {
+                    items.forEach(notif => {
+                        const div = document.createElement('div');
+                        div.className = 'notif-item unread';
+                        div.dataset.notifId = notif.id;
+                        div.dataset.requestId = notif.request_id || '';
+                        div.dataset.type = notif.type;
+                        div.innerHTML = `
+                            <div class="notif-message">${notif.message}</div>
+                            <div class="notif-time">${notif.created_at_formatted}</div>
+                        `;
+                        attachNotifListener(div);
+                        menu.appendChild(div);
+                    });
+                }
+            })
+            .catch(() => {}); // silently fail
+    }
+
+    // Reuse existing mark-single-read logic
+    function attachNotifListener(item) {
+        item.addEventListener('click', function() {
+            const notifId = this.dataset.notifId;
+            const requestId = this.dataset.requestId;
+            fetch('/zen/reqHub/notification_action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'id=' + encodeURIComponent(notifId)
+            }).then(() => fetchNotifications());
+            if (requestId) window.location.href = '/zen/reqHub/dashboard';
+        });
+    }
+
+    function attachMarkAllListener(btn) {
+        btn.addEventListener('click', function() {
+            fetch('/zen/reqHub/notification_action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: ''
+            }).then(() => fetchNotifications());
+        });
+    }
+
+    // Re-attach listener to existing mark-all button if present
+    const existingMarkAll = document.getElementById('markAllReadBtn');
+    if (existingMarkAll) attachMarkAllListener(existingMarkAll);
+
+    // Poll every 20 seconds
+    setInterval(fetchNotifications, 20000);
+})();
 });
 </script>

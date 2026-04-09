@@ -50,6 +50,7 @@ $routes = [
     '/notifications' => '/includes/notifications.php',
     '/notification_action' => '/actions/notification_action.php',
     '/notification_fetch' => '/includes/notification_fetch.php',
+    '/notification_fetch_live' => '/includes/notification_fetch_live.php'
 ];
 
 // ============================================================================
