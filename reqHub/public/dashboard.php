@@ -28,7 +28,7 @@ $user   = $_SESSION['reqhub_user'];
 $userId = $user['emp_no'];
 $role   = $user['reqhub_role'];
 $status = $_GET['status'] ?? 'pending';
-$pending_tab = $_GET['pending_tab'] ?? 'all';  // 'all' or 'needs_revision'
+$pending_tab = $_GET['pending_tab'] ?? 'all';
 
 error_log("User: $userId, Role: $role, Status: $status, Pending Tab: $pending_tab");
 
@@ -40,25 +40,66 @@ $sql = "
 SELECT 
     r.*,
     s.name AS system_name,
+
+    -- Who submitted the request (r.user_id → users.employee_id → HR)
     COALESCE(
-        CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
-        hu.U_Name,
-        hu.Emp_No
-    ) AS requestor_name,
-    u1.U_Name AS approved_by_name,
-    u2.U_Name AS denied_by_name,
-    u3.U_Name AS served_by_name,
+        CONCAT(NULLIF(sub_bi.bi_empfname, ''), ' ', NULLIF(sub_bi.bi_emplname, '')),
+        sub_hu.U_Name,
+        sub_u.employee_id
+    ) AS submitter_name,
+
+    -- Who the request is for (r.request_for → tbl_user2.U_ID → HR)
+    COALESCE(
+        CONCAT(NULLIF(rf_bi.bi_empfname, ''), ' ', NULLIF(rf_bi.bi_emplname, '')),
+        rf_hu.U_Name,
+        rf_hu.Emp_No
+    ) AS access_for_name,
+
+    -- remove_from is free text
+    r.remove_from,
+
+    -- Approver name
+    COALESCE(
+        CONCAT(NULLIF(appr_bi.bi_empfname, ''), ' ', NULLIF(appr_bi.bi_emplname, '')),
+        appr_u.employee_id
+    ) AS approved_by_name,
+
+    -- Served-by name
+    COALESCE(
+        CONCAT(NULLIF(srv_bi.bi_empfname, ''), ' ', NULLIF(srv_bi.bi_emplname, '')),
+        srv_u.employee_id
+    ) AS served_by_name,
+
+    r.approved_at,
+    r.served_at,
+
     GROUP_CONCAT(
         CONCAT(at.role, '||', at.module, '||', at.actions)
         SEPARATOR '##'
     ) AS access_type
+
 FROM requests r
 LEFT JOIN systems s ON r.system_id = s.id
-LEFT JOIN tngc_hrd2.tbl_user2 hu ON hu.U_ID = r.request_for
-LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
-LEFT JOIN tngc_hrd2.tbl_user2 u1 ON u1.Emp_No = r.approved_by
-LEFT JOIN tngc_hrd2.tbl_user2 u2 ON u2.Emp_No = r.denied_by
-LEFT JOIN tngc_hrd2.tbl_user2 u3 ON u3.Emp_No = r.served_by
+
+-- Submitter: r.user_id → reqhub users → HR
+LEFT JOIN users sub_u ON sub_u.id = r.user_id
+LEFT JOIN tngc_hrd2.tbl_user2 sub_hu ON sub_hu.Emp_No = sub_u.employee_id
+LEFT JOIN tngc_hrd2.tbl201_basicinfo sub_bi ON sub_hu.Emp_No = sub_bi.bi_empno AND sub_bi.datastat = 'current'
+
+-- Access for: r.request_for → tbl_user2.U_ID → HR
+LEFT JOIN tngc_hrd2.tbl_user2 rf_hu ON rf_hu.U_ID = r.request_for
+LEFT JOIN tngc_hrd2.tbl201_basicinfo rf_bi ON rf_hu.Emp_No = rf_bi.bi_empno AND rf_bi.datastat = 'current'
+
+-- Approved by: r.approved_by → reqhub users → HR
+LEFT JOIN users appr_u ON appr_u.id = r.approved_by
+LEFT JOIN tngc_hrd2.tbl_user2 appr_hu ON appr_hu.Emp_No = appr_u.employee_id
+LEFT JOIN tngc_hrd2.tbl201_basicinfo appr_bi ON appr_hu.Emp_No = appr_bi.bi_empno AND appr_bi.datastat = 'current'
+
+-- Served by: r.served_by → reqhub users → HR
+LEFT JOIN users srv_u ON srv_u.id = r.served_by
+LEFT JOIN tngc_hrd2.tbl_user2 srv_hu ON srv_hu.Emp_No = srv_u.employee_id
+LEFT JOIN tngc_hrd2.tbl201_basicinfo srv_bi ON srv_hu.Emp_No = srv_bi.bi_empno AND srv_bi.datastat = 'current'
+
 LEFT JOIN request_access_types ra ON r.id = ra.request_id
 LEFT JOIN access_types at ON ra.access_type_id = at.id
 WHERE 1=1
@@ -67,11 +108,9 @@ WHERE 1=1
 /* STATUS FILTER */
 switch ($status) {
     case 'pending':
-        // Handle both 'all' and 'needs_revision' sub-tabs
         if ($pending_tab === 'needs_revision') {
             $sql .= " AND r.status = 'needs_revision'";
         } else {
-            // 'all' tab - show only original pending
             $sql .= " AND r.status = 'pending'";
         }
         break;
@@ -94,7 +133,6 @@ switch ($status) {
 /* ROLE FILTER */
 $params = [];
 
-// For all roles, we need to get the actual users.id from employee_id
 $stmt_userLookup = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
 $stmt_userLookup->execute([$userId]);
 $userRecord = $stmt_userLookup->fetch(PDO::FETCH_ASSOC);
@@ -102,36 +140,36 @@ $userRecord = $stmt_userLookup->fetch(PDO::FETCH_ASSOC);
 if ($userRecord) {
     $actual_user_id = $userRecord['id'];
     error_log("Mapped emp_no=$userId to users.id=$actual_user_id");
-    
+
     if ($role === 'Requestor') {
-    $sql .= " AND r.user_id = ?";
-    $params[] = $actual_user_id;
+        $sql .= " AND r.user_id = ?";
+        $params[] = $actual_user_id;
     }
-    
+
     if ($role === 'Approver') {
-    error_log("Filter: Approver - fetching assigned systems from user_approver_assignments");
-    try {
-        $stmt2 = $pdo->prepare("
-            SELECT DISTINCT system_id
-            FROM user_approver_assignments
-            WHERE user_id = :id
-        ");
-        $stmt2->execute([':id' => $actual_user_id]);
-        $systemIds = $stmt2->fetchAll(PDO::FETCH_COLUMN);
+        error_log("Filter: Approver - fetching assigned systems from user_approver_assignments");
+        try {
+            $stmt2 = $pdo->prepare("
+                SELECT DISTINCT system_id
+                FROM user_approver_assignments
+                WHERE user_id = :id
+            ");
+            $stmt2->execute([':id' => $actual_user_id]);
+            $systemIds = $stmt2->fetchAll(PDO::FETCH_COLUMN);
 
-        error_log("Approver system assignments: " . json_encode($systemIds));
+            error_log("Approver system assignments: " . json_encode($systemIds));
 
-        if (!empty($systemIds)) {
-            $placeholders = implode(',', array_fill(0, count($systemIds), '?'));
-            $sql .= " AND r.system_id IN ($placeholders)";
-            foreach ($systemIds as $sid) $params[] = $sid;
-        } else {
-            $sql .= " AND 1=0";
-            error_log("WARNING: No approver assignments found for user id=$actual_user_id");
+            if (!empty($systemIds)) {
+                $placeholders = implode(',', array_fill(0, count($systemIds), '?'));
+                $sql .= " AND r.system_id IN ($placeholders)";
+                foreach ($systemIds as $sid) $params[] = $sid;
+            } else {
+                $sql .= " AND 1=0";
+                error_log("WARNING: No approver assignments found for user id=$actual_user_id");
+            }
+        } catch (Exception $e) {
+            error_log("ERROR: Failed to fetch approver assignments - " . $e->getMessage());
         }
-    } catch (Exception $e) {
-        error_log("ERROR: Failed to fetch approver assignments - " . $e->getMessage());
-    }
     }
 }
 
@@ -220,20 +258,24 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 <?php endif; ?>
 
 <?php foreach ($requests as $req): ?>
-
 <tr class="request-row" style="cursor:pointer"
     data-id="<?= $req['id'] ?>"
-    data-name="<?= htmlspecialchars($req['requestor_name'] ?? '') ?>"
+    data-submitter="<?= htmlspecialchars($req['submitter_name'] ?? '') ?>"
+    data-access-for="<?= htmlspecialchars($req['access_for_name'] ?? '') ?>"
     data-system="<?= htmlspecialchars($req['system_name'] ?? '') ?>"
     data-access="<?= htmlspecialchars($req['access_type'] ?? '') ?>"
     data-chosen-role="<?= htmlspecialchars($req['chosen_role'] ?? '') ?>"
-    data-remove="<?= htmlspecialchars($req['remove_from'] ?: 'New Request') ?>"
+    data-remove="<?= htmlspecialchars($req['remove_from'] ?? '') ?>"
     data-description="<?= htmlspecialchars($req['description'] ?? '') ?>"
     data-status="<?= $req['status'] ?>"
     data-admin-status="<?= htmlspecialchars($req['admin_status'] ?? '') ?>"
+    data-approved-by="<?= htmlspecialchars($req['approved_by_name'] ?? '') ?>"
+    data-approved-at="<?= htmlspecialchars($req['approved_at'] ?? '') ?>"
+    data-served-by="<?= htmlspecialchars($req['served_by_name'] ?? '') ?>"
+    data-served-at="<?= htmlspecialchars($req['served_at'] ?? '') ?>"
 >
     <td><?= htmlspecialchars($req['system_name'] ?? '') ?></td>
-    <td><?= htmlspecialchars($req['requestor_name'] ?? '') ?></td>
+    <td><?= htmlspecialchars($req['access_for_name'] ?? '') ?></td>
     <td><?= htmlspecialchars($req['chosen_role'] ?? '(Not specified)') ?></td>
     <td>
         <?php if ($req['status'] === 'needs_revision'): ?>
@@ -247,7 +289,6 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
         <?php endif; ?>
     </td>
 </tr>
-
 <?php endforeach; ?>
 </tbody>
 </table>
@@ -266,23 +307,31 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 <div class="row">
 <div class="col-md-6 d-flex flex-column">
 
-<p><strong>Requestor:</strong><br><span id="modalName"></span></p>
-<p><strong>System:</strong><br><span id="modalSystem"></span></p>
+    <p><strong>Requestor:</strong><br><span id="modalSubmitter"></span></p>
+    <p><strong>Access For:</strong><br><span id="modalAccessFor"></span></p>
+    <p><strong>System:</strong><br><span id="modalSystem"></span></p>
+    <p><strong>Role:</strong><br><span id="modalRole" style="color: #333; font-weight: bold;"></span></p>
+    <p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>
 
-<p><strong>Role:</strong><br><span id="modalRole" style="color: #333; font-weight: bold;"></span></p>
+    <!-- Approved by / Served by — shown conditionally via JS -->
+    <p id="modalApprovedByRow" style="display:none;">
+        <strong>Approved by:</strong><br><span id="modalApprovedBy"></span>
+        <span id="modalApprovedAt" class="text-muted small ms-1"></span>
+    </p>
+    <p id="modalServedByRow" style="display:none;">
+        <strong>Served by:</strong><br><span id="modalServedBy"></span>
+        <span id="modalServedAt" class="text-muted small ms-1"></span>
+    </p>
 
-<p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>
-
-<p><strong>Access Type:</strong><br>
-<div id="modalAccess" class="small" style="
-    max-height: 400px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px;
-    background-color: #f8f9fa;
-"></div>
-</p>
+    <p><strong>Access Type:</strong></p>
+    <div id="modalAccess" class="small" style="
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px;
+        background-color: #f8f9fa;
+    "></div>
 
 </div>
 
@@ -340,25 +389,22 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
 </div>
 </div>
 </div>
+</div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
 
 <script>
-// Define global variables for modals
 let modal;
 let reviseModal;
 
-// Define helper functions FIRST, before they're referenced
 function openReviseModal(requestId) {
     document.getElementById('reviseRequestId').value = requestId;
     document.getElementById('reviseForm').reset();
     reviseModal.show();
 }
 
-// NOW run the main code
 document.addEventListener('DOMContentLoaded', function () {
 
-    // Initialize modals as global variables
     modal = new bootstrap.Modal(document.getElementById('requestModal'));
     reviseModal = new bootstrap.Modal(document.getElementById('reviseModal'));
     let chatInterval = null;
@@ -366,12 +412,38 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.request-row').forEach(row => {
         row.addEventListener('click', function() {
 
-            document.getElementById('modalName').textContent = this.dataset.name;
-            document.getElementById('modalSystem').textContent = this.dataset.system;
-            document.getElementById('modalRole').textContent = this.dataset.chosenRole || '(Not specified)';
-            document.getElementById('modalRemove').textContent = this.dataset.remove;
+            document.getElementById('modalSubmitter').textContent  = this.dataset.submitter  || '—';
+            document.getElementById('modalAccessFor').textContent  = this.dataset.accessFor  || '—';
+            document.getElementById('modalSystem').textContent     = this.dataset.system;
+            document.getElementById('modalRole').textContent       = this.dataset.chosenRole || '(Not specified)';
             document.getElementById('modalDescription').textContent = this.dataset.description;
-            document.getElementById('chatRequestId').value = this.dataset.id;
+            document.getElementById('chatRequestId').value         = this.dataset.id;
+
+            // Remove From
+            const removeEl = document.getElementById('modalRemove');
+            removeEl.textContent = this.dataset.remove || '—';
+
+            // Approved by
+            const approvedByRow = document.getElementById('modalApprovedByRow');
+            if (this.dataset.approvedBy) {
+                document.getElementById('modalApprovedBy').textContent = this.dataset.approvedBy;
+                document.getElementById('modalApprovedAt').textContent =
+                    this.dataset.approvedAt ? '(' + formatDateTime(this.dataset.approvedAt) + ')' : '';
+                approvedByRow.style.display = '';
+            } else {
+                approvedByRow.style.display = 'none';
+            }
+
+            // Served by
+            const servedByRow = document.getElementById('modalServedByRow');
+            if (this.dataset.servedBy) {
+                document.getElementById('modalServedBy').textContent = this.dataset.servedBy;
+                document.getElementById('modalServedAt').textContent =
+                    this.dataset.servedAt ? '(' + formatDateTime(this.dataset.servedAt) + ')' : '';
+                servedByRow.style.display = '';
+            } else {
+                servedByRow.style.display = 'none';
+            }
 
             renderAccessStructure(this.dataset.access, this.dataset.chosenRole);
             renderActions(this.dataset);
@@ -386,6 +458,13 @@ document.addEventListener('DOMContentLoaded', function () {
             modal.show();
         });
     });
+
+    function formatDateTime(dt) {
+        if (!dt) return '';
+        const d = new Date(dt);
+        if (isNaN(d)) return dt;
+        return d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+    }
 
     function renderAccessStructure(raw, chosenRole) {
         const container = document.getElementById('modalAccess');
@@ -402,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const parts = entry.split('||');
             if (parts.length !== 3) return;
 
-            const role = parts[0];
+            const role   = parts[0];
             const module = parts[1];
             const action = parts[2];
 
@@ -415,12 +494,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Create accordion HTML with collapsible sections by Module
         let html = '<div class="accordion" id="accessAccordion">';
         let accordionIndex = 0;
-        
+
         for (let module in grouped) {
-            // Check if ANY action in this module is manually added
             let hasManuallyAdded = false;
             for (let action in grouped[module]) {
                 if (!grouped[module][action].isFromChosenRole) {
@@ -428,10 +505,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     break;
                 }
             }
-            
-            const moduleColor = hasManuallyAdded ? '#0d6efd' : '#000';
-            const moduleFontWeight = hasManuallyAdded ? 'bold' : 'normal';
-            
+
+            const moduleColor      = hasManuallyAdded ? '#0d6efd' : '#000';
+            const moduleFontWeight = hasManuallyAdded ? 'bold'    : 'normal';
+
             html += `
             <div class="accordion-item">
                 <h2 class="accordion-header">
@@ -442,13 +519,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 <div id="accordion${accordionIndex}" class="accordion-collapse collapse" style="display:none;">
                     <div class="accordion-body p-2">
             `;
-            
+
             for (let action in grouped[module]) {
                 const isFromChosenRole = grouped[module][action].isFromChosenRole;
-                const role = grouped[module][action].role;
-                const color = isFromChosenRole ? '#000' : '#0d6efd';
-                const fontWeight = isFromChosenRole ? 'normal' : 'bold';
-                
+                const role             = grouped[module][action].role;
+                const color            = isFromChosenRole ? '#000'    : '#0d6efd';
+                const fontWeight       = isFromChosenRole ? 'normal'  : 'bold';
+
                 html += `
                 <div class="ms-2 mb-2">
                     <span style="color: ${color}; font-weight: ${fontWeight};">• ${action}</span>
@@ -456,35 +533,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
                 `;
             }
-            
-            html += `
-                    </div>
-                </div>
-            </div>
-            `;
+
+            html += `</div></div></div>`;
             accordionIndex++;
         }
-        
+
         html += '</div>';
         container.innerHTML = html;
-        
-        // Add manual click handlers for collapse functionality
+
         document.querySelectorAll('[data-accordion-toggle]').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                const targetId = 'accordion' + this.getAttribute('data-accordion-toggle');
+                const targetId  = 'accordion' + this.getAttribute('data-accordion-toggle');
                 const targetDiv = document.getElementById(targetId);
-                const isHidden = targetDiv.style.display === 'none';
-                
-                // Close all other accordions
+                const isHidden  = targetDiv.style.display === 'none';
+
                 document.querySelectorAll('[data-accordion-toggle]').forEach(otherBtn => {
-                    const otherId = 'accordion' + otherBtn.getAttribute('data-accordion-toggle');
+                    const otherId  = 'accordion' + otherBtn.getAttribute('data-accordion-toggle');
                     const otherDiv = document.getElementById(otherId);
                     otherDiv.style.display = 'none';
                     otherBtn.classList.add('collapsed');
                 });
-                
-                // Toggle current accordion
+
                 if (isHidden) {
                     targetDiv.style.display = 'block';
                     this.classList.remove('collapsed');
@@ -497,31 +567,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderActions(data) {
-        const container = document.getElementById('modalActions');
+        const container     = document.getElementById('modalActions');
         container.innerHTML = '';
         const role = "<?= $role ?>";
-        
-        // Disable chat if request is denied or served
-        const chatInput = document.getElementById('chatInput');
+
+        const chatInput     = document.getElementById('chatInput');
         const chatSubmitBtn = document.getElementById('chatSubmitBtn');
-        
+
         if (data.status === 'denied' || data.adminStatus === 'served') {
-            chatInput.disabled = true;
+            chatInput.disabled     = true;
             chatSubmitBtn.disabled = true;
-            chatInput.placeholder = 'Chat disabled for this request';
+            chatInput.placeholder  = 'Chat disabled for this request';
         } else {
-            chatInput.disabled = false;
+            chatInput.disabled     = false;
             chatSubmitBtn.disabled = false;
-            chatInput.placeholder = 'Type message...';
+            chatInput.placeholder  = 'Type message...';
         }
-        
-        console.log('renderActions called with data:', data);
-        console.log('role:', role);
-        console.log('data.status:', data.status);
-        console.log('data.adminStatus:', data.adminStatus);
 
         if (role === 'Approver' && data.status === 'pending') {
-            console.log('Showing Approver actions for pending');
             container.innerHTML = `
                 <form method="post" action="/zen/reqHub/approve" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
@@ -535,7 +598,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (role === 'Approver' && data.status === 'needs_revision') {
-            console.log('Showing Approver actions for needs_revision');
             container.innerHTML = `
                 <form method="post" action="/zen/reqHub/approve" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
@@ -548,52 +610,37 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (role === 'Requestor' && data.status === 'needs_revision') {
-            console.log('Showing Requestor actions for needs_revision');
             container.innerHTML = `
                 <a href="/zen/reqHub/request_revise?request_id=${data.id}" class="btn btn-primary btn-sm">Edit & Resubmit</a>`;
         }
 
         if (role === 'Admin' && data.status === 'approved' && data.adminStatus !== 'served') {
-            console.log('Showing Admin actions');
             container.innerHTML = `
                 <form method="post" action="/zen/reqHub/served" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-primary btn-sm">Mark as Served</button>
                 </form>`;
         }
-        
-        if (container.innerHTML === '') {
-            console.log('No actions available for this user/status combination');
-        }
     }
 
-    function openReviseModal(requestId) {
-        document.getElementById('reviseRequestId').value = requestId;
-        document.getElementById('reviseForm').reset();
-        reviseModal.show();
-    }
-
-    function loadChat(requestId){
-        fetch('/zen/reqHub/chat_fetch?request_id='+requestId)
-        .then(res=> {
-            console.log('chat_fetch response:', res.status, res.statusText);
+    function loadChat(requestId) {
+        fetch('/zen/reqHub/chat_fetch?request_id=' + requestId)
+        .then(res => {
             if (!res.ok) {
-                console.error('Chat fetch error:', res.status, res.statusText);
-                document.getElementById('chatBox').innerHTML = '<div class="alert alert-warning">Unable to load chat (' + res.status + ')</div>';
+                document.getElementById('chatBox').innerHTML =
+                    '<div class="alert alert-warning">Unable to load chat (' + res.status + ')</div>';
                 throw new Error('Failed to fetch chat: ' + res.status);
             }
             return res.text();
         })
-        .then(html=>{
-            console.log('Chat HTML received:', html.substring(0, 100));
+        .then(html => {
             const chatBox = document.getElementById('chatBox');
             if (chatBox) {
-                chatBox.innerHTML = html;
-                chatBox.scrollTop = chatBox.scrollHeight;
+                chatBox.innerHTML   = html;
+                chatBox.scrollTop   = chatBox.scrollHeight;
             }
         })
         .catch(err => {
-            console.error('Chat error:', err);
             const chatBox = document.getElementById('chatBox');
             if (chatBox) {
                 chatBox.innerHTML = '<div class="alert alert-danger">Error loading chat: ' + err.message + '</div>';
@@ -601,12 +648,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    document.getElementById('chatForm').addEventListener('submit', function(e){
+    document.getElementById('chatForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        fetch('/zen/reqHub/chat_send',{
-            method:'POST',
-            body:new FormData(this)
-        }).then(()=>{
+        fetch('/zen/reqHub/chat_send', {
+            method: 'POST',
+            body:   new FormData(this)
+        }).then(() => {
             loadChat(document.getElementById('chatRequestId').value);
             this.reset();
         });
@@ -616,20 +663,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (chatInterval) clearInterval(chatInterval);
     });
 
-    // Handle revise form submission (for approver)
     const reviseForm = document.getElementById('reviseForm');
     if (reviseForm && !reviseForm.hasListener) {
         reviseForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            const requestId = document.getElementById('reviseRequestId').value;
+            const requestId       = document.getElementById('reviseRequestId').value;
             const revisionMessage = document.querySelector('[name="revision_message"]').value;
-            
+
             fetch('/zen/reqHub/revise_action', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: 'id=' + requestId + '&revision_message=' + encodeURIComponent(revisionMessage)
+                method:  'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body:    'id=' + requestId + '&revision_message=' + encodeURIComponent(revisionMessage)
             })
             .then(response => response.json())
             .then(data => {
@@ -649,6 +693,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         reviseForm.hasListener = true;
     }
+
+// Auto-open modal if redirected from notification
+const urlParams = new URLSearchParams(window.location.search);
+const openRequestId = urlParams.get('open_request');
+if (openRequestId) {
+    const targetRow = document.querySelector(`.request-row[data-id="${openRequestId}"]`);
+    if (targetRow) {
+        targetRow.click();
+        // Clean up URL without reloading
+        const cleanUrl = window.location.pathname + '?status=<?= $status ?>' +
+            (urlParams.get('pending_tab') ? '&pending_tab=' + urlParams.get('pending_tab') : '');
+        history.replaceState(null, '', cleanUrl);
+    }
+}
+
 
 });
 </script>

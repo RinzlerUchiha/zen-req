@@ -59,7 +59,6 @@ function notifyAdmins(PDO $pdo, int $requestId, string $message): void
 
 function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): void
 {
-    // Get request owner
     $stmt = $pdo->prepare("SELECT user_id, system_id FROM requests WHERE id = :id");
     $stmt->execute([':id' => $requestId]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -68,12 +67,10 @@ function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): vo
 
     $recipients = [];
 
-    // Add requestor if not the sender
     if ((int)$request['user_id'] !== $senderUserId) {
         $recipients[] = (int)$request['user_id'];
     }
 
-    // Add approvers of the system if not the sender
     $stmt = $pdo->prepare("
         SELECT DISTINCT u.id
         FROM users u
@@ -90,15 +87,24 @@ function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): vo
         }
     }
 
-    // Deduplicate and notify
     foreach (array_unique($recipients) as $recipientId) {
-        createNotification(
-            $pdo,
-            $recipientId,
-            'chat',
-            $requestId,
-            "There is a new message on a request."
-        );
+        // Only insert if no unread chat notification already exists for this request+user
+        $stmt = $pdo->prepare("
+            SELECT id FROM notifications
+            WHERE user_id = ? AND type = 'chat' AND request_id = ? AND is_read = 0
+            LIMIT 1
+        ");
+        $stmt->execute([$recipientId, $requestId]);
+
+        if (!$stmt->fetch()) {
+            createNotification(
+                $pdo,
+                $recipientId,
+                'chat',
+                $requestId,
+                "There is a new message on a request."
+            );
+        }
     }
 }
 ?>
