@@ -14,31 +14,23 @@ if (!userHasRoleIn('Requestor', 'Approver')) {
 }
 
 $currentUser = getCurrentUser();
-$userRole = $currentUser['reqhub_role'];
+$userRole    = $currentUser['reqhub_role'];
 
-$system_id     = $_POST['system_id'] ?? null;
+$system_id     = $_POST['system_id']     ?? null;
 $department_id = $_POST['department_id'] ?? null;
-$request_for   = $_POST['request_for'] ?? null;
-$access_types  = $_POST['access_types'] ?? [];
+$request_for   = $_POST['request_for']   ?? null;
+$access_types  = $_POST['access_types']  ?? [];
 $remove_from   = trim($_POST['remove_from'] ?? '') ?: null;
 $description   = trim($_POST['description'] ?? '');
-$chosen_role   = $_POST['chosen_role'] ?? null;
-
-error_log("=== REQUEST CREATE DEBUG ===");
-error_log("request_for: " . ($request_for ?? 'NULL'));
-error_log("system_id: " . ($system_id ?? 'NULL'));
-error_log("department_id: " . ($department_id ?? 'NULL'));
-error_log("access_types: " . json_encode($access_types));
-error_log("chosen_role: " . ($chosen_role ?? 'NULL'));
+$chosen_role   = $_POST['chosen_role']   ?? null;
 
 if (!$system_id || !$department_id || !$request_for || empty($access_types)) {
-    error_log("VALIDATION FAILED");
     http_response_code(400);
     die(json_encode(['success' => false, 'message' => 'All required fields must be filled out.']));
 }
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
-$zenHubDb = ReqHubDatabase::getConnection('hr');
+$pdo       = ReqHubDatabase::getConnection('reqhub');
+$zenHubDb  = ReqHubDatabase::getConnection('hr');
 
 $stmt = $zenHubDb->prepare("SELECT Emp_No, U_Name FROM tbl_user2 WHERE U_ID = ?");
 $stmt->execute([$request_for]);
@@ -59,15 +51,10 @@ if ($reqHubUser) {
     $request_for_id = $reqHubUser['id'];
 } else {
     try {
-        $stmt = $pdo->prepare("
-            INSERT INTO users (employee_id, reqhub_role, is_active, created_at, updated_at)
-            VALUES (?, 'Requestor', 1, NOW(), NOW())
-        ");
+        $stmt = $pdo->prepare("INSERT INTO users (employee_id, reqhub_role, is_active, created_at, updated_at) VALUES (?, 'Requestor', 1, NOW(), NOW())");
         $stmt->execute([$emp_no]);
         $request_for_id = $pdo->lastInsertId();
-        error_log("Auto-created ReqHub user: $emp_no (ID: $request_for_id)");
     } catch (Exception $e) {
-        error_log("Error creating ReqHub user: " . $e->getMessage());
         http_response_code(400);
         die("Error creating user in system: " . htmlspecialchars($e->getMessage()));
     }
@@ -85,6 +72,9 @@ if (!$userRow) {
 $user_id = $userRow['id'];
 
 try {
+    // Approvers can bypass the review step — go straight to 'reviewed'
+    // (so Approver-created requests are immediately visible to Approvers)
+    // Requestors always start as 'pending' and need Reviewer sign-off
     $status       = ($userRole === 'Approver') ? 'approved' : 'pending';
     $admin_status = 'pending';
     $approved_by  = ($userRole === 'Approver') ? $user_id : null;
@@ -117,24 +107,16 @@ try {
     ]);
 
     $request_id = (int)$pdo->lastInsertId();
-    error_log("Created request ID: $request_id");
 
     foreach ($access_types as $at_id) {
-        $stmt = $pdo->prepare("
-            INSERT INTO request_access_types (request_id, access_type_id)
-            VALUES (:request_id, :access_type_id)
-        ");
-        $stmt->execute([
-            ':request_id'     => $request_id,
-            ':access_type_id' => $at_id
-        ]);
+        $stmt = $pdo->prepare("INSERT INTO request_access_types (request_id, access_type_id) VALUES (:request_id, :access_type_id)");
+        $stmt->execute([':request_id' => $request_id, ':access_type_id' => $at_id]);
     }
-
-    error_log("Added " . count($access_types) . " access types to request");
 
     // Notifications
     if ($status === 'pending') {
-        notifyApproversForSystem($pdo, (int)$system_id, $request_id);
+        // Notify Reviewers — they must sign before Approvers can see it
+        notifyReviewers($pdo, $request_id);
     }
 
     if ($status === 'approved') {

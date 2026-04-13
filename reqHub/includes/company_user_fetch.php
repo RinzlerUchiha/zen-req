@@ -1,10 +1,9 @@
 <?php
 /**
- * Get users filtered by company
- * File: /zen/reqHub/actions/get_company_users_action.php
- * 
- * Called after department is selected to filter the remove_from dropdown
- * by company (jrec_company from tbl201_jobrec).
+ * Get users filtered by company (for remove_from dropdown)
+ * File: /zen/reqHub/actions/company_user_fetch.php
+ *
+ * Called after department is selected; filters users by jrec_company.
  */
 
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -29,7 +28,7 @@ if (!$dept_code) {
 try {
     $pdo = ReqHubDatabase::getConnection('reqhub');
 
-    // 1. Find the company for this department code from any employee in that dept
+    // Find the company for this department code
     $stmt = $pdo->prepare("
         SELECT DISTINCT jrec_company
         FROM tngc_hrd2.tbl201_jobrec
@@ -43,15 +42,17 @@ try {
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$row) {
-        // No company found - return all users
+        // No company found — return all users
         $stmt = $pdo->query("
-            SELECT hu.U_ID as id, hu.Emp_No as employee_id,
-                COALESCE(CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')), hu.U_Name, hu.Emp_No) as name
+            SELECT
+                hu.U_ID as id,
+                hu.Emp_No as employee_id,
+                COALESCE(CONCAT(NULLIF(bi.bi_empfname,''),' ',NULLIF(bi.bi_emplname,'')), hu.U_Name, hu.Emp_No) as name
             FROM tngc_hrd2.tbl_user2 hu
             LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
             WHERE hu.U_stat = 1
             GROUP BY hu.U_ID, hu.Emp_No, hu.U_Name, bi.bi_empfname, bi.bi_emplname
-            ORDER BY COALESCE(CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')), hu.U_Name, hu.Emp_No) ASC
+            ORDER BY COALESCE(CONCAT(NULLIF(bi.bi_empfname,''),' ',NULLIF(bi.bi_emplname,'')), hu.U_Name, hu.Emp_No) ASC
         ");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode(['success' => true, 'users' => $users, 'company' => null]);
@@ -60,13 +61,13 @@ try {
 
     $company = $row['jrec_company'];
 
-    // 2. Get all users in that company
+    // Get all active users in that company
     $stmt = $pdo->prepare("
         SELECT DISTINCT
             hu.U_ID as id,
             hu.Emp_No as employee_id,
             COALESCE(
-                CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+                CONCAT(NULLIF(bi.bi_empfname,''),' ',NULLIF(bi.bi_emplname,'')),
                 hu.U_Name,
                 hu.Emp_No
             ) as name
@@ -78,7 +79,7 @@ try {
         WHERE hu.U_stat = 1
         GROUP BY hu.U_ID, hu.Emp_No, hu.U_Name, bi.bi_empfname, bi.bi_emplname
         ORDER BY COALESCE(
-            CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+            CONCAT(NULLIF(bi.bi_empfname,''),' ',NULLIF(bi.bi_emplname,'')),
             hu.U_Name,
             hu.Emp_No
         ) ASC
@@ -89,7 +90,7 @@ try {
     echo json_encode(['success' => true, 'users' => $users, 'company' => $company]);
 
 } catch (Exception $e) {
-    error_log("get_company_users_action error: " . $e->getMessage());
+    error_log("company_user_fetch error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
