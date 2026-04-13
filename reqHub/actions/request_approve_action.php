@@ -20,7 +20,7 @@ if (!$request_id) {
     die("Invalid Request");
 }
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
+$pdo         = ReqHubDatabase::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
@@ -67,17 +67,34 @@ try {
     ");
 
     $stmt->execute([
-        ':id'          => $request_id,
-        ':approved_by' => $approver_id,
-        ':system_id'   => $systemId,
+        ':id'            => $request_id,
+        ':approved_by'   => $approver_id,
+        ':system_id'     => $systemId,
         ':department_id' => $departmentId
     ]);
 
     error_log("Request $request_id approved by " . $currentUser['emp_no']);
 
-    // Notifications
-    createNotification($pdo, (int)$requestorId, 'status_change', (int)$request_id, "Your request has been approved.");
-    notifyAdmins($pdo, (int)$request_id, "A request has been approved and is waiting to be served.");
+    // Resolve names for notifications
+    $requestorName = resolveEmployeeNameByUserId($pdo, (int)$requestorId);
+    $approverName  = resolveEmployeeName($pdo, $currentUser['emp_no']);
+    $systemName    = resolveSystemName($pdo, (int)$systemId);
+
+    // Notify requestor
+    createNotification(
+        $pdo,
+        (int)$requestorId,
+        'status_change',
+        (int)$request_id,
+        "Your [{$systemName}] request has been approved by {$approverName}."
+    );
+
+    // Notify admins to serve
+    notifyAdmins(
+        $pdo,
+        (int)$request_id,
+        "{$requestorName}'s [{$systemName}] request has been approved by {$approverName} and is waiting to be served."
+    );
 
     header('Location: /zen/reqHub/dashboard?status=pending');
     exit;

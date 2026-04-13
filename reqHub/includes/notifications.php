@@ -23,24 +23,85 @@ function createNotification(PDO $pdo, int $userId, string $type, ?int $requestId
 }
 
 /**
- * Notify Reviewers when a new request is created.
- * Reviewers must sign the request before it goes to the Approver.
+ * Resolve a display name from tbl201_basicinfo using employee_id (emp_no).
+ * Falls back to the raw employee_id string if not found.
  */
-function notifyReviewers(PDO $pdo, int $requestId): void
+function resolveEmployeeName(PDO $pdo, string $empNo): string
 {
     try {
+        $stmt = $pdo->prepare("
+            SELECT CONCAT(COALESCE(NULLIF(bi_empfname,''),''), ' ', COALESCE(NULLIF(bi_emplname,''),''))
+            FROM tngc_hrd2.tbl201_basicinfo
+            WHERE bi_empno = ? AND datastat = 'current'
+            LIMIT 1
+        ");
+        $stmt->execute([$empNo]);
+        $name = trim($stmt->fetchColumn());
+        return $name ?: $empNo;
+    } catch (Exception $e) {
+        error_log("resolveEmployeeName error: " . $e->getMessage());
+        return $empNo;
+    }
+}
+
+/**
+ * Resolve a display name from users.id -> employee_id -> tbl201_basicinfo.
+ */
+function resolveEmployeeNameByUserId(PDO $pdo, int $userId): string
+{
+    try {
+        $stmt = $pdo->prepare("SELECT employee_id FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $empNo = $stmt->fetchColumn();
+        if (!$empNo) return "Unknown";
+        return resolveEmployeeName($pdo, $empNo);
+    } catch (Exception $e) {
+        error_log("resolveEmployeeNameByUserId error: " . $e->getMessage());
+        return "Unknown";
+    }
+}
+
+/**
+ * Resolve a system name from systems.id.
+ */
+function resolveSystemName(PDO $pdo, int $systemId): string
+{
+    try {
+        $stmt = $pdo->prepare("SELECT name FROM systems WHERE id = ?");
+        $stmt->execute([$systemId]);
+        return $stmt->fetchColumn() ?: "Unknown System";
+    } catch (Exception $e) {
+        error_log("resolveSystemName error: " . $e->getMessage());
+        return "Unknown System";
+    }
+}
+
+/**
+ * Notify Reviewers when a new request is created.
+ * Message: "[Requestor Name] submitted a new request for [System]."
+ */
+function notifyReviewers(PDO $pdo, int $requestId, string $requestorName = '', string $systemName = ''): void
+{
+    try {
+        // If not passed in, resolve from the request row
+        if (!$requestorName || !$systemName) {
+            $stmt = $pdo->prepare("SELECT r.user_id, r.system_id FROM requests r WHERE r.id = ?");
+            $stmt->execute([$requestId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                if (!$requestorName) $requestorName = resolveEmployeeNameByUserId($pdo, (int)$row['user_id']);
+                if (!$systemName)    $systemName    = resolveSystemName($pdo, (int)$row['system_id']);
+            }
+        }
+
+        $message = "{$requestorName} submitted a new [{$systemName}] request pending your review.";
+
         $stmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Reviewer' AND is_active = 1");
         $stmt->execute();
         $reviewers = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($reviewers as $reviewerId) {
-            createNotification(
-                $pdo,
-                (int)$reviewerId,
-                'pending_review',
-                $requestId,
-                "A new request has been submitted and needs your signature."
-            );
+            createNotification($pdo, (int)$reviewerId, 'pending_review', $requestId, $message);
         }
     } catch (Exception $e) {
         error_log("notifyReviewers error: " . $e->getMessage());
@@ -49,10 +110,23 @@ function notifyReviewers(PDO $pdo, int $requestId): void
 
 /**
  * Notify Approvers assigned to a system once the request is reviewed/signed.
+ * Message: "[Requestor Name]'s [System] request has been reviewed and is pending your approval."
  */
-function notifyApproversForSystem(PDO $pdo, int $systemId, int $requestId): void
+function notifyApproversForSystem(PDO $pdo, int $systemId, int $requestId, string $requestorName = '', string $systemName = ''): void
 {
     try {
+        if (!$requestorName || !$systemName) {
+            $stmt = $pdo->prepare("SELECT user_id, system_id FROM requests WHERE id = ?");
+            $stmt->execute([$requestId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                if (!$requestorName) $requestorName = resolveEmployeeNameByUserId($pdo, (int)$row['user_id']);
+                if (!$systemName)    $systemName    = resolveSystemName($pdo, (int)($row['system_id'] ?? $systemId));
+            }
+        }
+
+        $message = "{$requestorName}'s [{$systemName}] request has been reviewed and is pending your approval.";
+
         $stmt = $pdo->prepare("
             SELECT DISTINCT u.id
             FROM users u
@@ -65,19 +139,17 @@ function notifyApproversForSystem(PDO $pdo, int $systemId, int $requestId): void
         $approvers = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($approvers as $approverId) {
-            createNotification(
-                $pdo,
-                (int)$approverId,
-                'pending_approval',
-                $requestId,
-                "A request has been reviewed and needs your approval."
-            );
+            createNotification($pdo, (int)$approverId, 'pending_approval', $requestId, $message);
         }
     } catch (Exception $e) {
         error_log("notifyApproversForSystem error: " . $e->getMessage());
     }
 }
 
+/**
+ * Notify Admins.
+ * Callers should pass a fully-formed message string.
+ */
 function notifyAdmins(PDO $pdo, int $requestId, string $message): void
 {
     try {
@@ -93,6 +165,10 @@ function notifyAdmins(PDO $pdo, int $requestId, string $message): void
     }
 }
 
+/**
+ * Notify chat participants when a new message is sent.
+ * Message: "[Sender Name] sent a message on a [System] request."
+ */
 function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): void
 {
     try {
@@ -100,6 +176,10 @@ function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): vo
         $stmt->execute([':id' => $requestId]);
         $request = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$request) return;
+
+        $senderName = resolveEmployeeNameByUserId($pdo, $senderUserId);
+        $systemName = resolveSystemName($pdo, (int)$request['system_id']);
+        $message    = "{$senderName} sent a message on a [{$systemName}] request.";
 
         $recipients = [];
 
@@ -128,7 +208,7 @@ function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): vo
             ");
             $stmt->execute([$recipientId, $requestId]);
             if (!$stmt->fetch()) {
-                createNotification($pdo, $recipientId, 'chat', $requestId, "There is a new message on a request.");
+                createNotification($pdo, $recipientId, 'chat', $requestId, $message);
             }
         }
     } catch (Exception $e) {

@@ -9,10 +9,10 @@ error_log("revise_submit_action.php START");
 
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
+require_once (__DIR__ . '/../includes/notifications.php');
 
 error_log("revise_submit_action: Auth and DB loaded");
 
-// Check if user is authenticated and is a Requestor
 if (!isAuthenticated()) {
     error_log("revise_submit_action: User not authenticated");
     http_response_code(403);
@@ -28,7 +28,6 @@ if (!in_array($current_user['reqhub_role'], ['Requestor', 'Approver'])) {
 
 error_log("revise_submit_action: Auth passed");
 
-// Log all POST data for debugging
 error_log("revise_submit_action: Full \$_POST: " . json_encode($_POST));
 
 $request_id    = isset($_POST['request_id'])    ? (int)$_POST['request_id']    : null;
@@ -65,38 +64,37 @@ if (empty($access_types)) {
 try {
     $pdo = ReqHubDatabase::getConnection('reqhub');
     error_log("revise_submit_action: Got PDO connection");
-    
+
     $emp_no = $current_user['emp_no'];
     error_log("revise_submit_action: emp_no = $emp_no");
-    
-    // Get the users.id for the current employee
+
     $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
     $stmt->execute([$emp_no]);
     $userRecord = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if (!$userRecord) {
         error_log("revise_submit_action: User not found for emp_no=$emp_no");
         http_response_code(400);
         die(json_encode(['success' => false, 'message' => 'User not found in database']));
     }
-    
+
     $actual_user_id = $userRecord['id'];
     error_log("revise_submit_action: Mapped emp_no=$emp_no to users.id=$actual_user_id");
-    
+
     // Verify the request belongs to the current user and is in needs_revision status
     $stmt = $pdo->prepare("SELECT id, status FROM requests WHERE id = ? AND user_id = ? AND status = 'needs_revision'");
     $stmt->execute([$request_id, $actual_user_id]);
     $existingRequest = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     error_log("revise_submit_action: Request lookup returned: " . ($existingRequest ? 'FOUND' : 'NOT FOUND'));
-    
+
     if (!$existingRequest) {
         error_log("revise_submit_action: Request not found or not in needs_revision status");
         http_response_code(400);
         die(json_encode(['success' => false, 'message' => 'Request not found or cannot be revised']));
     }
-    
-    // Update the request with new values and set status back to 'pending'
+
+    // Update the request
     $sql = "UPDATE requests SET 
         system_id = ?, 
         department_id = ?, 
@@ -107,9 +105,9 @@ try {
         status = 'pending',
         updated_at = NOW()
         WHERE id = ?";
-    
+
     error_log("revise_submit_action: Executing UPDATE");
-    
+
     $chosen_role = $_POST['chosen_role'] ?? null;
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
@@ -121,42 +119,46 @@ try {
         $chosen_role,
         (int)$request_id
     ]);
-    
+
     error_log("revise_submit_action: UPDATE rowCount: " . $stmt->rowCount());
-    
+
     // Delete old access types
     $stmt = $pdo->prepare("DELETE FROM request_access_types WHERE request_id = ?");
     $stmt->execute([$request_id]);
     error_log("revise_submit_action: Deleted old access types");
-    
+
     // Insert new access types
     $stmt = $pdo->prepare("INSERT INTO request_access_types (request_id, access_type_id) VALUES (?, ?)");
     foreach ($access_types as $access_type_id) {
         $stmt->execute([$request_id, $access_type_id]);
     }
     error_log("revise_submit_action: Inserted " . count($access_types) . " new access types");
-    
-    // Store a system message in chat indicating the revision was submitted
+
+    // System chat message
     $stmt = $pdo->prepare("
         INSERT INTO request_chats (request_id, sender_id, message, created_at)
         VALUES (?, 1, ?, NOW())
     ");
-    
     $system_message = "[REQUEST RESUBMITTED]\n\nRevisions have been submitted. The request is back in pending for approver review.";
-    
     $stmt->execute([$request_id, $system_message]);
     error_log("revise_submit_action: System message inserted");
-    
+
+    // Resolve names for notifications
+    $requestorName = resolveEmployeeName($pdo, $emp_no);
+    $systemName    = resolveSystemName($pdo, (int)$system_id);
+
+    // Notify reviewers that the revised request needs re-signing
+    notifyReviewers($pdo, (int)$request_id, $requestorName, $systemName);
+
     error_log("revise_submit_action: SUCCESS");
-    
-    // Return success but indicate the user should be redirected to dashboard
+
     http_response_code(200);
     echo json_encode([
-        'success' => true, 
-        'message' => 'Request revisions submitted successfully!',
+        'success'  => true,
+        'message'  => 'Request revisions submitted successfully!',
         'redirect' => '/zen/reqHub/dashboard?status=pending&pending_tab=all'
     ]);
-    
+
 } catch (Exception $e) {
     error_log("revise_submit_action: Exception - " . $e->getMessage());
     error_log("revise_submit_action: Trace - " . $e->getTraceAsString());

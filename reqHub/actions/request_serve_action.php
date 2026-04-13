@@ -19,7 +19,7 @@ if (!$request_id) {
     die("Invalid Request");
 }
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
+$pdo         = ReqHubDatabase::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
@@ -35,7 +35,7 @@ $admin_id = $userRow['id'];
 
 try {
     $stmt = $pdo->prepare("
-        SELECT user_id
+        SELECT user_id, system_id
         FROM requests
         WHERE id = :id AND status = 'approved'
     ");
@@ -65,8 +65,19 @@ try {
 
     error_log("Request $request_id marked as served by " . $currentUser['emp_no']);
 
-    // Notifications
-    createNotification($pdo, (int)$requestorId, 'status_change', (int)$request_id, "Your request has been approved and served.");
+    // Resolve names for notification
+    $requestorName = resolveEmployeeNameByUserId($pdo, (int)$requestorId);
+    $adminName     = resolveEmployeeName($pdo, $currentUser['emp_no']);
+    $systemName    = resolveSystemName($pdo, (int)$request['system_id']);
+
+    // Notify requestor
+    createNotification(
+        $pdo,
+        (int)$requestorId,
+        'status_change',
+        (int)$request_id,
+        "Your [{$systemName}] request has been served by {$adminName}. Access has been granted."
+    );
 
     header('Location: /zen/reqHub/dashboard?status=approved');
     exit;

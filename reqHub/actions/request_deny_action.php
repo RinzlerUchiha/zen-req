@@ -19,7 +19,7 @@ if (!$request_id) {
     die("Invalid Request");
 }
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
+$pdo         = ReqHubDatabase::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
@@ -65,8 +65,19 @@ try {
 
     error_log("Request $request_id denied by " . $currentUser['emp_no']);
 
-    // Notifications
-    createNotification($pdo, (int)$requestorId, 'status_change', (int)$request_id, "Your request has been denied.");
+    // Resolve names for notification
+    $requestorName = resolveEmployeeNameByUserId($pdo, (int)$requestorId);
+    $denierName    = resolveEmployeeName($pdo, $currentUser['emp_no']);
+    $systemName    = resolveSystemName($pdo, (int)$request['system_id']);
+
+    // Notify requestor
+    createNotification(
+        $pdo,
+        (int)$requestorId,
+        'status_change',
+        (int)$request_id,
+        "Your [{$systemName}] request has been denied by {$denierName}."
+    );
 
     header('Location: /zen/reqHub/dashboard?status=pending');
     exit;

@@ -48,8 +48,22 @@ try {
     ");
     $stmt->execute([$id, "[REQUEST REVIEWED]\n\nThis request has been signed by a Reviewer and is now visible to the Approver."]);
 
+    // Resolve names for notification
+    $requestorName = resolveEmployeeNameByUserId($pdo, (int)$request['user_id']);
+    $systemName    = resolveSystemName($pdo, (int)$request['system_id']);
+    $reviewerName  = resolveEmployeeName($pdo, $current_user['emp_no']);
+
+    // Notify requestor that their request has been reviewed
+    createNotification(
+        $pdo,
+        (int)$request['user_id'],
+        'status_change',
+        (int)$id,
+        "Your [{$systemName}] request has been reviewed by {$reviewerName} and is now pending approval."
+    );
+
     // Notify approvers assigned to this system
-    notifyApproversForSystem($pdo, (int)$request['system_id'], (int)$id);
+    notifyApproversForSystem($pdo, (int)$request['system_id'], (int)$id, $requestorName, $systemName);
 
     error_log("review_action: Request $id reviewed/signed by " . $current_user['emp_no']);
 

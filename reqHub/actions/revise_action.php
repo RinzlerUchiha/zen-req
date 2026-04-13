@@ -52,12 +52,24 @@ try {
     $result2 = $stmt2->execute([$id, $system_message]);
     error_log("revise_action: INSERT result: " . ($result2 ? 'true' : 'false'));
 
-    // Notify requestor
-    $stmt3 = $pdo->prepare("SELECT user_id FROM requests WHERE id = ?");
+    // Fetch request details for notification
+    $stmt3 = $pdo->prepare("SELECT user_id, system_id FROM requests WHERE id = ?");
     $stmt3->execute([$id]);
     $revRequest = $stmt3->fetch(PDO::FETCH_ASSOC);
+
     if ($revRequest) {
-        createNotification($pdo, (int)$revRequest['user_id'], 'status_change', (int)$id, "Your request needs revision.");
+        $requestorName = resolveEmployeeNameByUserId($pdo, (int)$revRequest['user_id']);
+        $approverName  = resolveEmployeeName($pdo, $current_user['emp_no']);
+        $systemName    = resolveSystemName($pdo, (int)$revRequest['system_id']);
+
+        // Notify requestor
+        createNotification(
+            $pdo,
+            (int)$revRequest['user_id'],
+            'status_change',
+            (int)$id,
+            "Your [{$systemName}] request has been sent back for revision by {$approverName}. Please review their comments."
+        );
     }
 
     error_log("revise_action: SUCCESS");

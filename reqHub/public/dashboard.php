@@ -16,7 +16,7 @@ try {
 }
 
 $user        = $_SESSION['reqhub_user'];
-$userId      = $user['emp_no']; 
+$userId      = $user['emp_no'];
 $debugUserId = $userId;
 $role        = $user['reqhub_role'];
 $status      = $_GET['status']      ?? 'pending';
@@ -111,26 +111,23 @@ WHERE 1=1
 ";
 
 /* ================================================================
-   STATUS FILTER  —  logic varies by role
+   STATUS FILTER
 ================================================================ */
 switch ($status) {
     case 'pending':
         if ($role === 'Reviewer') {
-            // Reviewer sees truly 'pending' requests (not yet reviewed)
             if ($pending_tab === 'needs_revision') {
                 $sql .= " AND r.status = 'needs_revision'";
             } else {
                 $sql .= " AND r.status = 'pending'";
             }
         } elseif ($role === 'Approver') {
-            // Approver only sees requests that have been reviewed (or needs_revision sent back)
             if ($pending_tab === 'needs_revision') {
                 $sql .= " AND r.status = 'needs_revision'";
             } else {
                 $sql .= " AND r.status = 'reviewed'";
             }
         } else {
-            // Requestor / Admin: standard pending view
             if ($pending_tab === 'needs_revision') {
                 $sql .= " AND r.status = 'needs_revision'";
             } else {
@@ -178,7 +175,6 @@ if ($userRecord) {
     }
 
     if ($role === 'Approver') {
-        // Approver sees requests for assigned systems
         $stmt2 = $pdo->prepare("SELECT DISTINCT system_id FROM user_approver_assignments WHERE user_id = ?");
         $stmt2->execute([$actual_user_id]);
         $systemIds = $stmt2->fetchAll(PDO::FETCH_COLUMN);
@@ -194,7 +190,6 @@ if ($userRecord) {
 
     if ($role === 'Reviewer') {
         // Reviewer sees ALL pending (pre-review) requests
-        // No additional filter — they see everything awaiting signature
     }
 }
 
@@ -205,7 +200,6 @@ try {
     $stmt->execute($params);
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Compute chat activity separately to avoid interpolation issues
     if (!empty($requests)) {
         $reqIds = array_column($requests, 'id');
         $ph = implode(',', array_fill(0, count($reqIds), '?'));
@@ -223,7 +217,6 @@ try {
         $activeIds = array_flip($chatStmt->fetchAll(PDO::FETCH_COLUMN));
 
         foreach ($requests as &$req) {
-            error_log("REQUEST " . $req['id'] . " human_chat_count=" . $req['human_chat_count']);
             $req['human_chat_count'] = isset($activeIds[$req['id']]) ? 1 : 0;
         }
         unset($req);
@@ -235,7 +228,6 @@ try {
 ?>
 
 <?php include __DIR__ . '/../includes/header.php'; ?>
-<!-- DEBUG: <span id="debug-userid"><?= htmlspecialchars($debugUserId) ?></span> -->
 
 <div class="container mt-4">
 
@@ -371,8 +363,8 @@ try {
         <span id="modalServedAt" class="text-muted small ms-1"></span>
     </p>
     <p id="modalDeniedByRow" style="display:none;">
-    <strong>Denied by:</strong><br><span id="modalDeniedBy"></span>
-    <span id="modalDeniedAt" class="text-muted small ms-1"></span>
+        <strong>Denied by:</strong><br><span id="modalDeniedBy"></span>
+        <span id="modalDeniedAt" class="text-muted small ms-1"></span>
     </p>
     <p><strong>Access Type:</strong></p>
     <div id="modalAccess" class="small" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:8px; background:#f8f9fa;"></div>
@@ -440,63 +432,79 @@ document.addEventListener('DOMContentLoaded', function () {
     let chatInterval = null;
     const openedRequests = new Set();
 
-    document.querySelectorAll('.request-row').forEach(row => {
-        
-
-        row.addEventListener('click', function () {
-
+    // ── Row click handler ──────────────────────────────────────────
+    function openRequestRow(row) {
         // Clear chat dot when request is opened
-        const dot = this.querySelector('.chat-dot');
+        const dot = row.querySelector('.chat-dot');
         if (dot) dot.style.visibility = 'hidden';
-        openedRequests.add(this.dataset.id);
+        openedRequests.add(row.dataset.id);
 
+        document.getElementById('modalSubmitter').textContent   = row.dataset.submitter  || '—';
+        document.getElementById('modalAccessFor').textContent   = row.dataset.accessFor  || '—';
+        document.getElementById('modalSystem').textContent      = row.dataset.system;
+        document.getElementById('modalRole').textContent        = row.dataset.chosenRole || '(Not specified)';
+        document.getElementById('modalDescription').textContent = row.dataset.description;
+        document.getElementById('chatRequestId').value          = row.dataset.id;
+        document.getElementById('modalRemove').textContent      = row.dataset.remove || '—';
 
-            document.getElementById('modalSubmitter').textContent   = this.dataset.submitter  || '—';
-            document.getElementById('modalAccessFor').textContent   = this.dataset.accessFor  || '—';
-            document.getElementById('modalSystem').textContent      = this.dataset.system;
-            document.getElementById('modalRole').textContent        = this.dataset.chosenRole || '(Not specified)';
-            document.getElementById('modalDescription').textContent = this.dataset.description;
-            document.getElementById('chatRequestId').value          = this.dataset.id;
-            document.getElementById('modalRemove').textContent      = this.dataset.remove || '—';
+        const approvedByRow = document.getElementById('modalApprovedByRow');
+        if (row.dataset.approvedBy) {
+            document.getElementById('modalApprovedBy').textContent = row.dataset.approvedBy;
+            document.getElementById('modalApprovedAt').textContent = row.dataset.approvedAt ? '(' + formatDateTime(row.dataset.approvedAt) + ')' : '';
+            approvedByRow.style.display = '';
+        } else {
+            approvedByRow.style.display = 'none';
+        }
 
-            const approvedByRow = document.getElementById('modalApprovedByRow');
-            if (this.dataset.approvedBy) {
-                document.getElementById('modalApprovedBy').textContent = this.dataset.approvedBy;
-                document.getElementById('modalApprovedAt').textContent = this.dataset.approvedAt ? '(' + formatDateTime(this.dataset.approvedAt) + ')' : '';
-                approvedByRow.style.display = '';
-            } else {
-                approvedByRow.style.display = 'none';
-            }
+        const servedByRow = document.getElementById('modalServedByRow');
+        if (row.dataset.servedBy) {
+            document.getElementById('modalServedBy').textContent = row.dataset.servedBy;
+            document.getElementById('modalServedAt').textContent = row.dataset.servedAt ? '(' + formatDateTime(row.dataset.servedAt) + ')' : '';
+            servedByRow.style.display = '';
+        } else {
+            servedByRow.style.display = 'none';
+        }
 
-            const servedByRow = document.getElementById('modalServedByRow');
-            if (this.dataset.servedBy) {
-                document.getElementById('modalServedBy').textContent = this.dataset.servedBy;
-                document.getElementById('modalServedAt').textContent = this.dataset.servedAt ? '(' + formatDateTime(this.dataset.servedAt) + ')' : '';
-                servedByRow.style.display = '';
-            } else {
-                servedByRow.style.display = 'none';
-            }
-            
-            const deniedByRow = document.getElementById('modalDeniedByRow');
-            if (this.dataset.deniedBy) {
-                document.getElementById('modalDeniedBy').textContent = this.dataset.deniedBy;
-                document.getElementById('modalDeniedAt').textContent = this.dataset.deniedAt ? '(' + formatDateTime(this.dataset.deniedAt) + ')' : '';
-                deniedByRow.style.display = '';
-            } else {
-                deniedByRow.style.display = 'none';
-            }
+        const deniedByRow = document.getElementById('modalDeniedByRow');
+        if (row.dataset.deniedBy) {
+            document.getElementById('modalDeniedBy').textContent = row.dataset.deniedBy;
+            document.getElementById('modalDeniedAt').textContent = row.dataset.deniedAt ? '(' + formatDateTime(row.dataset.deniedAt) + ')' : '';
+            deniedByRow.style.display = '';
+        } else {
+            deniedByRow.style.display = 'none';
+        }
 
-            renderAccessStructure(this.dataset.access, this.dataset.chosenRole);
-            renderActions(this.dataset);
-            loadChat(this.dataset.id);
+        renderAccessStructure(row.dataset.access, row.dataset.chosenRole);
+        renderActions(row.dataset);
+        loadChat(row.dataset.id);
 
-            if (chatInterval) clearInterval(chatInterval);
-            chatInterval = setInterval(() => loadChat(this.dataset.id), 5000);
+        if (chatInterval) clearInterval(chatInterval);
+        chatInterval = setInterval(() => loadChat(row.dataset.id), 5000);
 
-            modal.show();
+        modal.show();
+    }
+
+    document.querySelectorAll('.request-row').forEach(row => {
+        row.addEventListener('click', function () {
+            openRequestRow(this);
         });
     });
 
+    // ── Auto-open from URL param (notification redirect) ──────────
+    const urlParams  = new URLSearchParams(window.location.search);
+    const openId     = urlParams.get('open_request');
+    if (openId) {
+        const targetRow = document.querySelector(`.request-row[data-id="${openId}"]`);
+        if (targetRow) {
+            // Small delay to allow modal/bootstrap to be fully ready
+            setTimeout(() => {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                openRequestRow(targetRow);
+            }, 150);
+        }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────
     function formatDateTime(dt) {
         if (!dt) return '';
         const d = new Date(dt);
@@ -571,7 +579,6 @@ document.addEventListener('DOMContentLoaded', function () {
             chatInput.placeholder = 'Type message...';
         }
 
-        // Reviewer: can sign pending requests
         if (role === 'Reviewer' && data.status === 'pending') {
             container.innerHTML = `
                 <form id="reviewActionForm" class="d-inline">
@@ -600,7 +607,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // Approver: approve/deny/revise reviewed requests
         if (role === 'Approver' && (data.status === 'reviewed' || data.status === 'needs_revision')) {
             container.innerHTML = `
                 <form method="post" action="/zen/reqHub/approve" class="d-inline">
@@ -614,12 +620,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 ${data.status === 'reviewed' ? `<button class="btn btn-warning btn-sm ms-2" onclick="openReviseModal('${data.id}')">Revise</button>` : ''}`;
         }
 
-        // Requestor: edit & resubmit when needs_revision
         if (role === 'Requestor' && data.status === 'needs_revision') {
             container.innerHTML = `<a href="/zen/reqHub/request_revise?request_id=${data.id}" class="btn btn-primary btn-sm">Edit & Resubmit</a>`;
         }
 
-        // Admin: mark as served
         if (role === 'Admin' && data.status === 'approved' && data.adminStatus !== 'served') {
             container.innerHTML = `
                 <form method="post" action="/zen/reqHub/served" class="d-inline">
@@ -683,9 +687,9 @@ document.addEventListener('DOMContentLoaded', function () {
         reviseForm.hasListener = true;
     }
 
-    // Poll for chat activity dots
+    // ── Chat activity dots polling ─────────────────────────────────
     const allRows = document.querySelectorAll('.request-row');
-    const rowIds = Array.from(allRows).map(r => r.dataset.id).filter(Boolean);
+    const rowIds  = Array.from(allRows).map(r => r.dataset.id).filter(Boolean);
 
     if (rowIds.length > 0) {
         function pollChatActivity() {

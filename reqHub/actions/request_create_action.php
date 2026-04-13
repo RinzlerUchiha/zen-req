@@ -29,8 +29,8 @@ if (!$system_id || !$department_id || !$request_for || empty($access_types)) {
     die(json_encode(['success' => false, 'message' => 'All required fields must be filled out.']));
 }
 
-$pdo       = ReqHubDatabase::getConnection('reqhub');
-$zenHubDb  = ReqHubDatabase::getConnection('hr');
+$pdo      = ReqHubDatabase::getConnection('reqhub');
+$zenHubDb = ReqHubDatabase::getConnection('hr');
 
 $stmt = $zenHubDb->prepare("SELECT Emp_No, U_Name FROM tbl_user2 WHERE U_ID = ?");
 $stmt->execute([$request_for]);
@@ -71,10 +71,11 @@ if (!$userRow) {
 
 $user_id = $userRow['id'];
 
+// Resolve display names for notifications
+$requestorName = resolveEmployeeName($pdo, $currentUser['emp_no']);
+$systemName    = resolveSystemName($pdo, (int)$system_id);
+
 try {
-    // Approvers can bypass the review step — go straight to 'reviewed'
-    // (so Approver-created requests are immediately visible to Approvers)
-    // Requestors always start as 'pending' and need Reviewer sign-off
     $status       = ($userRole === 'Approver') ? 'approved' : 'pending';
     $admin_status = 'pending';
     $approved_by  = ($userRole === 'Approver') ? $user_id : null;
@@ -115,13 +116,16 @@ try {
 
     // Notifications
     if ($status === 'pending') {
-        // Notify Reviewers — they must sign before Approvers can see it
-        notifyReviewers($pdo, $request_id);
+        // Notify Reviewers with requestor name + system
+        notifyReviewers($pdo, $request_id, $requestorName, $systemName);
     }
 
     if ($status === 'approved') {
-        notifyAdmins($pdo, $request_id, "A request has been approved and is waiting to be served.");
-        createNotification($pdo, (int)$request_for_id, 'status_change', $request_id, "Your request has been approved.");
+        // Approver-created request goes straight to approved
+        $adminMsg     = "{$requestorName}'s [{$systemName}] request has been approved and is waiting to be served.";
+        $requestorMsg = "Your [{$systemName}] request has been approved.";
+        notifyAdmins($pdo, $request_id, $adminMsg);
+        createNotification($pdo, (int)$request_for_id, 'status_change', $request_id, $requestorMsg);
     }
 
     header('Location: /zen/reqHub/dashboard?status=pending');

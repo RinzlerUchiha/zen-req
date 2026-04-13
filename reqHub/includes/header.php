@@ -35,16 +35,25 @@ try {
 }
 
 // Fetch unread notifications for this user
-$notifications  = [];
-$unreadCount    = 0;
+$notifications = [];
+$unreadCount   = 0;
 
 if ($actualUserId) {
     try {
         $stmt = $pdo->prepare("
-            SELECT id, type, request_id, message, is_read, created_at
-            FROM notifications
-            WHERE user_id = :uid AND is_read = 0
-            ORDER BY created_at DESC
+            SELECT
+                n.id,
+                n.type,
+                n.request_id,
+                n.message,
+                n.is_read,
+                n.created_at,
+                r.status        AS request_status,
+                r.admin_status  AS admin_status
+            FROM notifications n
+            LEFT JOIN requests r ON n.request_id = r.id
+            WHERE n.user_id = :uid AND n.is_read = 0
+            ORDER BY n.created_at DESC
             LIMIT 20
         ");
         $stmt->execute([':uid' => $actualUserId]);
@@ -105,11 +114,6 @@ body,
     color: #000 !important;
 }
 
-/* Notification bell badge */
-/* .notif-bell {
-    position: relative;
-    display: inline-block;
-} */
 .notif-badge {
     position: absolute;
     top: -6px;
@@ -126,7 +130,6 @@ body,
     font-weight: bold;
 }
 
-/* Notification dropdown items */
 .notif-item {
     border-bottom: 1px solid #f0f0f0;
     padding: 10px 14px;
@@ -193,9 +196,9 @@ body,
 
         <!-- BELL DROPDOWN -->
         <div class="dropdown">
-            <button class="btn btn-outline-dark position-relative" 
+            <button class="btn btn-outline-dark position-relative"
                     id="notifBellBtn"
-                    data-bs-toggle="dropdown" 
+                    data-bs-toggle="dropdown"
                     data-bs-auto-close="outside"
                     aria-expanded="false">
                 🔔
@@ -206,7 +209,7 @@ body,
                 <?php endif; ?>
             </button>
 
-            <div class="dropdown-menu dropdown-menu-end p-0" 
+            <div class="dropdown-menu dropdown-menu-end p-0"
                 style="width: 360px; max-height: 480px; overflow-y: auto;">
 
                 <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
@@ -227,6 +230,8 @@ body,
                         <div class="notif-item unread"
                             data-notif-id="<?= $notif['id'] ?>"
                             data-request-id="<?= $notif['request_id'] ?? '' ?>"
+                            data-request-status="<?= htmlspecialchars($notif['request_status'] ?? '') ?>"
+                            data-admin-status="<?= htmlspecialchars($notif['admin_status'] ?? '') ?>"
                             data-type="<?= htmlspecialchars($notif['type']) ?>">
                             <div class="notif-message"><?= htmlspecialchars($notif['message']) ?></div>
                             <div class="notif-time">
@@ -246,7 +251,7 @@ body,
                 <?php
                 try {
                     $stmtSys = $pdo->prepare("
-                        SELECT s.name 
+                        SELECT s.name
                         FROM user_approver_assignments uaa
                         JOIN systems s ON uaa.system_id = s.id
                         WHERE uaa.user_id = ?
@@ -261,8 +266,7 @@ body,
                 <?php if (!empty($assignedSystems)): ?>
                     <div class="mt-1 position-relative d-inline-block">
 
-                        <!-- BUTTON -->
-                        <button 
+                        <button
                             id="systemsToggleBtn"
                             class="btn btn-sm btn-outline-secondary py-0 px-2"
                             type="button"
@@ -270,8 +274,7 @@ body,
                             View Assigned Systems
                         </button>
 
-                        <!-- CARD DROPDOWN -->
-                        <div 
+                        <div
                             id="systemsCard"
                             class="position-absolute bg-white shadow rounded border mt-2"
                             style="display: none; min-width: 220px; z-index: 1050; right: 0;">
@@ -292,7 +295,6 @@ body,
 
                     </div>
 
-                    <!-- TOGGLE SCRIPT -->
                     <script>
                         const btn = document.getElementById('systemsToggleBtn');
                         const card = document.getElementById('systemsCard');
@@ -337,26 +339,61 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'all';
     }
 
+    function buildRedirectUrl(requestId, requestStatus, adminStatus) {
+        const tab        = getTabForRequest(requestStatus, adminStatus);
+        const pendingTab = getPendingTabForRequest(requestStatus);
+        let url = '/zen/reqHub/dashboard?status=' + tab + '&open_request=' + requestId;
+        if (tab === 'pending') url += '&pending_tab=' + pendingTab;
+        return url;
+    }
+
+    function markAndRedirect(notifId, requestId, requestStatus, adminStatus) {
+        fetch('/zen/reqHub/notification_action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'id=' + encodeURIComponent(notifId)
+        }).catch(() => {});
+
+        if (requestId) {
+            window.location.href = buildRedirectUrl(requestId, requestStatus, adminStatus);
+        }
+    }
+
     function attachNotifClickHandler(item) {
         item.addEventListener('click', function () {
-            const notifId   = this.dataset.notifId;
-            const requestId = this.dataset.requestId;
-            const requestStatus = this.dataset.requestStatus;
-            const adminStatus = this.dataset.adminStatus;
+            const notifId       = this.dataset.notifId;
+            const requestId     = this.dataset.requestId;
+            const requestStatus = this.dataset.requestStatus || '';
+            const adminStatus   = this.dataset.adminStatus   || '';
 
-            fetch('/zen/reqHub/notification_action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'id=' + encodeURIComponent(notifId)
-            }).catch(() => {});
-
-            if (requestId) {
-                const tab = getTabForRequest(requestStatus, adminStatus);
-                const pendingTab = getPendingTabForRequest(requestStatus);
-                let url = '/zen/reqHub/dashboard?status=' + tab + '&open_request=' + requestId;
-                if (tab === 'pending') url += '&pending_tab=' + pendingTab;
-                window.location.href = url;
+            // If we already have status data on the element, redirect immediately
+            if (requestStatus || adminStatus) {
+                markAndRedirect(notifId, requestId, requestStatus, adminStatus);
+                return;
             }
+
+            // Fallback: fetch current status then redirect
+            fetch('/zen/reqHub/notification_fetch')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        window.location.href = '/zen/reqHub/dashboard';
+                        return;
+                    }
+                    const match = data.notifications.find(n => n.request_id == requestId);
+                    if (match) {
+                        markAndRedirect(notifId, requestId, match.request_status || '', match.admin_status || '');
+                    } else {
+                        // Already read or not found — still redirect to dashboard
+                        fetch('/zen/reqHub/notification_action', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'id=' + encodeURIComponent(notifId)
+                        }).catch(() => {});
+                        window.location.href = '/zen/reqHub/dashboard';
+                    }
+                })
+                .catch(() => { window.location.href = '/zen/reqHub/dashboard'; });
         });
     }
 
@@ -401,10 +438,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (!bellBtn) return;
-                const menu = bellBtn.closest('.dropdown').querySelector('.dropdown-menu');
+                const menu   = bellBtn.closest('.dropdown').querySelector('.dropdown-menu');
                 const header = menu.querySelector('.d-flex.justify-content-between');
 
-                // Remove old notification items and empty state message
+                // Remove old notification items and empty state
                 menu.querySelectorAll('.notif-item, .text-center.text-muted').forEach(el => el.remove());
 
                 // Mark all button
@@ -432,11 +469,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     items.forEach(notif => {
                         const div = document.createElement('div');
                         div.className = 'notif-item unread';
-                        div.dataset.notifId = notif.id;
-                        div.dataset.requestId = notif.request_id || '';
+                        div.dataset.notifId       = notif.id;
+                        div.dataset.requestId     = notif.request_id     || '';
                         div.dataset.requestStatus = notif.request_status || '';
-                        div.dataset.adminStatus = notif.admin_status || '';
-                        div.dataset.type = notif.type;
+                        div.dataset.adminStatus   = notif.admin_status   || '';
+                        div.dataset.type          = notif.type;
                         div.innerHTML = `
                             <div class="notif-message">${notif.message}</div>
                             <div class="notif-time">${notif.created_at_formatted}</div>
@@ -450,64 +487,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Attach handlers to server-rendered notifications on initial load
+    // (these already have data-request-status and data-admin-status from PHP)
     document.querySelectorAll('.notif-item').forEach(function(item) {
-        // Enrich with request status from data already in the DOM isn't available,
-        // so on initial load we fall back to simple dashboard redirect
-        item.addEventListener('click', function () {
-            const notifId   = this.dataset.notifId;
-            const requestId = this.dataset.requestId;
-
-            fetch('/zen/reqHub/notification_action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'id=' + encodeURIComponent(notifId)
-            }).catch(() => {});
-
-            if (requestId) {
-                // We don't have status on initial render, so fetch it first
-                fetch('/zen/reqHub/notification_fetch')
-                    .then(r => r.json())
-                    .then(data => {
-                        if (!data.success) {
-                            window.location.href = '/zen/reqHub/dashboard';
-                            return;
-                        }
-                        const match = data.notifications.find(n => n.request_id == requestId);
-                        if (match) {
-                            const tab = getTabForRequest(match.request_status, match.admin_status);
-                            const pendingTab = getPendingTabForRequest(match.request_status);
-                            let url = '/zen/reqHub/dashboard?status=' + tab + '&open_request=' + requestId;
-                            if (tab === 'pending') url += '&pending_tab=' + pendingTab;
-                            window.location.href = url;
-                        } else {
-                            window.location.href = '/zen/reqHub/dashboard';
-                        }
-                    })
-                    .catch(() => { window.location.href = '/zen/reqHub/dashboard'; });
-            }
-        });
+        attachNotifClickHandler(item);
     });
 
-            // Mark all as read (server-rendered button)
-            const markAllBtn = document.getElementById('markAllReadBtn');
-            if (markAllBtn) attachMarkAllListener(markAllBtn);
+    // Mark all as read (server-rendered button)
+    const markAllBtn = document.getElementById('markAllReadBtn');
+    if (markAllBtn) attachMarkAllListener(markAllBtn);
 
-            // Start polling
-            if (bellBtn) setInterval(fetchNotifications, 20000);
-
-            document.addEventListener('DOMContentLoaded', function() {
-            const btn = document.querySelector('[data-bs-target="#assignedSystemsCollapse"]');
-            const collapseEl = document.getElementById('assignedSystemsCollapse');
-
-            if (btn && collapseEl) {
-                collapseEl.addEventListener('show.bs.collapse', () => {
-                    btn.textContent = 'Hide Assigned Systems';
-                });
-
-                collapseEl.addEventListener('hide.bs.collapse', () => {
-                    btn.textContent = 'View Assigned Systems';
-                });
-            }
-        });
+    // Poll every 20 seconds
+    if (bellBtn) setInterval(fetchNotifications, 20000);
 });
 </script>
