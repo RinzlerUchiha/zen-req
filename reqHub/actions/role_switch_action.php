@@ -9,7 +9,7 @@ $currentUser = getCurrentUser();
 $emp_no = $currentUser['emp_no'];
 
 $newRole = $_POST['role'] ?? null;
-$allowedRoles = ['Requestor', 'Approver', 'Admin'];
+$allowedRoles = ['Requestor', 'Approver', 'Admin', 'Reviewer'];
 
 if (!$newRole || !in_array($newRole, $allowedRoles)) {
     echo json_encode(['success' => false, 'message' => 'Invalid role']);

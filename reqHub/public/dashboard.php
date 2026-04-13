@@ -232,7 +232,7 @@ try {
         <a class="nav-link <?= $pending_tab === 'all' ? 'active' : '' ?>"
            href="?status=pending&pending_tab=all">
             <?php if ($role === 'Reviewer'): ?>Awaiting Signature<?php
-            elseif ($role === 'Approver'): ?>Reviewed (Ready to Approve)<?php
+            elseif ($role === 'Approver'): ?>All Pending<?php
             else: ?>All Pending<?php endif; ?>
         </a>
     </li>

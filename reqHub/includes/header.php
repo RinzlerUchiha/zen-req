@@ -164,6 +164,7 @@ body,
             <option value="Requestor" <?= $role === 'Requestor' ? 'selected' : '' ?>>Requestor</option>
             <option value="Approver"  <?= $role === 'Approver'  ? 'selected' : '' ?>>Approver</option>
             <option value="Admin"     <?= $role === 'Admin'     ? 'selected' : '' ?>>Admin</option>
+            <option value="Reviewer"  <?= $role === 'Reviewer'  ? 'selected' : '' ?>>Reviewer</option>
         </select>
         <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($role) ?></strong></span>
     </div>
@@ -256,10 +257,56 @@ body,
                     $assignedSystems = [];
                 }
                 ?>
+
                 <?php if (!empty($assignedSystems)): ?>
-                    <span class="text-muted" style="font-size: 0.82rem;">
-                        <?= htmlspecialchars(implode(', ', $assignedSystems)) ?>
-                    </span>
+                    <div class="mt-1 position-relative d-inline-block">
+
+                        <!-- BUTTON -->
+                        <button 
+                            id="systemsToggleBtn"
+                            class="btn btn-sm btn-outline-secondary py-0 px-2"
+                            type="button"
+                            style="font-size: 0.75rem;">
+                            View Assigned Systems
+                        </button>
+
+                        <!-- CARD DROPDOWN -->
+                        <div 
+                            id="systemsCard"
+                            class="position-absolute bg-white shadow rounded border mt-2"
+                            style="display: none; min-width: 220px; z-index: 1050; right: 0;">
+
+                            <div class="p-2 border-bottom fw-semibold">
+                                Assigned Systems
+                            </div>
+
+                            <div class="p-2">
+                                <?php foreach ($assignedSystems as $sys): ?>
+                                    <div class="py-1 border-bottom small">
+                                        <?= htmlspecialchars($sys) ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- TOGGLE SCRIPT -->
+                    <script>
+                        const btn = document.getElementById('systemsToggleBtn');
+                        const card = document.getElementById('systemsCard');
+
+                        btn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            card.style.display = (card.style.display === 'block') ? 'none' : 'block';
+                        });
+
+                        document.addEventListener('click', function () {
+                            card.style.display = 'none';
+                        });
+                    </script>
+
                 <?php endif; ?>
             <?php endif; ?>
         </div>
@@ -441,11 +488,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Mark all as read (server-rendered button)
-    const markAllBtn = document.getElementById('markAllReadBtn');
-    if (markAllBtn) attachMarkAllListener(markAllBtn);
+            // Mark all as read (server-rendered button)
+            const markAllBtn = document.getElementById('markAllReadBtn');
+            if (markAllBtn) attachMarkAllListener(markAllBtn);
 
-    // Start polling
-    if (bellBtn) setInterval(fetchNotifications, 20000);
+            // Start polling
+            if (bellBtn) setInterval(fetchNotifications, 20000);
+
+            document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.querySelector('[data-bs-target="#assignedSystemsCollapse"]');
+            const collapseEl = document.getElementById('assignedSystemsCollapse');
+
+            if (btn && collapseEl) {
+                collapseEl.addEventListener('show.bs.collapse', () => {
+                    btn.textContent = 'Hide Assigned Systems';
+                });
+
+                collapseEl.addEventListener('hide.bs.collapse', () => {
+                    btn.textContent = 'View Assigned Systems';
+                });
+            }
+        });
 });
 </script>
