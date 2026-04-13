@@ -16,7 +16,8 @@ try {
 }
 
 $user        = $_SESSION['reqhub_user'];
-$userId      = $user['emp_no'];
+$userId      = $user['emp_no']; 
+$debugUserId = $userId;
 $role        = $user['reqhub_role'];
 $status      = $_GET['status']      ?? 'pending';
 $pending_tab = $_GET['pending_tab'] ?? 'all';
@@ -61,13 +62,21 @@ SELECT
         srv_u.employee_id
     ) AS served_by_name,
 
+    COALESCE(
+        CONCAT(NULLIF(den_bi.bi_empfname,''),' ',NULLIF(den_bi.bi_emplname,'')),
+        den_u.employee_id
+    ) AS denied_by_name,
+
+    r.denied_at,
     r.approved_at,
     r.served_at,
 
     GROUP_CONCAT(
         CONCAT(at.role,'||',at.module,'||',at.actions)
         SEPARATOR '##'
-    ) AS access_type
+    ) AS access_type,
+
+0 AS human_chat_count
 
 FROM requests r
 LEFT JOIN systems s ON r.system_id = s.id
@@ -86,6 +95,10 @@ LEFT JOIN tngc_hrd2.tbl201_basicinfo appr_bi ON appr_hu.Emp_No = appr_bi.bi_empn
 LEFT JOIN users srv_u ON srv_u.id = r.served_by
 LEFT JOIN tngc_hrd2.tbl_user2 srv_hu ON srv_hu.Emp_No = srv_u.employee_id
 LEFT JOIN tngc_hrd2.tbl201_basicinfo srv_bi ON srv_hu.Emp_No = srv_bi.bi_empno AND srv_bi.datastat = 'current'
+
+LEFT JOIN users den_u ON den_u.id = r.denied_by
+LEFT JOIN tngc_hrd2.tbl_user2 den_hu ON den_hu.Emp_No = den_u.employee_id
+LEFT JOIN tngc_hrd2.tbl201_basicinfo den_bi ON den_hu.Emp_No = den_bi.bi_empno AND den_bi.datastat = 'current'
 
 LEFT JOIN tngc_hrd2.tbl_user2 rm_hu ON rm_hu.U_ID = (
     CASE WHEN r.remove_from REGEXP '^[0-9]+\$' THEN CAST(r.remove_from AS UNSIGNED) ELSE NULL END
@@ -191,6 +204,30 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Compute chat activity separately to avoid interpolation issues
+    if (!empty($requests)) {
+        $reqIds = array_column($requests, 'id');
+        $ph = implode(',', array_fill(0, count($reqIds), '?'));
+        $chatStmt = $pdo->prepare("
+            SELECT rc.request_id
+            FROM request_chats rc
+            JOIN users ru ON rc.sender_id = ru.id
+            WHERE rc.request_id IN ($ph)
+            AND rc.sender_id != 1
+            AND ru.employee_id != ?
+            GROUP BY rc.request_id
+        ");
+        $chatParams = array_merge($reqIds, [$userId]);
+        $chatStmt->execute($chatParams);
+        $activeIds = array_flip($chatStmt->fetchAll(PDO::FETCH_COLUMN));
+
+        foreach ($requests as &$req) {
+            error_log("REQUEST " . $req['id'] . " human_chat_count=" . $req['human_chat_count']);
+            $req['human_chat_count'] = isset($activeIds[$req['id']]) ? 1 : 0;
+        }
+        unset($req);
+    }
 } catch (PDOException $e) {
     error_log("Dashboard SQL error: " . $e->getMessage());
     die("<h1>Database Error</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>");
@@ -198,6 +235,7 @@ try {
 ?>
 
 <?php include __DIR__ . '/../includes/header.php'; ?>
+<!-- DEBUG: <span id="debug-userid"><?= htmlspecialchars($debugUserId) ?></span> -->
 
 <div class="container mt-4">
 
@@ -275,8 +313,20 @@ try {
     data-approved-at="<?= htmlspecialchars($req['approved_at'] ?? '') ?>"
     data-served-by="<?= htmlspecialchars($req['served_by_name'] ?? '') ?>"
     data-served-at="<?= htmlspecialchars($req['served_at'] ?? '') ?>"
+    data-has-chat="<?= ($req['human_chat_count'] ?? 0) > 0 ? '1' : '0' ?>"
+    data-denied-by="<?= htmlspecialchars($req['denied_by_name'] ?? '') ?>"
+    data-denied-at="<?= htmlspecialchars($req['denied_at'] ?? '') ?>"
 >
-    <td><?= htmlspecialchars($req['system_name'] ?? '') ?></td>
+    <td>
+        <div class="d-flex align-items-center gap-2">
+            <?php if (($req['human_chat_count'] ?? 0) > 0): ?>
+                <span class="chat-dot" style="width:8px; height:8px; border-radius:50%; background-color:#0d6efd; flex-shrink:0; display:inline-block;" title="Has chat activity"></span>
+            <?php else: ?>
+                <span style="width:8px; height:8px; flex-shrink:0; display:inline-block;"></span>
+            <?php endif; ?>
+            <?= htmlspecialchars($req['system_name'] ?? '') ?>
+        </div>
+    </td>
     <td><?= htmlspecialchars($req['access_for_name'] ?? '') ?></td>
     <td><?= htmlspecialchars($req['chosen_role'] ?? '(Not specified)') ?></td>
     <td>
@@ -319,6 +369,10 @@ try {
     <p id="modalServedByRow" style="display:none;">
         <strong>Served by:</strong><br><span id="modalServedBy"></span>
         <span id="modalServedAt" class="text-muted small ms-1"></span>
+    </p>
+    <p id="modalDeniedByRow" style="display:none;">
+    <strong>Denied by:</strong><br><span id="modalDeniedBy"></span>
+    <span id="modalDeniedAt" class="text-muted small ms-1"></span>
     </p>
     <p><strong>Access Type:</strong></p>
     <div id="modalAccess" class="small" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:8px; background:#f8f9fa;"></div>
@@ -384,9 +438,19 @@ document.addEventListener('DOMContentLoaded', function () {
     modal       = new bootstrap.Modal(document.getElementById('requestModal'));
     reviseModal = new bootstrap.Modal(document.getElementById('reviseModal'));
     let chatInterval = null;
+    const openedRequests = new Set();
 
     document.querySelectorAll('.request-row').forEach(row => {
+        
+
         row.addEventListener('click', function () {
+
+        // Clear chat dot when request is opened
+        const dot = this.querySelector('.chat-dot');
+        if (dot) dot.style.visibility = 'hidden';
+        openedRequests.add(this.dataset.id);
+
+
             document.getElementById('modalSubmitter').textContent   = this.dataset.submitter  || '—';
             document.getElementById('modalAccessFor').textContent   = this.dataset.accessFor  || '—';
             document.getElementById('modalSystem').textContent      = this.dataset.system;
@@ -411,6 +475,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 servedByRow.style.display = '';
             } else {
                 servedByRow.style.display = 'none';
+            }
+            
+            const deniedByRow = document.getElementById('modalDeniedByRow');
+            if (this.dataset.deniedBy) {
+                document.getElementById('modalDeniedBy').textContent = this.dataset.deniedBy;
+                document.getElementById('modalDeniedAt').textContent = this.dataset.deniedAt ? '(' + formatDateTime(this.dataset.deniedAt) + ')' : '';
+                deniedByRow.style.display = '';
+            } else {
+                deniedByRow.style.display = 'none';
             }
 
             renderAccessStructure(this.dataset.access, this.dataset.chosenRole);
@@ -608,6 +681,34 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(() => alert('Network error'));
         });
         reviseForm.hasListener = true;
+    }
+
+    // Poll for chat activity dots
+    const allRows = document.querySelectorAll('.request-row');
+    const rowIds = Array.from(allRows).map(r => r.dataset.id).filter(Boolean);
+
+    if (rowIds.length > 0) {
+        function pollChatActivity() {
+            fetch('/zen/reqHub/chat_activity_fetch?ids=' + rowIds.join(','))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) return;
+                    allRows.forEach(row => {
+                        const dot = row.querySelector('.chat-dot');
+                        if (!dot) return;
+                        if (openedRequests.has(row.dataset.id)) return;
+                        if (data.active.includes(parseInt(row.dataset.id))) {
+                            dot.style.visibility = 'visible';
+                        } else {
+                            dot.style.visibility = 'hidden';
+                        }
+                    });
+                })
+                .catch(() => {});
+        }
+
+        pollChatActivity();
+        setInterval(pollChatActivity, 15000);
     }
 });
 </script>

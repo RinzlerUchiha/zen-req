@@ -37,7 +37,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT user_id, system_id
         FROM requests
-        WHERE id = :id AND status IN ('pending', 'needs_revision')
+        WHERE id = :id AND status IN ('pending', 'reviewed', 'needs_revision')
     ");
     $stmt->execute([':id' => $request_id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);

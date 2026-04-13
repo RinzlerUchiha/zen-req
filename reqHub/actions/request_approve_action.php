@@ -39,7 +39,7 @@ try {
         SELECT user_id, system_id, department_id
         FROM requests
         WHERE id = :id
-        AND status IN ('pending', 'needs_revision')
+        AND status IN ('pending', 'reviewed', 'needs_revision')
     ");
     $stmt->execute([':id' => $request_id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -61,7 +61,7 @@ try {
             approved_at = NOW(),
             updated_at = NOW()
         WHERE id = :id
-          AND status IN ('pending', 'needs_revision')
+          AND status IN ('pending', 'reviewed', 'needs_revision')
           AND system_id = :system_id
           AND department_id = :department_id
     ");
