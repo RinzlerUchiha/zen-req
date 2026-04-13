@@ -227,7 +227,7 @@ try {
                         <select name="request_for" id="requestForSelect" class="form-select" required>
                             <option value="">Select User</option>
                             <?php foreach ($users as $u): ?>
-                                <option value="<?= $u['id'] ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>"
+                                <option value="<?= htmlspecialchars($u['name']) ?>" data-employee-id="<?= htmlspecialchars($u['employee_id']) ?>"
                                         <?= $request['request_for'] == $u['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($u['name']) ?>
                                 </option>
@@ -252,7 +252,7 @@ try {
                     <select name="remove_from" id="removeFromSelect" class="form-select">
                         <option value="">-- Leave blank if new request --</option>
                         <?php foreach ($users as $u): ?>
-                            <option value="<?= $u['id'] ?>" <?= $request['remove_from'] == $u['id'] ? 'selected' : '' ?>>
+                            <option value="<?= htmlspecialchars($u['name']) ?>" <?= $request['remove_from'] == $u['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($u['name']) ?>
                             </option>
                         <?php endforeach; ?>

@@ -124,7 +124,7 @@ foreach ($accessTypes as $type) {
                 <select name="remove_from" id="removeFromSelect" class="form-select">
                     <option value="">-- Leave blank if new request --</option>
                     <?php foreach ($users as $u): ?>
-                        <option value="<?= $u['id'] ?>">
+                        <option value="<?= htmlspecialchars($u['name']) ?>">
                             <?= htmlspecialchars($u['name']) ?>
                         </option>
                     <?php endforeach; ?>

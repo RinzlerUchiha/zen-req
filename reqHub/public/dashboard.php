@@ -55,8 +55,16 @@ SELECT
         rf_hu.Emp_No
     ) AS access_for_name,
 
-    -- remove_from is free text
-    r.remove_from,
+    -- remove_from: stored as name (new records) or numeric U_ID (legacy records)
+    CASE
+        WHEN r.remove_from REGEXP '^[0-9]+$' THEN
+            COALESCE(
+                CONCAT(NULLIF(rm_bi.bi_empfname, ''), ' ', NULLIF(rm_bi.bi_emplname, '')),
+                rm_hu.U_Name,
+                r.remove_from
+            )
+        ELSE r.remove_from
+    END AS remove_from_display,
 
     -- Approver name
     COALESCE(
@@ -99,6 +107,12 @@ LEFT JOIN tngc_hrd2.tbl201_basicinfo appr_bi ON appr_hu.Emp_No = appr_bi.bi_empn
 LEFT JOIN users srv_u ON srv_u.id = r.served_by
 LEFT JOIN tngc_hrd2.tbl_user2 srv_hu ON srv_hu.Emp_No = srv_u.employee_id
 LEFT JOIN tngc_hrd2.tbl201_basicinfo srv_bi ON srv_hu.Emp_No = srv_bi.bi_empno AND srv_bi.datastat = 'current'
+
+-- Remove from: legacy rows store a numeric U_ID; new rows store the display name directly
+LEFT JOIN tngc_hrd2.tbl_user2 rm_hu ON rm_hu.U_ID = (
+    CASE WHEN r.remove_from REGEXP '^[0-9]+$' THEN CAST(r.remove_from AS UNSIGNED) ELSE NULL END
+)
+LEFT JOIN tngc_hrd2.tbl201_basicinfo rm_bi ON rm_hu.Emp_No = rm_bi.bi_empno AND rm_bi.datastat = 'current'
 
 LEFT JOIN request_access_types ra ON r.id = ra.request_id
 LEFT JOIN access_types at ON ra.access_type_id = at.id
@@ -265,7 +279,7 @@ error_log("=== DASHBOARD.PHP DATA LOADED ===");
     data-system="<?= htmlspecialchars($req['system_name'] ?? '') ?>"
     data-access="<?= htmlspecialchars($req['access_type'] ?? '') ?>"
     data-chosen-role="<?= htmlspecialchars($req['chosen_role'] ?? '') ?>"
-    data-remove="<?= htmlspecialchars($req['remove_from'] ?? '') ?>"
+    data-remove="<?= htmlspecialchars($req['remove_from_display'] ?? '') ?>"
     data-description="<?= htmlspecialchars($req['description'] ?? '') ?>"
     data-status="<?= $req['status'] ?>"
     data-admin-status="<?= htmlspecialchars($req['admin_status'] ?? '') ?>"
@@ -693,21 +707,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         reviseForm.hasListener = true;
     }
-
-// Auto-open modal if redirected from notification
-const urlParams = new URLSearchParams(window.location.search);
-const openRequestId = urlParams.get('open_request');
-if (openRequestId) {
-    const targetRow = document.querySelector(`.request-row[data-id="${openRequestId}"]`);
-    if (targetRow) {
-        targetRow.click();
-        // Clean up URL without reloading
-        const cleanUrl = window.location.pathname + '?status=<?= $status ?>' +
-            (urlParams.get('pending_tab') ? '&pending_tab=' + urlParams.get('pending_tab') : '');
-        history.replaceState(null, '', cleanUrl);
-    }
-}
-
 
 });
 </script>
