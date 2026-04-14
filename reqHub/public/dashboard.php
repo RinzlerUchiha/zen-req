@@ -203,6 +203,12 @@ try {
     if (!empty($requests)) {
         $reqIds = array_column($requests, 'id');
         $ph = implode(',', array_fill(0, count($reqIds), '?'));
+        // Get current user's actual DB id for view tracking
+        $viewUserStmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+        $viewUserStmt->execute([$userId]);
+        $viewUserRow = $viewUserStmt->fetch(PDO::FETCH_ASSOC);
+        $currentDbUserId = $viewUserRow ? (int)$viewUserRow['id'] : 0;
+
         $chatStmt = $pdo->prepare("
             SELECT rc.request_id
             FROM request_chats rc
@@ -210,9 +216,18 @@ try {
             WHERE rc.request_id IN ($ph)
             AND rc.sender_id != 1
             AND ru.employee_id != ?
+            AND rc.created_at > COALESCE(
+                (
+                    SELECT last_viewed_at
+                    FROM request_chat_views
+                    WHERE request_id = rc.request_id
+                    AND user_id = ?
+                ),
+                '1970-01-01'
+            )
             GROUP BY rc.request_id
         ");
-        $chatParams = array_merge($reqIds, [$userId]);
+        $chatParams = array_merge($reqIds, [$userId, $currentDbUserId]);
         $chatStmt->execute($chatParams);
         $activeIds = array_flip($chatStmt->fetchAll(PDO::FETCH_COLUMN));
 
@@ -436,8 +451,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function openRequestRow(row) {
         // Clear chat dot when request is opened
         const dot = row.querySelector('.chat-dot');
-        if (dot) dot.style.visibility = 'hidden';
+        if (dot) dot.style.display = 'none';
         openedRequests.add(row.dataset.id);
+
+        if (row.dataset.status !== 'denied' && row.dataset.adminStatus !== 'served') {
+            fetch('/zen/reqHub/chat_view', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'request_id=' + encodeURIComponent(row.dataset.id)
+            }).catch(() => {});
+        }
 
         document.getElementById('modalSubmitter').textContent   = row.dataset.submitter  || '—';
         document.getElementById('modalAccessFor').textContent   = row.dataset.accessFor  || '—';

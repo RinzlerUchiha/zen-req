@@ -57,12 +57,15 @@ try {
             denied_at = NOW(),
             updated_at = NOW()
         WHERE id = :id
+        
     ");
     $stmt->execute([
         ':id'        => $request_id,
         ':denied_by' => $denier_id
     ]);
-
+    
+    $pdo->prepare("DELETE FROM request_chat_views WHERE request_id = ?")->execute([$request_id]);
+    $pdo->prepare("DELETE FROM notifications WHERE request_id = ?")->execute([$request_id]);
     error_log("Request $request_id denied by " . $currentUser['emp_no']);
 
     // Resolve names for notification

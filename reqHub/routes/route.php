@@ -55,6 +55,7 @@ $routes = [
     '/company_fetch' => '/actions/company_user_fetch.php',
     '/requestor_fetch' => '/actions/requestor_user_fetch.php',
     '/chat_activity_fetch' => '/includes/chat_activity_fetch.php',
+    '/chat_view' => '/includes/chat_view_record.php',
 ];
 
 // ============================================================================

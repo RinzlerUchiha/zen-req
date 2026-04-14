@@ -63,6 +63,8 @@ try {
         ':served_by' => $admin_id
     ]);
 
+    $pdo->prepare("DELETE FROM request_chat_views WHERE request_id = ?")->execute([$request_id]);
+    $pdo->prepare("DELETE FROM notifications WHERE request_id = ?")->execute([$request_id]);
     error_log("Request $request_id marked as served by " . $currentUser['emp_no']);
 
     // Resolve names for notification

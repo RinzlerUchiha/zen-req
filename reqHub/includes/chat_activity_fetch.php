@@ -27,6 +27,12 @@ try {
     $currentUser = getCurrentUser();
     $currentEmpNo = $currentUser['emp_no'];
 
+    // Get current user's actual DB id
+    $userIdStmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
+    $userIdStmt->execute([$currentEmpNo]);
+    $currentUserRow = $userIdStmt->fetch(PDO::FETCH_ASSOC);
+    $currentDbUserId = $currentUserRow ? (int)$currentUserRow['id'] : 0;
+
     $stmt = $pdo->prepare("
         SELECT rc.request_id
         FROM request_chats rc
@@ -34,9 +40,19 @@ try {
         WHERE rc.request_id IN ($placeholders)
         AND rc.sender_id != 1
         AND ru.employee_id != ?
+        AND rc.created_at > COALESCE(
+            (
+                SELECT last_viewed_at
+                FROM request_chat_views
+                WHERE request_id = rc.request_id
+                AND user_id = ?
+            ),
+            '1970-01-01'
+        )
         GROUP BY rc.request_id
     ");
     $idArray[] = $currentEmpNo;
+    $idArray[] = $currentDbUserId;
     $stmt->execute($idArray);
     $active = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
