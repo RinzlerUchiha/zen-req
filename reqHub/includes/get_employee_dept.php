@@ -55,12 +55,14 @@ try {
     $response = [
         'employee_id' => $emp_no,
         'department' => null,
+        'dept_code' => null,       // ← add this
         'requires_store' => false
     ];
-    
+
     if ($jobRecord) {
         $department = $jobRecord['jrec_department'];
         $response['department'] = $department;
+        $response['dept_code'] = $department;   // ← add this
         
         error_log("get_employee_dept: Found department: $department");
         

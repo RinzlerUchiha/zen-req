@@ -52,7 +52,7 @@ try {
         FROM tngc_hrd2.tbl_user2 hu
         LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
         LEFT JOIN tngc_hrd2.tbl201_jobrec jr ON hu.Emp_No = jr.jrec_empno AND jr.jrec_status = 'primary'
-        WHERE hu.U_stat = 1
+        WHERE hu.U_remarks = 'Active'
         GROUP BY hu.U_ID, hu.Emp_No, hu.U_Name, bi.bi_empfname, bi.bi_emplname
         ORDER BY COALESCE(CONCAT(NULLIF(bi.bi_empfname,''),' ',NULLIF(bi.bi_emplname,'')), hu.U_Name, hu.Emp_No) ASC
     ")->fetchAll();
@@ -81,6 +81,17 @@ try {
         cursor: not-allowed;
     }
     .choices.is-disabled { opacity: 1 !important; }
+    .choices__input {
+        color: #212529 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        line-height: normal !important;
+        vertical-align: middle !important;
+    }
+    .choices__inner {
+        display: flex !important;
+        align-items: center !important;
+    }
 </style>
 
 <div class="container-fluid mt-4 px-3 px-lg-5">
@@ -340,7 +351,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // Actions — INLINE (flex-wrap row instead of 2-col grid)
             const actionsGrid = document.createElement("div");
-            actionsGrid.style.cssText = "display:flex; flex-wrap:wrap; gap:6px; flex:1; align-content:flex-start;";
+            // actionsGrid
+            actionsGrid.style.cssText = "display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; align-content:flex-start;";
 
             const actionCheckboxes = [];
 
@@ -349,7 +361,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const actionDiv = document.createElement("div");
                 // Inline capsule style
-                actionDiv.style.cssText = "display:inline-flex; align-items:center; gap:4px; background:#f0f0f0; border-radius:20px; padding:3px 10px; cursor:pointer;";
+                // actionDiv
+                actionDiv.style.cssText = "display:flex; align-items:center; gap:4px; background:#f0f0f0; border-radius:20px; padding:3px 10px; cursor:pointer;";
 
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
@@ -387,7 +400,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const label = document.createElement("label");
                 label.htmlFor = `access_${matchedType.id}`;
-                label.style.cssText = "margin-bottom:0; cursor:pointer; font-size:0.78rem; user-select:none; white-space:nowrap; color:#333; line-height:1.3;";
+                // label
+                label.style.cssText = "margin-bottom:0; cursor:pointer; font-size:0.78rem; user-select:none; white-space:normal; color:#333; line-height:1.3; word-break:break-word;";
                 label.textContent = matchedType.actions;
 
                 // Clicking the capsule div also toggles
