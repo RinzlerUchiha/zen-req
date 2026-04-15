@@ -100,18 +100,30 @@ foreach ($moduleActions as $moduleId => $actionsList) {
     foreach ($actionsList as $a) $moduleAssignments[$moduleId][] = $a['action_id'];
 }
 
-// Role permissions
+// Role permissions — system-scoped
+// Structure: $roleAssignments[role_id][system_id] = [permissions]
 $roleAssignments = [];
 foreach ($roles as $role) {
     $stmt = $pdo->prepare("
-        SELECT rp.module_id, rp.action_id, m.name AS module_name, a.name AS action_name
+        SELECT rp.module_id, rp.action_id, rp.system_id,
+               m.name AS module_name, a.name AS action_name
         FROM role_permissions rp
         LEFT JOIN modules m ON rp.module_id = m.id
         LEFT JOIN actions a ON rp.action_id = a.id
         WHERE rp.role_id = ?
+        ORDER BY rp.system_id, m.name, a.name
     ");
     $stmt->execute([$role['id']]);
-    $roleAssignments[$role['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Group by system_id (NULL = legacy/global)
+    $grouped = [];
+    foreach ($rows as $row) {
+        $sysKey = $row['system_id'] ?? 'null';
+        if (!isset($grouped[$sysKey])) $grouped[$sysKey] = [];
+        $grouped[$sysKey][] = $row;
+    }
+    $roleAssignments[$role['id']] = $grouped;
 }
 
 // System roles
@@ -243,21 +255,32 @@ try {
                     <div class="role-permissions mt-2" style="display:none;">
                         <?php
                         $ra = $roleAssignments[$role['id']] ?? [];
-                        if(!empty($ra)):
-                            $currentModule = '';
-                            foreach ($ra as $item):
-                                if ($item['module_name'] !== $currentModule):
-                                    if ($currentModule !== '') echo '</div>';
-                                    $currentModule = $item['module_name'];
-                                    echo '<span class="d-block mt-2 ps-3" style="font-weight:normal;">'.htmlspecialchars($currentModule).'</span>';
-                                    echo '<div class="d-flex flex-wrap gap-2 ps-3">';
-                                endif;
-                                if ($item['action_name']):
-                                    echo '<span class="badge bg-light text-dark" style="font-weight:normal;">• '.htmlspecialchars($item['action_name']).'</span>';
-                                endif;
+                        if (!empty($ra)):
+                            foreach ($ra as $sysKey => $perms):
+                                $sysLabel = 'Global';
+                                if ($sysKey !== 'null') {
+                                    foreach ($systems as $s) {
+                                        if ($s['id'] == $sysKey) { $sysLabel = $s['name']; break; }
+                                    }
+                                }
+                                echo '<div class="mb-2"><span class="badge bg-secondary mb-1">' . htmlspecialchars($sysLabel) . '</span>';
+                                $currentModule = '';
+                                foreach ($perms as $item):
+                                    if ($item['module_name'] !== $currentModule):
+                                        if ($currentModule !== '') echo '</div>';
+                                        $currentModule = $item['module_name'];
+                                        echo '<span class="d-block ps-3" style="font-weight:normal;">' . htmlspecialchars($currentModule) . '</span>';
+                                        echo '<div class="d-flex flex-wrap gap-2 ps-3">';
+                                    endif;
+                                    if ($item['action_name']):
+                                        echo '<span class="badge bg-light text-dark" style="font-weight:normal;">• ' . htmlspecialchars($item['action_name']) . '</span>';
+                                    endif;
+                                endforeach;
+                                if ($currentModule !== '') echo '</div>';
+                                echo '</div>';
                             endforeach;
-                            if ($currentModule !== '') echo '</div>';
-                        else echo '<span class="text-muted">No permissions assigned</span>';
+                        else:
+                            echo '<span class="text-muted">No permissions assigned</span>';
                         endif;
                         ?>
                     </div>
@@ -683,17 +706,54 @@ $(function(){
             });
             html += '</div></div>';
         });
+
+        // System dropdown prepended
+        const systemSelectorHtml = `
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <label class="form-label mb-0 fw-semibold text-nowrap">System:</label>
+                <select id="roleModalSystemSelect" class="form-select form-select-sm w-auto">
+                    <option value="">-- Select system --</option>
+                    ${$('.system-item').map(function(){
+                        const sysId = $(this).data('system-id');
+                        const sysName = $(this).find('.editable-label').text().trim();
+                        return `<option value="${sysId}">${htmlEscape(sysName)}</option>`;
+                    }).get().join('')}
+                </select>
+            </div>`;
+        html = systemSelectorHtml + html;
+
         $('#permissionsContainer').html(html);
 
-        if (roleAssignments[roleId]) {
-            roleAssignments[roleId].forEach(p => {
-                $(`.role-permission-checkbox[data-module="${p.module_id}"][value="${p.action_id}"]`).prop('checked', true);
+        // System change handler — loads existing permissions for that system
+        $(document).off('change', '#roleModalSystemSelect').on('change', '#roleModalSystemSelect', function() {
+            const selectedSystemId = $(this).val();
+
+            // Clear all checkboxes first
+            $('.role-permission-checkbox').prop('checked', false);
+            $('.module-master-checkbox').prop('checked', false);
+
+            if (!selectedSystemId || !roleId || !roleAssignments[roleId]) return;
+
+            const permissions = roleAssignments[roleId][selectedSystemId] || [];
+
+            permissions.forEach(p => {
+                $(`.role-permission-checkbox[data-module="${p.module_id}"][value="${p.action_id}"]`)
+                    .prop('checked', true);
             });
+
             $('.module-master-checkbox').each(function(){
                 const mid = $(this).data('module');
-                $(this).prop('checked', $(`.role-permission-checkbox[data-module="${mid}"]:checked`).length > 0);
+                $(this).prop('checked',
+                    $(`.role-permission-checkbox[data-module="${mid}"]:checked`).length > 0
+                );
             });
-        }
+
+            updateModalSummary();
+        });
+
+        $('#permissionsContainer')
+            .off('change','.role-permission-checkbox')
+            .on('change','.role-permission-checkbox', updateModalSummary);
 
         setTimeout(() => {
             $(document).off('keyup','#searchRoleModulesEdit').on('keyup','#searchRoleModulesEdit', function(){
@@ -885,38 +945,102 @@ $(function(){
             if (action !== 'editRole') $('#modalInput').focus();
 
             let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Select Modules</strong><input type="text" class="form-control" id="searchRoleModules" placeholder="Search..." style="max-width:250px;"></div>';
+
             $('.module-item').each(function(){
                 const mid   = $(this).find('.editable-label').data('id');
                 const mname = $(this).find('.editable-label').text().trim();
-                html += `<div class="role-modal-module-card"><div class="role-modal-module-header"><label><input type="checkbox" class="module-master-checkbox" data-module="${mid}"><strong>${htmlEscape(mname)}</strong></label></div><div class="d-flex flex-wrap gap-2 ps-3">`;
+
+                html += `
+                    <div class="role-modal-module-card">
+                        <div class="role-modal-module-header">
+                            <label>
+                                <input type="checkbox" class="module-master-checkbox" data-module="${mid}">
+                                <strong>${htmlEscape(mname)}</strong>
+                            </label>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 ps-3">
+                `;
+
                 (moduleAssignments[mid] || []).forEach(aid => {
                     const actionItem = $(`.action-item`).find(`[data-id="${aid}"]`).closest('.action-item');
                     if (actionItem.length) {
                         const aname = actionItem.find('.editable-label').text().trim();
-                        html += `<label class="badge bg-light text-dark"><input type="checkbox" class="role-permission-checkbox" data-module="${mid}" value="${aid}"><span>${htmlEscape(aname)}</span></label>`;
+                        html += `
+                            <label class="badge bg-light text-dark">
+                                <input type="checkbox" class="role-permission-checkbox" data-module="${mid}" value="${aid}">
+                                <span>${htmlEscape(aname)}</span>
+                            </label>
+                        `;
                     }
                 });
-                html += '</div></div>';
+
+                html += `</div></div>`;
             });
+
+            // System dropdown
+            const systemSelectorHtml = `
+                <div class="mb-3 d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 fw-semibold text-nowrap">System:</label>
+                    <select id="roleModalSystemSelect" class="form-select form-select-sm w-auto">
+                        <option value="">-- Select system --</option>
+                        ${$('.system-item').map(function(){
+                            const sysId = $(this).data('system-id');
+                            const sysName = $(this).find('.editable-label').text().trim();
+                            return `<option value="${sysId}">${htmlEscape(sysName)}</option>`;
+                        }).get().join('')}
+                    </select>
+                </div>
+            `;
+
+            // Prepend dropdown
+            html = systemSelectorHtml + html;
+
             $('#permissionsContainer').html(html);
 
             const roleId = $(this).data('role-id');
-            if (roleId && roleAssignments[roleId]) {
-                roleAssignments[roleId].forEach(p => {
-                    $(`.role-permission-checkbox[data-module="${p.module_id}"][value="${p.action_id}"]`).prop('checked', true);
+
+            // System change handler
+            $(document).off('change', '#roleModalSystemSelect').on('change', '#roleModalSystemSelect', function() {
+                const selectedSystemId = $(this).val();
+
+                // Clear all checkboxes
+                $('.role-permission-checkbox').prop('checked', false);
+                $('.module-master-checkbox').prop('checked', false);
+
+                if (!selectedSystemId || !roleId || !roleAssignments[roleId]) return;
+
+                const permissions = roleAssignments[roleId][selectedSystemId] || [];
+
+                permissions.forEach(p => {
+                    $(`.role-permission-checkbox[data-module="${p.module_id}"][value="${p.action_id}"]`)
+                        .prop('checked', true);
                 });
+
                 $('.module-master-checkbox').each(function(){
                     const mid = $(this).data('module');
-                    $(this).prop('checked', $(`.role-permission-checkbox[data-module="${mid}"]:checked`).length > 0);
+                    $(this).prop('checked',
+                        $(`.role-permission-checkbox[data-module="${mid}"]:checked`).length > 0
+                    );
                 });
-            }
 
-            $('#permissionsContainer').off('change','.role-permission-checkbox').on('change','.role-permission-checkbox', updateModalSummary);
+                updateModalSummary();
+            });
+
+            $('#permissionsContainer')
+                .off('change','.role-permission-checkbox')
+                .on('change','.role-permission-checkbox', updateModalSummary);
+
             setTimeout(() => {
                 $(document).off('keyup','#searchRoleModules').on('keyup','#searchRoleModules', function(){
                     const q = $(this).val().toLowerCase();
-                    $('.role-modal-module-card').each(function(){ $(this).toggle($(this).find('strong').text().toLowerCase().includes(q)); });
+                    $('.role-modal-module-card').each(function(){
+                        $(this).toggle($(this).find('strong').text().toLowerCase().includes(q));
+                    });
                 });
+
+                // Auto-trigger change to load first system's permissions if editing
+                if (roleId) $('#roleModalSystemSelect').trigger('change');
+
                 updateModalSummary();
             }, 100);
         }
@@ -1191,6 +1315,8 @@ $(function(){
 
         if (action.includes('Role')) {
             data.role_id = $('#modalRole').val();
+            // ✅ FIX 1: Send the selected system_id with the save request
+            data.system_id = $('#roleModalSystemSelect').val() || null;
             data.permissions = [];
             $('.role-permission-checkbox:checked').each(function(){
                 const moduleId   = $(this).data('module');
@@ -1262,7 +1388,16 @@ $(function(){
 
             if (action === 'addRole') {
                 const dn = res.name || data.name;
-                roleAssignments[res.id] = (data.permissions || []).map(p => ({ module_id: parseInt(p.module_id), action_id: parseInt(p.action_id), module_name: p.module_name || '', action_name: p.action_name || '' }));
+                // ✅ FIX 2: Store new role under the correct nested system key
+                const sysKey = data.system_id || 'null';
+                roleAssignments[res.id] = {};
+                roleAssignments[res.id][sysKey] = (data.permissions || []).map(p => ({
+                    module_id: parseInt(p.module_id),
+                    action_id: parseInt(p.action_id),
+                    module_name: p.module_name || '',
+                    action_name: p.action_name || '',
+                    system_id: data.system_id || null
+                }));
                 let permHtml = '';
                 if (data.permissions && data.permissions.length > 0) {
                     const byMod = {};
@@ -1275,13 +1410,47 @@ $(function(){
             if (action === 'editRole') {
                 const card = $(`.role-item .editable-label[data-id="${res.id}"]`).closest('.role-item');
                 card.find('.editable-label').text(res.name || data.name);
-                roleAssignments[res.id] = (data.permissions || []).map(p => ({ module_id: parseInt(p.module_id), action_id: parseInt(p.action_id), module_name: p.module_name || '', action_name: p.action_name || '' }));
+                // ✅ FIX 3: Update the nested roleAssignments cache under the correct system key
+                if (!roleAssignments[res.id]) roleAssignments[res.id] = {};
+                const sysKey = data.system_id || 'null';
+                roleAssignments[res.id][sysKey] = (data.permissions || []).map(p => ({
+                    module_id: parseInt(p.module_id),
+                    action_id: parseInt(p.action_id),
+                    module_name: p.module_name || '',
+                    action_name: p.action_name || '',
+                    system_id: data.system_id || null
+                }));
+                // Rebuild the role-permissions display from all system keys
                 let permHtml = '';
-                if (data.permissions && data.permissions.length > 0) {
-                    const byMod = {};
-                    data.permissions.forEach(p => { if (!byMod[p.module_id]) byMod[p.module_id] = { name: p.module_name || '', actions: [] }; byMod[p.module_id].actions.push(p.action_name || ''); });
-                    Object.keys(byMod).forEach(mid => { permHtml += `<span class="d-block mt-2 ps-3" style="font-weight:normal;">${htmlEscape(byMod[mid].name)}</span><div class="d-flex flex-wrap gap-2 ps-3">${byMod[mid].actions.map(a => `<span class="badge bg-light text-dark" style="font-weight:normal;">• ${htmlEscape(a)}</span>`).join('')}</div>`; });
-                } else { permHtml = '<span class="text-muted">No permissions assigned</span>'; }
+                const allSysKeys = Object.keys(roleAssignments[res.id]);
+                if (allSysKeys.length > 0) {
+                    allSysKeys.forEach(sk => {
+                        const sysPerms = roleAssignments[res.id][sk];
+                        if (!sysPerms || sysPerms.length === 0) return;
+                        // Find system label
+                        let sysLabel = 'Global';
+                        if (sk !== 'null') {
+                            $('.system-item').each(function(){
+                                if ($(this).data('system-id') == sk) {
+                                    sysLabel = $(this).find('.editable-label').text().trim();
+                                    return false;
+                                }
+                            });
+                        }
+                        permHtml += `<div class="mb-2"><span class="badge bg-secondary mb-1">${htmlEscape(sysLabel)}</span>`;
+                        const byMod = {};
+                        sysPerms.forEach(p => {
+                            if (!byMod[p.module_id]) byMod[p.module_id] = { name: p.module_name || '', actions: [] };
+                            byMod[p.module_id].actions.push(p.action_name || '');
+                        });
+                        Object.keys(byMod).forEach(mid => {
+                            permHtml += `<span class="d-block ps-3" style="font-weight:normal;">${htmlEscape(byMod[mid].name)}</span>`;
+                            permHtml += `<div class="d-flex flex-wrap gap-2 ps-3">${byMod[mid].actions.map(a => `<span class="badge bg-light text-dark" style="font-weight:normal;">• ${htmlEscape(a)}</span>`).join('')}</div>`;
+                        });
+                        permHtml += '</div>';
+                    });
+                }
+                if (!permHtml) permHtml = '<span class="text-muted">No permissions assigned</span>';
                 card.find('.role-permissions').html(permHtml);
             }
 

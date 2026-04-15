@@ -64,12 +64,12 @@ try {
                 $stmt = $pdo->prepare("
                     SELECT r.name as role_name, m.name as module_name, a.name as action_name
                     FROM roles r
-                    LEFT JOIN role_permissions rp ON rp.role_id = r.id
+                    LEFT JOIN role_permissions rp ON rp.role_id = r.id AND rp.system_id = ?
                     LEFT JOIN modules m ON rp.module_id = m.id
                     LEFT JOIN actions a ON rp.action_id = a.id
                     WHERE r.id = ?
                 ");
-                $stmt->execute([$roleId]);
+                $stmt->execute([$systemID, $roleId]);
                 $perms = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($perms as $p) {
@@ -136,12 +136,12 @@ try {
                 $stmt = $pdo->prepare("
                     SELECT r.name as role_name, m.name as module_name, a.name as action_name
                     FROM roles r
-                    LEFT JOIN role_permissions rp ON rp.role_id = r.id
+                    LEFT JOIN role_permissions rp ON rp.role_id = r.id AND rp.system_id = ?
                     LEFT JOIN modules m ON rp.module_id = m.id
                     LEFT JOIN actions a ON rp.action_id = a.id
                     WHERE r.id = ?
                 ");
-                $stmt->execute([$roleId]);
+                $stmt->execute([$systemId, $roleId]);
                 $perms = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($perms as $p) {
@@ -199,7 +199,7 @@ try {
                     FROM role_permissions rp
                     LEFT JOIN modules m ON rp.module_id = m.id
                     LEFT JOIN actions a ON rp.action_id = a.id
-                    WHERE rp.role_id = ?
+                    WHERE rp.role_id = ? AND rp.system_id = ?
                     ORDER BY m.name, a.name
                 ");
                 $stmt->execute([$role['role_id']]);
@@ -280,12 +280,12 @@ try {
                 $stmt = $pdo->prepare("
                     SELECT r.name as role_name, m.name as module_name, a.name as action_name
                     FROM roles r
-                    LEFT JOIN role_permissions rp ON rp.role_id = r.id
+                    LEFT JOIN role_permissions rp ON rp.role_id = r.id AND rp.system_id = ?
                     LEFT JOIN modules m ON rp.module_id = m.id
                     LEFT JOIN actions a ON rp.action_id = a.id
                     WHERE r.id = ?
                 ");
-                $stmt->execute([$roleId]);
+                $stmt->execute([$sourceSystemId, $roleId]);
                 $perms = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($perms as $p) {

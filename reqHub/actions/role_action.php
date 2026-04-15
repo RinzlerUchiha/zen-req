@@ -61,8 +61,9 @@ try {
         }
 
         // Delete existing role_permissions
-        $stmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ?");
-        $stmt->execute([$role_id]);
+        $system_id = !empty($_POST['system_id']) ? intval($_POST['system_id']) : null;
+        $stmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ? AND system_id = ?");
+        $stmt->execute([$role_id, $system_id]);
 
         // Update in roles table
         $stmt = $pdo->prepare("UPDATE roles SET name = ? WHERE id = ?");

@@ -148,10 +148,11 @@ switch ($action) {
                 $perm_keys = $_POST['perm_keys'] ?? [];
                 $pdo->prepare("INSERT INTO roles (name) VALUES (?)")->execute([$name]);
                 $role_id = $pdo->lastInsertId();
-                $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id) VALUES (?, ?, ?)");
+                $system_id = !empty($_POST['system_id']) ? intval($_POST['system_id']) : null;
+                $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id, system_id) VALUES (?, ?, ?, ?)");
                 foreach ($perm_keys as $key) {
                     [$mod_id, $act_id] = explode('_', $key);
-                    $stmt->execute([$role_id, intval($mod_id), intval($act_id)]);
+                    $stmt->execute([$role_id, intval($mod_id), intval($act_id), $system_id]);
                 }
                 respond(true, '', ['id' => $role_id, 'name' => $name]);
 
@@ -208,11 +209,12 @@ switch ($action) {
             case 'role':
                 $perm_keys = $_POST['perm_keys'] ?? [];
                 $pdo->prepare("UPDATE roles SET name = ? WHERE id = ?")->execute([$name, $id]);
-                $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ?")->execute([$id]);
-                $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id) VALUES (?, ?, ?)");
+                $system_id = !empty($_POST['system_id']) ? intval($_POST['system_id']) : null;
+                $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ? AND system_id = ?")->execute([$id, $system_id]);
+                $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id, system_id) VALUES (?, ?, ?, ?)");
                 foreach ($perm_keys as $key) {
                     [$mod_id, $act_id] = explode('_', $key);
-                    $stmt->execute([$id, intval($mod_id), intval($act_id)]);
+                    $stmt->execute([$id, intval($mod_id), intval($act_id), $system_id]);
                 }
                 respond(true);
 
