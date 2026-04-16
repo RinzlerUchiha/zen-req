@@ -324,13 +324,19 @@ try {
                                         <span><?= htmlspecialchars($roleName) ?></span>
                                         <div class="system-role-modules mt-2 ps-3" style="display:none;">
                                             <?php
-                                            $modulesByName = [];
-                                            foreach ($perms as $p) {
-                                                if (!isset($modulesByName[$p['module_id']])) {
-                                                    $modulesByName[$p['module_id']] = ['name' => $p['module_name'], 'actions' => []];
+                                                $modulesByName = [];
+                                                $flatPerms = [];
+                                                foreach ($perms as $sysKey => $sysRows) {
+                                                    foreach ($sysRows as $p) {
+                                                        $flatPerms[] = $p;
+                                                    }
                                                 }
-                                                if ($p['action_name']) $modulesByName[$p['module_id']]['actions'][] = $p['action_name'];
-                                            }
+                                                foreach ($flatPerms as $p) {
+                                                    if (!isset($modulesByName[$p['module_id']])) {
+                                                        $modulesByName[$p['module_id']] = ['name' => $p['module_name'], 'actions' => []];
+                                                    }
+                                                    if ($p['action_name']) $modulesByName[$p['module_id']]['actions'][] = $p['action_name'];
+                                                }
                                             foreach ($modulesByName as $modId => $modData): ?>
                                             <div class="system-module-item mb-2">
                                                 <span><?= htmlspecialchars($modData['name']) ?></span>
@@ -1039,7 +1045,15 @@ $(function(){
                 });
 
                 // Auto-trigger change to load first system's permissions if editing
-                if (roleId) $('#roleModalSystemSelect').trigger('change');
+                // Auto-select the first system that has permissions for this role, then trigger load
+                if (roleId && roleAssignments[roleId]) {
+                    const availableKeys = Object.keys(roleAssignments[roleId]).filter(k => roleAssignments[roleId][k] && roleAssignments[roleId][k].length > 0);
+                    if (availableKeys.length > 0) {
+                        const firstKey = availableKeys[0];
+                        $('#roleModalSystemSelect').val(firstKey === 'null' ? '' : firstKey);
+                    }
+                }
+                $('#roleModalSystemSelect').trigger('change');
 
                 updateModalSummary();
             }, 100);
@@ -1400,9 +1414,21 @@ $(function(){
                 }));
                 let permHtml = '';
                 if (data.permissions && data.permissions.length > 0) {
+                    // Find system label
+                    let sysLabel = 'Global';
+                    if (data.system_id) {
+                        $('.system-item').each(function(){
+                            if ($(this).data('system-id') == data.system_id) {
+                                sysLabel = $(this).find('.editable-label').text().trim();
+                                return false;
+                            }
+                        });
+                    }
+                    permHtml += `<div class="mb-2"><span class="badge bg-secondary mb-1">${htmlEscape(sysLabel)}</span>`;
                     const byMod = {};
                     data.permissions.forEach(p => { if (!byMod[p.module_id]) byMod[p.module_id] = { name: p.module_name || '', actions: [] }; byMod[p.module_id].actions.push(p.action_name || ''); });
-                    Object.keys(byMod).forEach(mid => { permHtml += `<span class="d-block mt-2 ps-3" style="font-weight:normal;">${htmlEscape(byMod[mid].name)}</span><div class="d-flex flex-wrap gap-2 ps-3">${byMod[mid].actions.map(a => `<span class="badge bg-light text-dark" style="font-weight:normal;">• ${htmlEscape(a)}</span>`).join('')}</div>`; });
+                    Object.keys(byMod).forEach(mid => { permHtml += `<span class="d-block ps-3" style="font-weight:normal;">${htmlEscape(byMod[mid].name)}</span><div class="d-flex flex-wrap gap-2 ps-3">${byMod[mid].actions.map(a => `<span class="badge bg-light text-dark" style="font-weight:normal;">• ${htmlEscape(a)}</span>`).join('')}</div>`; });
+                    permHtml += '</div>';
                 } else { permHtml = '<span class="text-muted">No permissions assigned</span>'; }
                 const html = `<div class="role-item card p-3 mb-2"><div class="d-flex justify-content-between align-items-center mb-2"><div class="d-flex align-items-center"><button class="btn btn-sm btn-outline-secondary me-2 toggle-role">+</button><span class="editable-label" data-type="role" data-id="${res.id}">${htmlEscape(dn)}</span></div><div><button class="btn btn-sm btn-danger" data-action="deleteRole" data-role-id="${res.id}">×</button></div></div><div class="role-permissions mt-2" style="display:none;">${permHtml}</div></div>`;
                 $('.roles-grid').append(html);

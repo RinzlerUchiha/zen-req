@@ -40,9 +40,10 @@ try {
 
         // Insert into role_permissions
         if (!empty($permissions)) {
-            $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id) VALUES (?, ?, ?)");
+            $system_id = !empty($_POST['system_id']) ? intval($_POST['system_id']) : null;
+            $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id, system_id) VALUES (?, ?, ?, ?)");
             foreach ($permissions as $perm) {
-                $stmt->execute([$newRoleId, $perm['module_id'], $perm['action_id']]);
+                $stmt->execute([$newRoleId, $perm['module_id'], $perm['action_id'], $system_id]);
             }
         }
 
@@ -71,9 +72,9 @@ try {
 
         // Insert new role_permissions
         if (!empty($permissions)) {
-            $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id) VALUES (?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id, system_id) VALUES (?, ?, ?, ?)");
             foreach ($permissions as $perm) {
-                $stmt->execute([$role_id, $perm['module_id'], $perm['action_id']]);
+                $stmt->execute([$role_id, $perm['module_id'], $perm['action_id'], $system_id ?: null]);
             }
         }
 
