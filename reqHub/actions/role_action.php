@@ -24,7 +24,12 @@ try {
 $action = $_POST['action'] ?? '';
 $role_id = $_POST['role_id'] ?? null;
 $name = $_POST['name'] ?? '';
-$permissions = $_POST['permissions'] ?? [];
+
+// JS sends: system_permissions = [{ system_id, permissions: [{module_id, action_id}] }]
+$system_permissions_raw = $_POST['system_permissions'] ?? '[]';
+$system_permissions = is_array($system_permissions_raw)
+    ? $system_permissions_raw
+    : json_decode($system_permissions_raw, true) ?? [];
 
 try {
     if ($action === 'addRole') {
@@ -33,17 +38,17 @@ try {
             exit;
         }
 
-        // Insert into roles table
         $stmt = $pdo->prepare("INSERT INTO roles (name) VALUES (?)");
         $stmt->execute([$name]);
         $newRoleId = $pdo->lastInsertId();
 
-        // Insert into role_permissions
-        if (!empty($permissions)) {
-            $system_id = !empty($_POST['system_id']) ? intval($_POST['system_id']) : null;
+        if (!empty($system_permissions)) {
             $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id, system_id) VALUES (?, ?, ?, ?)");
-            foreach ($permissions as $perm) {
-                $stmt->execute([$newRoleId, $perm['module_id'], $perm['action_id'], $system_id]);
+            foreach ($system_permissions as $sp) {
+                $system_id = !empty($sp['system_id']) ? intval($sp['system_id']) : null;
+                foreach ($sp['permissions'] as $perm) {
+                    $stmt->execute([$newRoleId, $perm['module_id'], $perm['action_id'], $system_id]);
+                }
             }
         }
 
@@ -61,20 +66,29 @@ try {
             exit;
         }
 
-        // Delete existing role_permissions
-        $system_id = !empty($_POST['system_id']) ? intval($_POST['system_id']) : null;
-        $stmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ? AND system_id = ?");
-        $stmt->execute([$role_id, $system_id]);
-
-        // Update in roles table
         $stmt = $pdo->prepare("UPDATE roles SET name = ? WHERE id = ?");
         $stmt->execute([$name, $role_id]);
 
-        // Insert new role_permissions
-        if (!empty($permissions)) {
-            $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id, system_id) VALUES (?, ?, ?, ?)");
-            foreach ($permissions as $perm) {
-                $stmt->execute([$role_id, $perm['module_id'], $perm['action_id'], $system_id ?: null]);
+        if (!empty($system_permissions)) {
+            foreach ($system_permissions as $sp) {
+                $system_id = !empty($sp['system_id']) ? intval($sp['system_id']) : null;
+
+                // Delete only the permissions for this specific system
+                if ($system_id !== null) {
+                    $stmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ? AND system_id = ?");
+                    $stmt->execute([$role_id, $system_id]);
+                } else {
+                    $stmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ? AND system_id IS NULL");
+                    $stmt->execute([$role_id]);
+                }
+
+                // Re-insert for this system
+                if (!empty($sp['permissions'])) {
+                    $stmt = $pdo->prepare("INSERT INTO role_permissions (role_id, module_id, action_id, system_id) VALUES (?, ?, ?, ?)");
+                    foreach ($sp['permissions'] as $perm) {
+                        $stmt->execute([$role_id, $perm['module_id'], $perm['action_id'], $system_id]);
+                    }
+                }
             }
         }
 
@@ -92,7 +106,6 @@ try {
             exit;
         }
 
-        // If only name provided, get ID
         if ($name && !$role_id) {
             $stmt = $pdo->prepare("SELECT id FROM roles WHERE name = ?");
             $stmt->execute([$name]);
@@ -100,14 +113,10 @@ try {
             $role_id = $result['id'] ?? null;
         }
 
-        // Delete from role_permissions
         if ($role_id) {
             $stmt = $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ?");
             $stmt->execute([$role_id]);
-        }
 
-        // Delete from roles
-        if ($role_id) {
             $stmt = $pdo->prepare("DELETE FROM roles WHERE id = ?");
             $stmt->execute([$role_id]);
         }
