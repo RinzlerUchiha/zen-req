@@ -21,18 +21,23 @@ try {
         $userRow = $stmtUid->fetch(PDO::FETCH_ASSOC);
 
         if ($userRow) {
-            $stmtSys = $pdo->prepare("
-                SELECT DISTINCT s.id, s.name
-                FROM user_approver_assignments uaa
-                JOIN systems s ON uaa.system_id = s.id
-                WHERE uaa.user_id = ?
-                ORDER BY s.name ASC
-            ");
-            $stmtSys->execute([$userRow['id']]);
-            $systems = $stmtSys->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            $systems = [];
+        $stmtSys = $pdo->prepare("
+            SELECT DISTINCT s.id, s.name
+            FROM user_approver_assignments uaa
+            JOIN systems s ON uaa.system_id = s.id
+            WHERE uaa.user_id = ?
+            ORDER BY s.name ASC
+        ");
+        $stmtSys->execute([$userRow['id']]);
+        $systems = $stmtSys->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fallback: if no valid system assignments found, show all systems
+        if (empty($systems)) {
+            $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
         }
+    } else {
+        $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+    }
     } else {
         // Approver sees all systems
         $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll();
