@@ -43,6 +43,23 @@ try {
         $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll();
     }
 
+    // Fetch full system names from HR database
+    $systemFullNames = [];
+    try {
+        $hrPdo = ReqHubDatabase::getConnection('hr');
+        $hrSystems = $hrPdo->query("SELECT system_id, sys_desc FROM tngc_hrd2.tbl_systems")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($hrSystems as $sys) {
+            $systemFullNames[strtolower(trim($sys['system_id']))] = trim($sys['sys_desc']);
+        }
+    } catch (Exception $e) {
+        error_log("Failed to load system full names: " . $e->getMessage());
+    }
+
+    foreach ($systems as &$system) {
+        $system['full_name'] = $systemFullNames[strtolower(trim($system['name']))] ?? $system['name'];
+    }
+    unset($system);
+
     $departments = $pdo->query("
         SELECT DISTINCT d.id, d.name, d.code
         FROM tngc_hrd2.tbl201_jobrec jr
@@ -118,7 +135,7 @@ try {
                 <select name="system_id" id="systemSelect" class="form-select" required>
                     <option value="">Select System</option>
                     <?php foreach ($systems as $system): ?>
-                    <option value="<?= $system['id'] ?>"><?= htmlspecialchars($system['name']) ?></option>
+                    <option value="<?= $system['id'] ?>" data-name="<?= htmlspecialchars($system['name']) ?>"><?= htmlspecialchars($system['full_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -266,7 +283,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let systemNameMap = {};
     document.querySelectorAll("#systemSelect option").forEach(opt => {
-        if (opt.value) systemNameMap[opt.value] = opt.textContent.trim();
+        if (opt.value) systemNameMap[opt.value] = opt.dataset.name || opt.textContent.trim();
     });
 
     let currentSearch        = "";
