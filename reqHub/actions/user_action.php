@@ -31,7 +31,7 @@ try {
 $action = $_POST['action'] ?? null;
 
 // Roles that can have system assignments
-$rolesWithSystemAssignment = ['Approver', 'Requestor'];
+$rolesWithSystemAssignment = ['Approver', 'Requestor', 'Reviewer'];
 
 try {
     if ($action === 'addUser') {

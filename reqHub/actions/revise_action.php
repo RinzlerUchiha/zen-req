@@ -20,10 +20,10 @@ if (!isAuthenticated()) {
 }
 
 $current_user = getCurrentUser();
-if ($current_user['reqhub_role'] !== 'Approver') {
-    error_log("revise_action: User role is " . $current_user['reqhub_role'] . ", not Approver");
+if (!in_array($current_user['reqhub_role'], ['Approver', 'Reviewer'])) {
+    error_log("revise_action: User role is " . $current_user['reqhub_role'] . ", not Approver or Reviewer");
     http_response_code(403);
-    die(json_encode(['success' => false, 'message' => 'Only approvers can revise requests']));
+    die(json_encode(['success' => false, 'message' => 'Only approvers and reviewers can revise requests']));
 }
 
 error_log("revise_action: Auth passed");

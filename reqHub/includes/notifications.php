@@ -67,7 +67,12 @@ function resolveEmployeeNameByUserId(PDO $pdo, int $userId): string
 function resolveSystemName(PDO $pdo, int $systemId): string
 {
     try {
-        $stmt = $pdo->prepare("SELECT name FROM systems WHERE id = ?");
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(NULLIF(ts.sys_desc, ''), s.name) AS display_name
+            FROM systems s
+            LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
+            WHERE s.id = ?
+        ");
         $stmt->execute([$systemId]);
         return $stmt->fetchColumn() ?: "Unknown System";
     } catch (Exception $e) {
@@ -198,6 +203,17 @@ function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): vo
 
         foreach ($approvers as $approverId) {
             if ((int)$approverId !== $senderUserId) $recipients[] = (int)$approverId;
+        }
+
+        // After the approvers block, add:
+        $stmt = $pdo->prepare("
+            SELECT id FROM users WHERE reqhub_role = 'Reviewer' AND is_active = 1
+        ");
+        $stmt->execute();
+        $reviewers = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($reviewers as $reviewerId) {
+            if ((int)$reviewerId !== $senderUserId) $recipients[] = (int)$reviewerId;
         }
 
         foreach (array_unique($recipients) as $recipientId) {

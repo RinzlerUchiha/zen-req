@@ -247,13 +247,14 @@ body,
         <div class="text-dark d-flex flex-column align-items-end" style="font-size: 18px; line-height: 1.2;">
             <span>Hello, <?= htmlspecialchars($user['name']) ?></span>
             <span class="text-muted" style="font-size: 1rem;"><?= htmlspecialchars($role) ?></span>
-            <?php if ($role === 'Approver' && $actualUserId): ?>
+            <?php if (in_array($role, ['Approver', 'Reviewer']) && $actualUserId): ?>
                 <?php
                 try {
                     $stmtSys = $pdo->prepare("
-                        SELECT s.name
+                        SELECT COALESCE(NULLIF(ts.sys_desc,''), s.name) AS name
                         FROM user_approver_assignments uaa
                         JOIN systems s ON uaa.system_id = s.id
+                        LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
                         WHERE uaa.user_id = ?
                     ");
                     $stmtSys->execute([$actualUserId]);

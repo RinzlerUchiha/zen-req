@@ -18,7 +18,7 @@ $pdo   = ReqHubDatabase::getConnection('reqhub');
 $hrPdo = ReqHubDatabase::getConnection('hr');
 
 // Roles that support system assignment
-$rolesWithSystemAssignment = ['Approver', 'Requestor'];
+$rolesWithSystemAssignment = ['Approver', 'Requestor', 'Reviewer'];
 
 // --- Fetch users (exclude SYSTEM) ---
 $users = $pdo->query("SELECT id, employee_id, reqhub_role FROM users WHERE employee_id != 'SYSTEM' ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
@@ -265,7 +265,7 @@ try {
                                     if ($sysKey !== 'null') {
                                         foreach ($systems as $s) {
                                             if ($s['id'] == $sysKey) {
-                                                $sysLabel = $s['name'];
+                                                $sysLabel = $s['full_name'] ?? $s['name'];
                                                 break;
                                             }
                                         }
@@ -377,6 +377,15 @@ try {
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="filterUsersBtn">Filter</button>
                         <div class="dropdown-menu p-3" style="min-width:220px;" id="filterUsersDropdown">
+                            <div class="mb-2 fw-semibold">Role</div>
+                            <div class="mb-3">
+                                <?php foreach (['No Access', 'Requestor', 'Reviewer', 'Approver', 'Admin'] as $roleOption): ?>
+                                    <div class="form-check">
+                                        <input class="form-check-input user-role-filter" type="checkbox" value="<?= strtolower($roleOption) ?>" id="roleFilter<?= md5($roleOption) ?>">
+                                        <label class="form-check-label" for="roleFilter<?= md5($roleOption) ?>"><?= $roleOption ?></label>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                             <div class="mb-2 fw-semibold">Department</div>
                             <div style="max-height:200px; overflow-y:auto;">
                                 <?php
@@ -405,7 +414,7 @@ try {
                     $userAssignments = $approverAssignments[$user['id']] ?? [];
                     $hasAssignments = in_array($user['reqhub_role'], $rolesWithSystemAssignment);
                 ?>
-                    <div class="user-item card p-3 mb-2" data-user-id="<?= $user['id'] ?>" data-hr-dept="<?= htmlspecialchars(strtolower($user['hr_department'])) ?>">
+                    <div class="user-item card p-3 mb-2" data-user-id="<?= $user['id'] ?>" data-hr-dept="<?= htmlspecialchars(strtolower($user['hr_department'])) ?>" data-role="<?= htmlspecialchars(strtolower($user['reqhub_role'])) ?>">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center">
@@ -432,7 +441,7 @@ try {
                                                 $sysName = '';
                                                 foreach ($systems as $s) {
                                                     if ($s['id'] == $sysId) {
-                                                        $sysName = $s['name'];
+                                                        $sysName = $s['full_name'] ?? $s['name'];
                                                         break;
                                                     }
                                                 }
@@ -729,7 +738,7 @@ try {
         let systemRoles = <?= json_encode($systemRoles) ?>;
 
         // Roles that show system assignment UI
-        const rolesWithSystemAssignment = ['Approver', 'Requestor'];
+        const rolesWithSystemAssignment = ['Approver', 'Requestor', 'Reviewer'];
 
         let duplicateSystemCounter = {};
 
@@ -1298,9 +1307,9 @@ try {
 
                 // Collect existing system assignments
                 const selectedSystems = [];
-                if (userId && approverAssignments[userId]) {
-                    approverAssignments[userId].forEach(a => {
-                        if (!selectedSystems.includes(a.system_id)) selectedSystems.push(a.system_id);
+                if (userId && approverAssignments[parseInt(userId)]) {
+                    approverAssignments[parseInt(userId)].forEach(a => {
+                        if (!selectedSystems.includes(parseInt(a.system_id))) selectedSystems.push(parseInt(a.system_id));
                     });
                 }
 
@@ -1435,6 +1444,9 @@ try {
             const checkedDepts = $('.user-dept-filter:checked').map(function() {
                 return $(this).val();
             }).get();
+            const checkedRoles = $('.user-role-filter:checked').map(function() {
+                return $(this).val();
+            }).get();
             $('.user-item').each(function() {
                 const nameText = $(this).find('strong').first().text().toLowerCase();
                 const matchSearch = nameText.includes(query);
@@ -1443,13 +1455,20 @@ try {
                     const userDept = ($(this).data('hr-dept') || '').toString().toLowerCase();
                     matchDept = checkedDepts.includes(userDept);
                 }
-                $(this).toggle(matchSearch && matchDept);
+                let matchRole = true;
+                if (checkedRoles.length > 0) {
+                    const userRole = ($(this).data('role') || '').toString().toLowerCase();
+                    matchRole = checkedRoles.includes(userRole);
+                }
+                $(this).toggle(matchSearch && matchDept && matchRole);
             });
         }
         $(document).on('keyup', '#searchUsers', applyUserFilters);
         $(document).on('change', '.user-dept-filter', applyUserFilters);
+        $(document).on('change', '.user-role-filter', applyUserFilters);
         $(document).on('click', '#clearDeptFilter', function() {
             $('.user-dept-filter').prop('checked', false);
+            $('.user-role-filter').prop('checked', false);
             applyUserFilters();
         });
         $(document).on('click', '#filterUsersBtn', function(e) {
@@ -2004,7 +2023,7 @@ try {
                         res.assignments.forEach(a => {
                             let sysName = '';
                             <?php foreach ($systems as $sys): ?>
-                                if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['name']) ?>';
+                                if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
                             <?php endforeach; ?>
                             approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${sysName}</small>`;
                         });
@@ -2049,7 +2068,7 @@ try {
                             res.assignments.forEach(a => {
                                 let sysName = '';
                                 <?php foreach ($systems as $sys): ?>
-                                    if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['name']) ?>';
+                                    if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
                                 <?php endforeach; ?>
                                 approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${sysName}</small>`;
                             });

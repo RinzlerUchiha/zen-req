@@ -28,7 +28,7 @@ $pending_tab = $_GET['pending_tab'] ?? 'all';
 $sql = "
 SELECT
     r.*,
-    s.name AS system_name,
+    COALESCE(NULLIF(ts.sys_desc, ''), s.name) AS system_name,
 
     COALESCE(
         CONCAT(NULLIF(sub_bi.bi_empfname,''),' ',NULLIF(sub_bi.bi_emplname,'')),
@@ -80,6 +80,7 @@ SELECT
 
 FROM requests r
 LEFT JOIN systems s ON r.system_id = s.id
+LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
 
 LEFT JOIN users sub_u ON sub_u.id = r.user_id
 LEFT JOIN tngc_hrd2.tbl_user2 sub_hu ON sub_hu.Emp_No = sub_u.employee_id
@@ -602,12 +603,18 @@ document.addEventListener('DOMContentLoaded', function () {
             chatInput.placeholder = 'Type message...';
         }
 
-        if (role === 'Reviewer' && data.status === 'pending') {
+        if (role === 'Reviewer' && (data.status === 'pending' || data.status === 'needs_revision')) {
             container.innerHTML = `
                 <form id="reviewActionForm" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-success btn-sm">✓ Sign & Send to Approver</button>
-                </form>`;
+                </form>
+                <form method="post" action="/zen/reqHub/deny" class="d-inline ms-2">
+                    <input type="hidden" name="id" value="${data.id}">
+                    <button type="submit" class="btn btn-danger btn-sm">Deny</button>
+                </form>
+                ${data.status === 'pending' ? `
+                <button class="btn btn-warning btn-sm ms-2" onclick="openReviseModal('${data.id}')">Revise</button>` : ''}`;
 
             document.getElementById('reviewActionForm').addEventListener('submit', function(e) {
                 e.preventDefault();

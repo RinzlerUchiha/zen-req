@@ -2,9 +2,9 @@
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 
-if (!userHasRoleIn('Requestor', 'Approver')) {
+if (!userHasRoleIn('Requestor', 'Approver', 'Reviewer')) {
     http_response_code(403);
-    die('Access denied: Only Requestors and Approvers can create requests');
+    die('Access denied: Only Requestors, Approvers, and Reviewers can create requests');
 }
 
 $pdo         = ReqHubDatabase::getConnection('reqhub');
@@ -14,7 +14,7 @@ $userRole    = $currentUser['reqhub_role'];
 
 try {
     // ── Systems: Requestors see only their assigned systems; Approvers see all ──
-    if ($userRole === 'Requestor') {
+    if ($userRole === 'Requestor' || $userRole === 'Reviewer') {
         // Get the users.id
         $stmtUid = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
         $stmtUid->execute([$emp_no]);
@@ -22,9 +22,10 @@ try {
 
         if ($userRow) {
         $stmtSys = $pdo->prepare("
-            SELECT DISTINCT s.id, s.name
+            SELECT DISTINCT s.id, s.name, COALESCE(NULLIF(ts.sys_desc,''), s.name) AS full_name
             FROM user_approver_assignments uaa
             JOIN systems s ON uaa.system_id = s.id
+            LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
             WHERE uaa.user_id = ?
             ORDER BY s.name ASC
         ");
@@ -40,25 +41,13 @@ try {
     }
     } else {
         // Approver sees all systems
-        $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll();
-    }
-
-    // Fetch full system names from HR database
-    $systemFullNames = [];
-    try {
-        $hrPdo = ReqHubDatabase::getConnection('hr');
-        $hrSystems = $hrPdo->query("SELECT system_id, sys_desc FROM tngc_hrd2.tbl_systems")->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($hrSystems as $sys) {
-            $systemFullNames[strtolower(trim($sys['system_id']))] = trim($sys['sys_desc']);
+        $systems = $pdo->query("
+        SELECT s.id, s.name, COALESCE(NULLIF(ts.sys_desc,''), s.name) AS full_name
+        FROM systems s
+        LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
+        ORDER BY s.name
+    ")->fetchAll(PDO::FETCH_ASSOC);
         }
-    } catch (Exception $e) {
-        error_log("Failed to load system full names: " . $e->getMessage());
-    }
-
-    foreach ($systems as &$system) {
-        $system['full_name'] = $systemFullNames[strtolower(trim($system['name']))] ?? $system['name'];
-    }
-    unset($system);
 
     $departments = $pdo->query("
         SELECT DISTINCT d.id, d.name, d.code
@@ -80,6 +69,26 @@ try {
     ")->fetchAll();
 
     $accessTypes = $pdo->query("SELECT id, system, role, module, actions FROM access_types ORDER BY role, module, actions")->fetchAll(PDO::FETCH_ASSOC);
+
+    $allUsers = $pdo->query("
+        SELECT 
+            hu.U_ID as id,
+            hu.Emp_No as employee_id,
+            COALESCE(
+                CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+                hu.U_Name,
+                hu.Emp_No
+            ) as name
+        FROM tngc_hrd2.tbl_user2 hu
+        LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
+        LEFT JOIN tngc_hrd2.tbl201_jobrec jr ON hu.Emp_No = jr.jrec_empno AND jr.jrec_status = 'primary'
+        GROUP BY hu.U_ID, hu.Emp_No, hu.U_Name, bi.bi_empfname, bi.bi_emplname
+        ORDER BY COALESCE(
+            CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+            hu.U_Name,
+            hu.Emp_No
+        ) ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
     error_log("Loaded " . count($systems) . " systems (role=$userRole), " . count($departments) . " departments, " . count($users) . " users, " . count($accessTypes) . " access types");
 } catch (PDOException $e) {
@@ -135,7 +144,7 @@ try {
                 <select name="system_id" id="systemSelect" class="form-select" required>
                     <option value="">Select System</option>
                     <?php foreach ($systems as $system): ?>
-                    <option value="<?= $system['id'] ?>" data-name="<?= htmlspecialchars($system['name']) ?>"><?= htmlspecialchars($system['full_name']) ?></option>
+                    <option value="<?= $system['id'] ?>" data-acronym="<?= htmlspecialchars($system['name']) ?>"><?= htmlspecialchars($system['full_name']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -167,7 +176,7 @@ try {
             <label class="form-label">Remove From <span class="text-muted" style="font-weight:normal;">(leave blank if new request)</span></label>
             <select name="remove_from" id="removeFromSelect" class="form-select">
                 <option value="">-- Leave blank if new request --</option>
-                <?php foreach ($users as $u): ?>
+                <?php foreach ($allUsers as $u): ?>
                 <option value="<?= htmlspecialchars($u['name']) ?>">
                     <?= htmlspecialchars($u['name']) ?>
                 </option>
@@ -231,7 +240,7 @@ document.addEventListener("DOMContentLoaded", function() {
         'id'          => $u['id'],
         'name'        => $u['name'],
         'employee_id' => $u['employee_id'],
-    ], $users)) ?>;
+    ], $allUsers)) ?>;
 
     // ── Form submit ──
     const requestForm = document.getElementById('requestForm');
@@ -282,8 +291,12 @@ document.addEventListener("DOMContentLoaded", function() {
     const allAccessTypesList = <?= json_encode($accessTypes) ?>;
 
     let systemNameMap = {};
+    let systemAcronymMap = {};
     document.querySelectorAll("#systemSelect option").forEach(opt => {
-        if (opt.value) systemNameMap[opt.value] = opt.dataset.name || opt.textContent.trim();
+        if (opt.value) {
+            systemNameMap[opt.value] = opt.textContent.trim();
+            systemAcronymMap[opt.value] = opt.dataset.acronym || opt.textContent.trim();
+        }
     });
 
     let currentSearch        = "";
@@ -312,7 +325,7 @@ document.addEventListener("DOMContentLoaded", function() {
         modulesDisplay.innerHTML = "";
 
         const selectedSystemId   = systemSelect.value;
-        const selectedSystemName = selectedSystemId ? systemNameMap[selectedSystemId] : null;
+        const selectedSystemName = selectedSystemId ? systemAcronymMap[selectedSystemId] : null;
         let toDisplay = selectedSystemName
             ? allAccessTypesList.filter(type => type.system === selectedSystemName)
             : [];
@@ -361,6 +374,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const moduleTitle = document.createElement("label");
             moduleTitle.style.cssText = "font-weight:bold; font-size:0.9rem; color:#000; word-break:break-word; flex:1; cursor:pointer; margin-bottom:0;";
             moduleTitle.textContent = moduleName;
+            moduleTitle.addEventListener("click", function() { moduleCheckbox.click(); });
 
             const badge = document.createElement("span");
             badge.style.cssText = "background-color:#555; color:#fff; padding:3px 6px; border-radius:3px; font-size:0.7rem; font-weight:bold; white-space:nowrap; flex-shrink:0;";
@@ -409,7 +423,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         autoSelectedItems.delete(this.value);
                     } else {
                         const role       = roleSelect.value;
-                        const systemName = systemNameMap[systemSelect.value];
+                        const systemName = systemAcronymMap[systemSelect.value];
                         const type       = allAccessTypesList.find(t => t.id.toString() === this.value);
                         if (type && type.role === role && type.system === systemName) autoSelectedItems.add(this.value);
                     }
@@ -428,7 +442,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 // Clicking the capsule div also toggles
                 actionDiv.addEventListener("click", function(e) {
-                    if (e.target !== checkbox) checkbox.click();
+                    if (e.target !== checkbox && e.target !== label) checkbox.click();
                 });
 
                 actionDiv.appendChild(checkbox);
@@ -439,7 +453,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // Module checkbox handler
             moduleCheckbox.addEventListener("change", function() {
                 const role       = roleSelect.value;
-                const systemName = systemNameMap[systemSelect.value];
+                const systemName = systemAcronymMap[systemSelect.value];
                 actionCheckboxes.forEach(cb => {
                     cb.checked = this.checked;
                     if (!this.checked) autoSelectedItems.delete(cb.value);
@@ -519,7 +533,7 @@ document.addEventListener("DOMContentLoaded", function() {
             updateSummary();
             return;
         }
-        selectAllModulesForRole(role, systemNameMap[systemSelect.value]);
+        selectAllModulesForRole(role, systemAcronymMap[systemSelect.value]);
     });
 
     function selectAllModulesForRole(role, systemName) {

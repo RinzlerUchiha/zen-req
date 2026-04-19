@@ -69,7 +69,13 @@ try {
 
 // Fetch dropdown data
 try {
-    $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll();
+    $systems = $pdo->query("
+        SELECT s.id, s.name,
+               COALESCE(NULLIF(ts.sys_desc, ''), s.name) AS full_name
+        FROM systems s
+        LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
+        ORDER BY s.name
+    ")->fetchAll();
     
     $departments = $pdo->query("
         SELECT DISTINCT 
@@ -96,7 +102,7 @@ try {
         FROM tngc_hrd2.tbl_user2 hu
         LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
         LEFT JOIN tngc_hrd2.tbl201_jobrec jr ON hu.Emp_No = jr.jrec_empno AND jr.jrec_status = 'primary'
-        WHERE hu.U_stat = 1
+        WHERE hu.U_remarks = 'Active'
         GROUP BY hu.U_ID, hu.Emp_No, hu.U_Name, bi.bi_empfname, bi.bi_emplname
         ORDER BY COALESCE(
             CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
@@ -106,7 +112,27 @@ try {
     ")->fetchAll();
     
     $accessTypes = $pdo->query("SELECT id, system, role, module, actions FROM access_types ORDER BY role, module, actions")->fetchAll(PDO::FETCH_ASSOC);
-    
+
+    $allUsers = $pdo->query("
+        SELECT 
+            hu.U_ID as id,
+            hu.Emp_No as employee_id,
+            COALESCE(
+                CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+                hu.U_Name,
+                hu.Emp_No
+            ) as name
+        FROM tngc_hrd2.tbl_user2 hu
+        LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
+        LEFT JOIN tngc_hrd2.tbl201_jobrec jr ON hu.Emp_No = jr.jrec_empno AND jr.jrec_status = 'primary'
+        GROUP BY hu.U_ID, hu.Emp_No, hu.U_Name, bi.bi_empfname, bi.bi_emplname
+        ORDER BY COALESCE(
+            CONCAT(NULLIF(bi.bi_empfname, ''), ' ', NULLIF(bi.bi_emplname, '')),
+            hu.U_Name,
+            hu.Emp_No
+        ) ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
     error_log("Loaded " . count($systems) . " systems, " . count($departments) . " departments, " . count($users) . " users, " . count($accessTypes) . " access types");
 } catch (PDOException $e) {
     error_log("Error fetching dropdown data: " . $e->getMessage());
@@ -192,6 +218,17 @@ try {
     .choices.is-disabled {
         opacity: 1 !important;
     }
+    .choices__input {
+        color: #212529 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        line-height: normal !important;
+        vertical-align: middle !important;
+    }
+    .choices__inner {
+        display: flex !important;
+        align-items: center !important;
+    }
 </style>
 
 <div class="container-fluid mt-4 px-3 px-lg-5">
@@ -216,8 +253,8 @@ try {
                         <select name="system_id" id="systemSelect" class="form-select" required>
                             <option value="">Select System</option>
                             <?php foreach ($systems as $system): ?>
-                                <option value="<?= $system['id'] ?>" <?= $request['system_id'] == $system['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($system['name']) ?>
+                                <option value="<?= $system['id'] ?>" data-name="<?= htmlspecialchars($system['name']) ?>" <?= $request['system_id'] == $system['id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($system['full_name'] ?? $system['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -251,7 +288,7 @@ try {
                     <label class="form-label">Remove From <span class="text-muted" style="font-weight:normal;">(leave blank if new request)</span></label>
                     <select name="remove_from" id="removeFromSelect" class="form-select">
                         <option value="">-- Leave blank if new request --</option>
-                        <?php foreach ($users as $u): ?>
+                        <?php foreach ($allUsers as $u): ?>
                             <option value="<?= $u['id'] ?>" <?= $request['remove_from'] == $u['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($u['name']) ?>
                             </option>
@@ -330,6 +367,13 @@ try {
 <script>
 document.addEventListener("DOMContentLoaded", function() {
 
+    // ADD after: document.addEventListener("DOMContentLoaded", function() {
+    const allUsersData = <?= json_encode(array_map(fn($u) => [
+        'id'          => $u['id'],
+        'name'        => $u['name'],
+        'employee_id' => $u['employee_id'],
+    ], $allUsers)) ?>;
+
     const requestForm = document.getElementById('requestForm');
     requestForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -399,7 +443,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let systemNameMap = {};
     document.querySelectorAll("#systemSelect option").forEach(opt => {
-        if (opt.value) systemNameMap[opt.value] = opt.textContent.trim();
+        if (opt.value) systemNameMap[opt.value] = opt.dataset.name || opt.textContent.trim();
     });
 
     let currentSearch = "";
@@ -414,6 +458,20 @@ document.addEventListener("DOMContentLoaded", function() {
             cb.checked = false;
             cb.indeterminate = false;
         });
+    }
+
+    // ADD before renderModules():
+    function rebuildRemoveFrom(filteredUsers) {
+        const sel = document.getElementById('removeFromSelect');
+        const currentVal = sel.value;
+        while (sel.options.length > 1) sel.remove(1);
+        filteredUsers.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.name;
+            opt.textContent = u.name;
+            sel.appendChild(opt);
+        });
+        sel.value = currentVal || '';
     }
 
     function renderModules(prioritizeAutoSelected = false) {
@@ -461,13 +519,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const moduleCard = document.createElement("div");
             moduleCard.className = "module-card";
-            moduleCard.style.border = "1px solid #555";
-            moduleCard.style.borderRadius = "4px";
-            moduleCard.style.padding = "10px";
-            moduleCard.style.backgroundColor = "#fffcfc";
-            moduleCard.style.minHeight = "250px";
-            moduleCard.style.display = "flex";
-            moduleCard.style.flexDirection = "column";
+            moduleCard.style.cssText = "border:1px solid #555; border-radius:4px; padding:10px; background-color:#fffcfc; display:flex; flex-direction:column; min-height:250px;";
 
             const headerDiv = document.createElement("div");
             headerDiv.style.display = "flex";
@@ -514,10 +566,7 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCard.appendChild(headerDiv);
 
             const actionsGrid = document.createElement("div");
-            actionsGrid.style.display = "grid";
-            actionsGrid.style.gridTemplateColumns = "1fr 1fr";
-            actionsGrid.style.gap = "8px";
-            actionsGrid.style.flex = "1";
+            actionsGrid.style.cssText = "display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; align-content:flex-start; flex:1;";
 
             const actionCheckboxes = [];
 
@@ -528,9 +577,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     types[0];
 
                 const actionDiv = document.createElement("div");
-                actionDiv.style.display = "flex";
-                actionDiv.style.alignItems = "flex-start";
-                actionDiv.style.gap = "6px";
+                actionDiv.style.cssText = "display:flex; align-items:center; gap:4px; background:#f0f0f0; border-radius:20px; padding:3px 10px; cursor:pointer;";
 
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
@@ -576,14 +623,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const label = document.createElement("label");
                 label.htmlFor = `access_${matchedType.id}`;
-                label.style.marginBottom = "0";
-                label.style.cursor = "pointer";
-                label.style.fontSize = "0.8rem";
-                label.style.userSelect = "none";
-                label.style.wordBreak = "break-word";
-                label.style.lineHeight = "1.4";
-                label.style.color = "#333";
+                label.style.cssText = "margin-bottom:0; cursor:pointer; font-size:0.78rem; user-select:none; white-space:normal; color:#333; line-height:1.3; word-break:break-word;";
                 label.textContent = matchedType.actions;
+
+                actionDiv.addEventListener("click", function(e) {
+                    if (e.target !== checkbox) checkbox.click();
+                });
 
                 actionDiv.appendChild(checkbox);
                 actionDiv.appendChild(label);
@@ -854,12 +899,13 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     requestForSelect.addEventListener('change', async function() {
-        const employeeId = this.options[this.selectedIndex].getAttribute('data-employee-id');
+        const employeeId = this.options[this.selectedIndex]?.getAttribute('data-employee-id');
         if (!employeeId) {
             departmentSelect.value = '';
             departmentSelect.disabled = false;
             if (departmentChoices) departmentChoices.enable();
             storeContainer.style.display = 'none';
+            rebuildRemoveFrom(allUsersData);
             return;
         }
 
@@ -878,6 +924,26 @@ document.addEventListener("DOMContentLoaded", function() {
                         break;
                     }
                 }
+
+                const deptCode = departmentSelect.options[departmentSelect.selectedIndex]?.getAttribute('data-code') || data.dept_code || '';
+                if (deptCode) {
+                    try {
+                        const companyRes = await fetch('/zen/reqHub/company_fetch?dept_code=' + encodeURIComponent(deptCode));
+                        if (companyRes.ok) {
+                            const companyData = await companyRes.json();
+                            if (companyData.success && companyData.users) {
+                                rebuildRemoveFrom(companyData.users);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Company fetch error:', err);
+                        rebuildRemoveFrom(allUsersData);
+                    }
+                } else {
+                    rebuildRemoveFrom(allUsersData);
+                }
+            } else {
+                rebuildRemoveFrom(allUsersData);
             }
 
             storeContainer.style.display = data.requires_store ? 'block' : 'none';

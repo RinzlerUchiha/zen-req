@@ -8,9 +8,9 @@ if (!isAuthenticated()) {
     die('Not authenticated');
 }
 
-if (!userHasRoleIn('Requestor', 'Approver')) {
+if (!userHasRoleIn('Requestor', 'Approver', 'Reviewer')) {
     http_response_code(403);
-    die('Access denied: Only requestors and approvers can create requests');
+    die('Access denied: Only requestors, approvers, and reviewers can create requests');
 }
 
 $currentUser = getCurrentUser();
@@ -76,7 +76,7 @@ $requestorName = resolveEmployeeName($pdo, $currentUser['emp_no']);
 $systemName    = resolveSystemName($pdo, (int)$system_id);
 
 try {
-    $status       = ($userRole === 'Approver') ? 'approved' : 'pending';
+    $status       = ($userRole === 'Approver') ? 'approved' : (($userRole === 'Reviewer') ? 'reviewed' : 'pending');
     $admin_status = 'pending';
     $approved_by  = ($userRole === 'Approver') ? $user_id : null;
     $approved_at  = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
@@ -118,6 +118,11 @@ try {
     if ($status === 'pending') {
         // Notify Reviewers with requestor name + system
         notifyReviewers($pdo, $request_id, $requestorName, $systemName);
+    }
+
+    if ($status === 'reviewed') {
+        // Reviewer-created request goes straight to reviewed, notify Approvers
+        notifyApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName);
     }
 
     if ($status === 'approved') {

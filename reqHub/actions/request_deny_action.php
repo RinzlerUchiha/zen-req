@@ -8,7 +8,7 @@ if (!isAuthenticated()) {
     die('Not authenticated');
 }
 
-if (!userHasRoleIn('Approver', 'Admin')) {
+if (!userHasRoleIn('Approver', 'Admin', 'Reviewer')) {
     http_response_code(403);
     die('Access denied');
 }

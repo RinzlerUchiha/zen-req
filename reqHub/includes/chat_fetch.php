@@ -60,7 +60,7 @@ try {
         FROM request_chats c
         LEFT JOIN users u ON c.sender_id = u.id
         LEFT JOIN tngc_hrd2.tbl_user2 hu ON u.employee_id = hu.Emp_No
-        LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno
+        LEFT JOIN tngc_hrd2.tbl201_basicinfo bi ON hu.Emp_No = bi.bi_empno AND bi.datastat = 'current'
         WHERE c.request_id = :rid
         ORDER BY c.created_at ASC
     ");
