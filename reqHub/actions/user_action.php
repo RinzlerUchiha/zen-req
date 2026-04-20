@@ -39,14 +39,14 @@ $rolesWithDepartmentAssignment = ['Reviewer'];
 /**
  * Look up department name from HR DB given a Dept_Code.
  */
-function getDeptName($hrPdo, $deptCode) {
+function getDeptName($pdo, $deptId) {
     try {
-        $stmt = $hrPdo->prepare("SELECT Dept_Name FROM tbl_department WHERE Dept_Code = ? LIMIT 1");
-        $stmt->execute([$deptCode]);
+        $stmt = $pdo->prepare("SELECT name FROM departments WHERE id = ? LIMIT 1");
+        $stmt->execute([$deptId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ? trim($row['Dept_Name']) : $deptCode;
+        return $row ? trim($row['name']) : $deptId;
     } catch (Exception $e) {
-        return $deptCode;
+        return $deptId;
     }
 }
 
@@ -88,10 +88,10 @@ try {
         }
 
         $stmt = $pdo->prepare("
-            INSERT INTO users (employee_id, reqhub_role, system_id, department_id, is_active)
-            VALUES (?, ?, ?, NULL, 1)
+            INSERT INTO users (employee_id, reqhub_role, is_active)
+            VALUES (?, ?, 1)
         ");
-        $stmt->execute([$employeeId, $reqhubRole, $systemId]);
+        $stmt->execute([$employeeId, $reqhubRole]);
         $userId = $pdo->lastInsertId();
 
         $assignments = [];
@@ -111,6 +111,19 @@ try {
                 }
             }
         } elseif (in_array($userType, $rolesWithDepartmentAssignment)) {
+            // System assignments for Reviewer
+            $systemIds = $_POST['system_ids'] ?? [];
+            if (!empty($systemIds)) {
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+                    VALUES (?, ?, NULL)
+                    ON DUPLICATE KEY UPDATE id = id
+                ");
+                foreach ($systemIds as $sysId) {
+                    $insertStmt->execute([$userId, $sysId]);
+                    $assignments[] = ['system_id' => (int)$sysId, 'department_id' => null];
+                }
+            }
             // Department assignments for Reviewer
             $deptCodes = $_POST['department_codes'] ?? [];
             if (!empty($deptCodes)) {
@@ -120,11 +133,18 @@ try {
                     ON DUPLICATE KEY UPDATE id = id
                 ");
                 foreach ($deptCodes as $deptCode) {
-                    $insertStmt->execute([$userId, $deptCode]);
+                    // Resolve dept code to numeric id in reqhub departments table
+                    $deptLookup = $pdo->prepare("SELECT id FROM departments WHERE code = ? LIMIT 1");
+                    $deptLookup->execute([$deptCode]);
+                    $deptRow = $deptLookup->fetch(PDO::FETCH_ASSOC);
+                    if (!$deptRow) continue; // skip if not found
+                    $deptId = $deptRow['id'];
+
+                    $insertStmt->execute([$userId, $deptId]);
                     $assignments[] = [
                         'system_id'     => null,
-                        'department_id' => $deptCode,
-                        'dept_name'     => getDeptName($hrPdo, $deptCode),
+                        'department_id' => $deptId,
+                        'dept_name'     => getDeptName($pdo, $deptId),
                     ];
                 }
             }
@@ -187,10 +207,10 @@ try {
 
         $stmt = $pdo->prepare("
             UPDATE users
-            SET employee_id = ?, reqhub_role = ?, system_id = ?, department_id = NULL
+            SET employee_id = ?, reqhub_role = ?
             WHERE id = ?
         ");
-        $stmt->execute([$employeeId, $reqhubRole, $systemId, $userId]);
+        $stmt->execute([$employeeId, $reqhubRole, $userId]);
 
         // Clear all existing assignments first
         $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
@@ -212,6 +232,18 @@ try {
                 }
             }
         } elseif (in_array($userType, $rolesWithDepartmentAssignment)) {
+            // System assignments for Reviewer
+            $systemIds = $_POST['system_ids'] ?? [];
+            if (!empty($systemIds)) {
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+                    VALUES (?, ?, NULL)
+                ");
+                foreach ($systemIds as $sysId) {
+                    $insertStmt->execute([$userId, $sysId]);
+                    $assignments[] = ['system_id' => (int)$sysId, 'department_id' => null];
+                }
+            }
             // Department assignments for Reviewer
             $deptCodes = $_POST['department_codes'] ?? [];
             if (!empty($deptCodes)) {
@@ -220,11 +252,18 @@ try {
                     VALUES (?, NULL, ?)
                 ");
                 foreach ($deptCodes as $deptCode) {
-                    $insertStmt->execute([$userId, $deptCode]);
+                    // Resolve dept code to numeric id in reqhub departments table
+                    $deptLookup = $pdo->prepare("SELECT id FROM departments WHERE code = ? LIMIT 1");
+                    $deptLookup->execute([$deptCode]);
+                    $deptRow = $deptLookup->fetch(PDO::FETCH_ASSOC);
+                    if (!$deptRow) continue; // skip if not found
+                    $deptId = $deptRow['id'];
+
+                    $insertStmt->execute([$userId, $deptId]);
                     $assignments[] = [
                         'system_id'     => null,
-                        'department_id' => $deptCode,
-                        'dept_name'     => getDeptName($hrPdo, $deptCode),
+                        'department_id' => $deptId,
+                        'dept_name'     => getDeptName($pdo, $deptId),
                     ];
                 }
             }

@@ -255,16 +255,25 @@ body,
                         FROM user_approver_assignments uaa
                         JOIN systems s ON uaa.system_id = s.id
                         LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
-                        WHERE uaa.user_id = ?
+                        WHERE uaa.user_id = ? AND uaa.system_id IS NOT NULL
                     ");
                     $stmtSys->execute([$actualUserId]);
                     $assignedSystems = $stmtSys->fetchAll(PDO::FETCH_COLUMN);
+
+                    $stmtDept = $pdo->prepare("
+                        SELECT d.name
+                        FROM user_approver_assignments uaa
+                        JOIN departments d ON uaa.department_id = d.id
+                        WHERE uaa.user_id = ? AND uaa.department_id IS NOT NULL
+                    ");
+                    $stmtDept->execute([$actualUserId]);
+                    $assignedDepartments = $stmtDept->fetchAll(PDO::FETCH_COLUMN);
                 } catch (Exception $e) {
                     $assignedSystems = [];
                 }
                 ?>
 
-                <?php if (!empty($assignedSystems)): ?>
+                <?php if (!empty($assignedSystems) || !empty($assignedDepartments)): ?>
                     <div class="mt-1 position-relative d-inline-block">
 
                         <button
@@ -272,7 +281,7 @@ body,
                             class="btn btn-sm btn-outline-secondary py-0 px-2"
                             type="button"
                             style="font-size: 0.75rem;">
-                            View Assigned Systems
+                            View Assignments
                         </button>
 
                         <div
@@ -280,10 +289,10 @@ body,
                             class="position-absolute bg-white shadow rounded border mt-2"
                             style="display: none; min-width: 220px; z-index: 1050; right: 0;">
 
+                            <?php if (!empty($assignedSystems)): ?>
                             <div class="p-2 border-bottom fw-semibold">
                                 Assigned Systems
                             </div>
-
                             <div class="p-2">
                                 <?php foreach ($assignedSystems as $sys): ?>
                                     <div class="py-1 border-bottom small">
@@ -291,6 +300,20 @@ body,
                                     </div>
                                 <?php endforeach; ?>
                             </div>
+                            <?php endif; ?>
+
+                            <?php if (!empty($assignedDepartments)): ?>
+                            <div class="p-2 border-bottom fw-semibold">
+                                Assigned Departments
+                            </div>
+                            <div class="p-2">
+                                <?php foreach ($assignedDepartments as $dept): ?>
+                                    <div class="py-1 border-bottom small">
+                                        <?= htmlspecialchars($dept) ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
 
                         </div>
 

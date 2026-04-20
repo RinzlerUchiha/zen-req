@@ -289,7 +289,7 @@ try {
                     <select name="remove_from" id="removeFromSelect" class="form-select">
                         <option value="">-- Leave blank if new request --</option>
                         <?php foreach ($allUsers as $u): ?>
-                            <option value="<?= $u['id'] ?>" <?= $request['remove_from'] == $u['id'] ? 'selected' : '' ?>>
+                            <option value="<?= htmlspecialchars($u['name']) ?>" <?= $request['remove_from'] == $u['name'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($u['name']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -306,7 +306,7 @@ try {
 
             <!-- RIGHT: approver's comments -->
             <div class="col-md-3">
-                <label class="form-label fw-bold" style="color: #842029;">Approver's Comments</label>
+                <label class="form-label fw-bold" style="color: #842029;">Reviewer/Approver's Comments</label>
                 <div class="border rounded p-3" style="
                     background-color: #fff8f8;
                     border-color: #f5c6cb !important;
@@ -424,7 +424,11 @@ document.addEventListener("DOMContentLoaded", function() {
     new Choices('#systemSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const requestForChoices = new Choices('#requestForSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const departmentChoices = new Choices('#departmentSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
-    new Choices('#removeFromSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
+    const removeFromChoices = new Choices('#removeFromSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
+    const savedRemoveFrom = <?= json_encode($request['remove_from'] ?? '') ?>;
+    if (savedRemoveFrom) {
+        removeFromChoices.setChoiceByValue(savedRemoveFrom.toString());
+    }
 
     const systemSelect = document.getElementById("systemSelect");
     const roleSelect = document.getElementById("roleSelect");

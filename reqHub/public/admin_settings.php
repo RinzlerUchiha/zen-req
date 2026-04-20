@@ -466,11 +466,26 @@ try {
                                             $shownIds = [];
                                             foreach ($userAssignments as $assignment) {
                                                 if ($isReviewer) {
-                                                    $deptCode = $assignment['department_id'] ?? null;
-                                                    if (!$deptCode || in_array($deptCode, $shownIds)) continue;
-                                                    $shownIds[] = $deptCode;
-                                                    $deptLabel = $deptDescriptions[strtoupper(trim($deptCode))] ?? $deptCode;
-                                                    echo '<small class="d-block mb-1"><strong>Department:</strong> ' . htmlspecialchars($deptLabel) . '</small>';
+                                                    if ($assignment['system_id']) {
+                                                        $sysId = $assignment['system_id'];
+                                                        if (in_array('sys_' . $sysId, $shownIds)) continue;
+                                                        $shownIds[] = 'sys_' . $sysId;
+                                                        $sysName = '';
+                                                        foreach ($systems as $s) {
+                                                            if ($s['id'] == $sysId) { $sysName = $s['full_name'] ?? $s['name']; break; }
+                                                        }
+                                                        echo '<small class="d-block mb-1"><strong>System:</strong> ' . htmlspecialchars($sysName) . '</small>';
+                                                    } elseif ($assignment['department_id']) {
+                                                        $deptId = $assignment['department_id'];
+                                                        if (in_array('dept_' . $deptId, $shownIds)) continue;
+                                                        $shownIds[] = 'dept_' . $deptId;
+                                                        // Look up dept name by numeric id
+                                                        $deptLabel = $deptId;
+                                                        foreach ($departments as $d) {
+                                                            if ($d['id'] == $deptId) { $deptLabel = $d['name']; break; }
+                                                        }
+                                                        echo '<small class="d-block mb-1"><strong>Department:</strong> ' . htmlspecialchars($deptLabel) . '</small>';
+                                                    }
                                                 } else {
                                                     $sysId = $assignment['system_id'] ?? null;
                                                     if (!$sysId || in_array($sysId, $shownIds)) continue;
@@ -2255,14 +2270,14 @@ try {
                     if (hasAssignment && res.assignments && res.assignments.length > 0) {
                         const isReviewer = res.user_type === 'Reviewer';
                         res.assignments.forEach(a => {
-                            if (isReviewer) {
-                                approvalsContent += `<small class="d-block mb-1"><strong>Department:</strong> ${htmlEscape(a.dept_name || a.department_id)}</small>`;
-                            } else {
+                            if (a.system_id) {
                                 let sysName = '';
                                 <?php foreach ($systems as $sys): ?>
                                     if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
                                 <?php endforeach; ?>
-                                approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${htmlEscape(sysName)}</small>`;
+                                if (sysName) approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${htmlEscape(sysName)}</small>`;
+                            } else if (a.department_id) {
+                                approvalsContent += `<small class="d-block mb-1"><strong>Department:</strong> ${htmlEscape(a.dept_name || a.department_id)}</small>`;
                             }
                         });
                     } else {
@@ -2307,14 +2322,14 @@ try {
                         let approvalsContent = '';
                         if (res.assignments && res.assignments.length > 0) {
                             res.assignments.forEach(a => {
-                                if (isReviewer) {
-                                    approvalsContent += `<small class="d-block mb-1"><strong>Department:</strong> ${htmlEscape(a.dept_name || a.department_id)}</small>`;
-                                } else {
+                                if (a.system_id) {
                                     let sysName = '';
                                     <?php foreach ($systems as $sys): ?>
                                         if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
                                     <?php endforeach; ?>
-                                    approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${htmlEscape(sysName)}</small>`;
+                                    if (sysName) approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${htmlEscape(sysName)}</small>`;
+                                } else if (a.department_id) {
+                                    approvalsContent += `<small class="d-block mb-1"><strong>Department:</strong> ${htmlEscape(a.dept_name || a.department_id)}</small>`;
                                 }
                             });
                         } else {

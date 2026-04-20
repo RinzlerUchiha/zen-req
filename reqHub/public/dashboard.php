@@ -190,7 +190,21 @@ if ($userRecord) {
     }
 
     if ($role === 'Reviewer') {
-        // Reviewer sees ALL pending (pre-review) requests
+        $stmtDepts = $pdo->prepare("
+            SELECT DISTINCT department_id 
+            FROM user_approver_assignments 
+            WHERE user_id = ? AND department_id IS NOT NULL
+        ");
+        $stmtDepts->execute([$actual_user_id]);
+        $assignedDeptIds = $stmtDepts->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($assignedDeptIds)) {
+            $placeholders = implode(',', array_fill(0, count($assignedDeptIds), '?'));
+            $sql .= " AND r.department_id IN ($placeholders)";
+            foreach ($assignedDeptIds as $did) $params[] = $did;
+        } else {
+            $sql .= " AND 1=0";
+        }
     }
 }
 
