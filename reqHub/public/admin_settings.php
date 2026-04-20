@@ -18,10 +18,13 @@ $pdo   = ReqHubDatabase::getConnection('reqhub');
 $hrPdo = ReqHubDatabase::getConnection('hr');
 
 // Roles that support system assignment
-$rolesWithSystemAssignment = ['Approver', 'Requestor', 'Reviewer'];
+$rolesWithSystemAssignment = ['Approver', 'Requestor'];
+
+// Roles that support department assignment
+$rolesWithDepartmentAssignment = ['Reviewer'];
 
 // --- Fetch users (exclude SYSTEM) ---
-$users = $pdo->query("SELECT id, employee_id, reqhub_role FROM users WHERE employee_id != 'SYSTEM' ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
+$users = $pdo->query("SELECT id, employee_id, reqhub_role, is_active FROM users WHERE employee_id != 'SYSTEM' ORDER BY employee_id")->fetchAll(PDO::FETCH_ASSOC);
 if (!$users) $users = [];
 
 // HR names
@@ -87,6 +90,20 @@ foreach ($systems as $system) {
 }
 $systems = $systemsWithFullNames;
 
+// Active HR departments for Reviewer assignment
+$hrActiveDepartments = [];
+try {
+    $hrActiveDepartments = $hrPdo->query("
+        SELECT Dept_Code, Dept_Name
+        FROM tbl_department
+        WHERE Dept_Name IS NOT NULL AND Dept_Name != ''
+          AND Dept_Stat = 'active'
+        ORDER BY Dept_Name
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("HR active departments fetch failed: " . $e->getMessage());
+}
+
 $departments = $pdo->query("SELECT id, name FROM departments ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $actions     = $pdo->query("SELECT id, name FROM actions ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $modules     = $pdo->query("SELECT id, name FROM modules ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
@@ -138,7 +155,7 @@ foreach ($systems as $system) {
     $systemRoles[$system['id']] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// Approver/Requestor assignments
+// Approver/Requestor/Reviewer assignments
 $approverAssignments = [];
 foreach ($users as $user) {
     if (!isset($user['id'])) continue;
@@ -377,6 +394,17 @@ try {
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="filterUsersBtn">Filter</button>
                         <div class="dropdown-menu p-3" style="min-width:220px;" id="filterUsersDropdown">
+                            <div class="mb-2 fw-semibold">Status</div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input user-active-filter" type="checkbox" value="active" id="filterActive">
+                                    <label class="form-check-label" for="filterActive">Active</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input user-active-filter" type="checkbox" value="inactive" id="filterInactive">
+                                    <label class="form-check-label" for="filterInactive">Inactive</label>
+                                </div>
+                            </div>
                             <div class="mb-2 fw-semibold">Role</div>
                             <div class="mb-3">
                                 <?php foreach (['No Access', 'Requestor', 'Reviewer', 'Approver', 'Admin'] as $roleOption): ?>
@@ -412,9 +440,9 @@ try {
                 <?php foreach ($users as $user):
                     if (!isset($user['id']) || !isset($user['employee_id'])) continue;
                     $userAssignments = $approverAssignments[$user['id']] ?? [];
-                    $hasAssignments = in_array($user['reqhub_role'], $rolesWithSystemAssignment);
+                    $hasAssignments = in_array($user['reqhub_role'], array_merge($rolesWithSystemAssignment, $rolesWithDepartmentAssignment));
                 ?>
-                    <div class="user-item card p-3 mb-2" data-user-id="<?= $user['id'] ?>" data-hr-dept="<?= htmlspecialchars(strtolower($user['hr_department'])) ?>" data-role="<?= htmlspecialchars(strtolower($user['reqhub_role'])) ?>">
+                    <div class="user-item card p-3 mb-2" data-user-id="<?= $user['id'] ?>" data-hr-dept="<?= htmlspecialchars(strtolower($user['hr_department'])) ?>" data-role="<?= htmlspecialchars(strtolower($user['reqhub_role'])) ?>" data-active="<?= $user['is_active'] ? 'active' : 'inactive' ?>">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center">
@@ -427,29 +455,38 @@ try {
                                         <small class="text-muted user-role-label"><?= htmlspecialchars($user['reqhub_role']) ?></small>
                                     </div>
                                 </div>
-                                <!-- System assignments (collapsible) — always rendered so JS toggle works after role change -->
+                                <!-- System/department assignments (collapsible) — always rendered so JS toggle works after role change -->
                                 <div class="user-approvals mt-2" style="display:none; margin-left:30px;">
                                     <small class="text-muted d-block mb-1">Assigned to:</small>
                                     <div class="ps-2">
                                         <?php if ($hasAssignments && !empty($userAssignments)): ?>
                                             <?php
-                                            $shownSystems = [];
+                                            $isReviewer = ($user['reqhub_role'] === 'Reviewer');
+                                            $shownIds = [];
                                             foreach ($userAssignments as $assignment) {
-                                                $sysId = $assignment['system_id'];
-                                                if (in_array($sysId, $shownSystems)) continue;
-                                                $shownSystems[] = $sysId;
-                                                $sysName = '';
-                                                foreach ($systems as $s) {
-                                                    if ($s['id'] == $sysId) {
-                                                        $sysName = $s['full_name'] ?? $s['name'];
-                                                        break;
+                                                if ($isReviewer) {
+                                                    $deptCode = $assignment['department_id'] ?? null;
+                                                    if (!$deptCode || in_array($deptCode, $shownIds)) continue;
+                                                    $shownIds[] = $deptCode;
+                                                    $deptLabel = $deptDescriptions[strtoupper(trim($deptCode))] ?? $deptCode;
+                                                    echo '<small class="d-block mb-1"><strong>Department:</strong> ' . htmlspecialchars($deptLabel) . '</small>';
+                                                } else {
+                                                    $sysId = $assignment['system_id'] ?? null;
+                                                    if (!$sysId || in_array($sysId, $shownIds)) continue;
+                                                    $shownIds[] = $sysId;
+                                                    $sysName = '';
+                                                    foreach ($systems as $s) {
+                                                        if ($s['id'] == $sysId) {
+                                                            $sysName = $s['full_name'] ?? $s['name'];
+                                                            break;
+                                                        }
                                                     }
+                                                    echo '<small class="d-block mb-1"><strong>System:</strong> ' . htmlspecialchars($sysName) . '</small>';
                                                 }
-                                                echo '<small class="d-block mb-1"><strong>System:</strong> ' . htmlspecialchars($sysName) . '</small>';
                                             }
                                             ?>
                                         <?php else: ?>
-                                            <small class="text-muted">No systems assigned yet</small>
+                                            <small class="text-muted">No assignments yet</small>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -738,7 +775,12 @@ try {
         let systemRoles = <?= json_encode($systemRoles) ?>;
 
         // Roles that show system assignment UI
-        const rolesWithSystemAssignment = ['Approver', 'Requestor', 'Reviewer'];
+        const rolesWithSystemAssignment = ['Approver', 'Requestor'];
+        // Roles that show department assignment UI
+        const rolesWithDepartmentAssignment = ['Reviewer'];
+
+        // Active HR departments for Reviewer assignment
+        const hrActiveDepartments = <?= json_encode($hrActiveDepartments) ?>;
 
         let duplicateSystemCounter = {};
 
@@ -1309,13 +1351,31 @@ try {
                 const selectedSystems = [];
                 if (userId && approverAssignments[parseInt(userId)]) {
                     approverAssignments[parseInt(userId)].forEach(a => {
-                        if (!selectedSystems.includes(parseInt(a.system_id))) selectedSystems.push(parseInt(a.system_id));
+                        if (a.system_id && !selectedSystems.includes(parseInt(a.system_id))) {
+                            selectedSystems.push(parseInt(a.system_id));
+                        }
+                    });
+                }
+
+                // Collect existing department assignments (for Reviewer)
+                const selectedDepts = [];
+                if (userId && approverAssignments[parseInt(userId)]) {
+                    approverAssignments[parseInt(userId)].forEach(a => {
+                        if (a.department_id && !selectedDepts.includes(a.department_id)) {
+                            selectedDepts.push(a.department_id);
+                        }
                     });
                 }
 
                 // System checkboxes (shown for Approver and Requestor)
-                html += `<div class="mt-3 system-department-selectors" style="display:none;">
-                <label class="form-label">System(s)</label>
+                html += `<div class="mt-3 system-assignment-selectors" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label mb-0">System(s)</label>
+                    <div class="form-check mb-0">
+                        <input type="checkbox" class="form-check-input" id="selectAllSystems">
+                        <label class="form-check-label small text-muted" for="selectAllSystems">Select All</label>
+                    </div>
+                </div>
                 <div class="border rounded p-2 bg-light" style="max-height:200px; overflow-y:auto;">`;
                 $('.system-item').each(function() {
                     const sysId = $(this).data('system-id');
@@ -1328,20 +1388,87 @@ try {
                 });
                 html += `</div></div>`;
 
+                // Department checkboxes (shown for Reviewer)
+                html += `<div class="mt-3 department-assignment-selectors" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label mb-0">Department(s)</label>
+                    <div class="form-check mb-0">
+                        <input type="checkbox" class="form-check-input" id="selectAllDepts">
+                        <label class="form-check-label small text-muted" for="selectAllDepts">Select All</label>
+                    </div>
+                </div>
+                <div class="border rounded p-2 bg-light" style="max-height:200px; overflow-y:auto;">`;
+                if (hrActiveDepartments.length > 0) {
+                    hrActiveDepartments.forEach(dept => {
+                        const deptCode = htmlEscape(dept.Dept_Code);
+                        const deptName = htmlEscape(dept.Dept_Name);
+                        const isSelected = selectedDepts.includes(dept.Dept_Code);
+                        html += `<div class="form-check">
+                        <input type="checkbox" class="form-check-input department-checkbox" id="dept-${deptCode}" value="${deptCode}" ${isSelected ? 'checked' : ''}>
+                        <label class="form-check-label" for="dept-${deptCode}">${deptName}</label>
+                    </div>`;
+                    });
+                } else {
+                    html += `<span class="text-muted small">No active departments found</span>`;
+                }
+                html += `</div></div>`;
+
                 $('#permissionsContainer').html(html);
 
                 const updateSelectors = () => {
                     const type = $('.user-type-select').val();
                     if (rolesWithSystemAssignment.includes(type)) {
-                        $('.system-department-selectors').removeAttr('style').show();
-                    } else {
-                        $('.system-department-selectors').hide();
+                        $('.system-assignment-selectors').show();
+                        $('.department-assignment-selectors').hide();
+                        $('.department-checkbox').prop('checked', false);
+                    } else if (rolesWithDepartmentAssignment.includes(type)) {
+                        $('.department-assignment-selectors').show();
+                        $('.system-assignment-selectors').hide();
                         $('.system-checkbox').prop('checked', false);
+                    } else {
+                        $('.system-assignment-selectors').hide();
+                        $('.department-assignment-selectors').hide();
+                        $('.system-checkbox').prop('checked', false);
+                        $('.department-checkbox').prop('checked', false);
                     }
                 };
 
                 updateSelectors();
                 $(document).off('change', '.user-type-select').on('change', '.user-type-select', updateSelectors);
+
+                // Select All — systems
+                $(document).off('change', '#selectAllSystems').on('change', '#selectAllSystems', function() {
+                    $('.system-checkbox').prop('checked', $(this).is(':checked'));
+                });
+                $(document).off('change', '.system-checkbox').on('change', '.system-checkbox', function() {
+                    const total = $('.system-checkbox').length;
+                    const checked = $('.system-checkbox:checked').length;
+                    $('#selectAllSystems').prop('checked', total > 0 && checked === total)
+                                         .prop('indeterminate', checked > 0 && checked < total);
+                });
+
+                // Select All — departments
+                $(document).off('change', '#selectAllDepts').on('change', '#selectAllDepts', function() {
+                    $('.department-checkbox').prop('checked', $(this).is(':checked'));
+                });
+                $(document).off('change', '.department-checkbox').on('change', '.department-checkbox', function() {
+                    const total = $('.department-checkbox').length;
+                    const checked = $('.department-checkbox:checked').length;
+                    $('#selectAllDepts').prop('checked', total > 0 && checked === total)
+                                        .prop('indeterminate', checked > 0 && checked < total);
+                });
+
+                // Seed the Select All checkbox state based on pre-checked items
+                setTimeout(() => {
+                    const sysTotal = $('.system-checkbox').length;
+                    const sysChecked = $('.system-checkbox:checked').length;
+                    $('#selectAllSystems').prop('checked', sysTotal > 0 && sysChecked === sysTotal)
+                                         .prop('indeterminate', sysChecked > 0 && sysChecked < sysTotal);
+                    const deptTotal = $('.department-checkbox').length;
+                    const deptChecked = $('.department-checkbox:checked').length;
+                    $('#selectAllDepts').prop('checked', deptTotal > 0 && deptChecked === deptTotal)
+                                        .prop('indeterminate', deptChecked > 0 && deptChecked < deptTotal);
+                }, 50);
             }
 
             getModal().show();
@@ -1447,6 +1574,9 @@ try {
             const checkedRoles = $('.user-role-filter:checked').map(function() {
                 return $(this).val();
             }).get();
+            const checkedActive = $('.user-active-filter:checked').map(function() {
+                return $(this).val();
+            }).get();
             $('.user-item').each(function() {
                 const nameText = $(this).find('strong').first().text().toLowerCase();
                 const matchSearch = nameText.includes(query);
@@ -1460,15 +1590,22 @@ try {
                     const userRole = ($(this).data('role') || '').toString().toLowerCase();
                     matchRole = checkedRoles.includes(userRole);
                 }
-                $(this).toggle(matchSearch && matchDept && matchRole);
+                let matchActive = true;
+                if (checkedActive.length > 0) {
+                    const userActive = ($(this).data('active') || '').toString().toLowerCase();
+                    matchActive = checkedActive.includes(userActive);
+                }
+                $(this).toggle(matchSearch && matchDept && matchRole && matchActive);
             });
         }
         $(document).on('keyup', '#searchUsers', applyUserFilters);
         $(document).on('change', '.user-dept-filter', applyUserFilters);
         $(document).on('change', '.user-role-filter', applyUserFilters);
+        $(document).on('change', '.user-active-filter', applyUserFilters);
         $(document).on('click', '#clearDeptFilter', function() {
             $('.user-dept-filter').prop('checked', false);
             $('.user-role-filter').prop('checked', false);
+            $('.user-active-filter').prop('checked', false);
             applyUserFilters();
         });
         $(document).on('click', '#filterUsersBtn', function(e) {
@@ -1571,7 +1708,6 @@ try {
                 const sysName = $(`.system-item[data-system-id="${sysId}"]`).find('.editable-label').text().trim();
                 tabBarHtml += `<button type="button" class="btn btn-sm role-panel-tab" data-tab-target="panel-${sysId}">${htmlEscape(sysName)}</button>`;
             });
-            // REPLACE the "+ Add System" dropdown block with this:
             tabBarHtml += `<div class="position-relative ms-1" id="addSystemPanelWrapper">
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="addSystemPanelBtn">+ Add System</button>
                 <div id="addSystemPanelMenu" style="display:none; position:absolute; top:100%; left:0; z-index:9999;
@@ -1659,7 +1795,6 @@ try {
                 $(`#${target}`).show();
                 updateModalSummary();
             });
-            // Manual dropdown toggle for "+ Add System"
             $(document).off('click.addSysBtn').on('click.addSysBtn', '#addSystemPanelBtn', function(e) {
                 e.stopPropagation();
                 $('#addSystemPanelMenu').toggle();
@@ -1677,7 +1812,6 @@ try {
                 const sysId = $(this).data('sys-id').toString();
                 const sysName = $(this).data('sys-name');
 
-                // Mark menu item as added
                 $(this)
                     .prop('disabled', true)
                     .css({ opacity: 0.5, cursor: 'not-allowed' })
@@ -1685,7 +1819,6 @@ try {
 
                 $('#addSystemPanelMenu').hide();
 
-                // 1. Build the panel HTML string first
                 let newPanel = `<div class="role-system-panel" data-panel-system-id="${sysId}" id="panel-${sysId}" style="display:none;">`;
                 newPanel += `<div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="text-muted small">Permissions exclusive to <strong>${htmlEscape(sysName)}</strong>.</span>
@@ -1718,15 +1851,12 @@ try {
                 });
                 newPanel += `</div></div>`;
 
-                // 2. Append panel to DOM BEFORE touching tabs or switching
                 $('#permissionsContainer').append(newPanel);
 
-                // 3. Add the tab button
                 $('#addSystemPanelWrapper').before(
                     `<button type="button" class="btn btn-sm btn-outline-secondary role-panel-tab" data-tab-target="panel-${sysId}">${htmlEscape(sysName)}</button>`
                 );
 
-                // 4. Switch to the new panel DIRECTLY — no .click() which risks firing before DOM is ready
                 $('.role-panel-tab').removeClass('active btn-dark').addClass('btn-outline-secondary');
                 $(`.role-panel-tab[data-tab-target="panel-${sysId}"]`).removeClass('btn-outline-secondary').addClass('active btn-dark');
                 $('.role-system-panel').hide();
@@ -1742,14 +1872,12 @@ try {
                 $(`#panel-${sysKey}`).remove();
                 $(`.role-panel-tab[data-tab-target="panel-${sysKey}"]`).remove();
 
-                // Re-enable the menu item
                 const $menuItem = $(`.add-system-panel-item[data-sys-id="${sysKey}"]`);
                 $menuItem
                     .prop('disabled', false)
                     .css({ opacity: '', cursor: '' })
                     .text($menuItem.data('sys-name'));
 
-                // Switch back to Global DIRECTLY
                 $('.role-panel-tab').removeClass('active btn-dark').addClass('btn-outline-secondary');
                 $(`.role-panel-tab[data-tab-target="panel-null"]`).removeClass('btn-outline-secondary').addClass('active btn-dark');
                 $('.role-system-panel').hide();
@@ -1804,9 +1932,8 @@ try {
                 data.role_id = $('#modalRole').val();
                 data.system_permissions = [];
 
-                // Collect from all system panels (each panel has data-panel-system-id)
                 $('#permissionsContainer .role-system-panel').each(function() {
-                    const panelSystemId = $(this).data('panel-system-id'); // 'null' string or numeric id
+                    const panelSystemId = $(this).data('panel-system-id');
                     const permissions = [];
                     $(this).find('.role-permission-checkbox:checked').each(function() {
                         const moduleId = $(this).data('module');
@@ -1815,7 +1942,6 @@ try {
                         const actionName = $(this).closest('label').find('span').text().trim();
                         permissions.push({ module_id: moduleId, action_id: actionId, module_name: moduleName, action_name: actionName });
                     });
-                    // Always push the panel even if empty so that clearing permissions is saved
                     data.system_permissions.push({
                         system_id: panelSystemId === 'null' ? null : panelSystemId,
                         permissions: permissions
@@ -1849,8 +1975,12 @@ try {
                 data.user_id = $('#modalUser').val();
                 data.user_type = $('#permissionsContainer select[name="user_type"]').val();
                 data.system_ids = [];
+                data.department_codes = [];
                 $('#permissionsContainer .system-checkbox:checked').each(function() {
                     data.system_ids.push($(this).val().toString());
+                });
+                $('#permissionsContainer .department-checkbox:checked').each(function() {
+                    data.department_codes.push($(this).val().toString());
                 });
             }
 
@@ -1902,7 +2032,6 @@ try {
                     const dn = res.name || data.name;
                     roleAssignments[res.id] = {};
 
-                    // Store permissions organized by system
                     (data.system_permissions || []).forEach(sp => {
                         const sysKey = sp.system_id || 'null';
                         roleAssignments[res.id][sysKey] = (sp.permissions || []).map(p => ({
@@ -1952,7 +2081,6 @@ try {
 
                     if (!roleAssignments[res.id]) roleAssignments[res.id] = {};
 
-                    // Store permissions organized by system
                     (data.system_permissions || []).forEach(sp => {
                         const sysKey = sp.system_id || 'null';
                         roleAssignments[res.id][sysKey] = (sp.permissions || []).map(p => ({
@@ -1964,14 +2092,12 @@ try {
                         }));
                     });
 
-                    // Rebuild the role-permissions display from all system keys
                     let permHtml = '';
                     const allSysKeys = Object.keys(roleAssignments[res.id]);
                     if (allSysKeys.length > 0) {
                         allSysKeys.forEach(sk => {
                             const sysPerms = roleAssignments[res.id][sk];
                             if (!sysPerms || sysPerms.length === 0) return;
-                            // Find system label
                             let sysLabel = 'Global';
                             if (sk !== 'null') {
                                 $('.system-item').each(function() {
@@ -2016,19 +2142,24 @@ try {
                 }
 
                 if (action === 'addUser') {
-                    const hasAssignment = rolesWithSystemAssignment.includes(res.user_type);
+                    const hasAssignment = rolesWithSystemAssignment.includes(res.user_type) || rolesWithDepartmentAssignment.includes(res.user_type);
                     let toggleHtml = hasAssignment ? '<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>' : '';
                     let approvalsContent = '';
                     if (hasAssignment && res.assignments && res.assignments.length > 0) {
+                        const isReviewer = res.user_type === 'Reviewer';
                         res.assignments.forEach(a => {
-                            let sysName = '';
-                            <?php foreach ($systems as $sys): ?>
-                                if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
-                            <?php endforeach; ?>
-                            approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${sysName}</small>`;
+                            if (isReviewer) {
+                                approvalsContent += `<small class="d-block mb-1"><strong>Department:</strong> ${htmlEscape(a.dept_name || a.department_id)}</small>`;
+                            } else {
+                                let sysName = '';
+                                <?php foreach ($systems as $sys): ?>
+                                    if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
+                                <?php endforeach; ?>
+                                approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${htmlEscape(sysName)}</small>`;
+                            }
                         });
                     } else {
-                        approvalsContent = '<small class="text-muted">No systems assigned yet</small>';
+                        approvalsContent = '<small class="text-muted">No assignments yet</small>';
                     }
                     const approvalsDiv = `<div class="user-approvals mt-2" style="display:none; margin-left:30px;"><small class="text-muted d-block mb-1">Assigned to:</small><div class="ps-2">${approvalsContent}</div></div>`;
                     const html = `<div class="user-item card p-3 mb-2" data-user-id="${res.id}">
@@ -2057,8 +2188,11 @@ try {
                     const item = $(`.user-item[data-user-id="${res.id}"]`);
                     approverAssignments[res.id] = res.assignments || [];
                     item.find('[data-action="editUser"]').data('name', res.employee_id || '').data('user-role', res.user_type || '');
+                    item.data('role', (res.user_type || '').toLowerCase());
 
-                    const hasAssignment = rolesWithSystemAssignment.includes(res.user_type);
+                    const hasAssignment = rolesWithSystemAssignment.includes(res.user_type) || rolesWithDepartmentAssignment.includes(res.user_type);
+                    const isReviewer = res.user_type === 'Reviewer';
+
                     if (hasAssignment) {
                         if (item.find('.toggle-user-approvals').length === 0) {
                             item.find('.flex-grow-1 > .d-flex.align-items-center').first().prepend('<button class="btn btn-sm btn-outline-secondary me-2 toggle-user-approvals">+</button>');
@@ -2066,19 +2200,23 @@ try {
                         let approvalsContent = '';
                         if (res.assignments && res.assignments.length > 0) {
                             res.assignments.forEach(a => {
-                                let sysName = '';
-                                <?php foreach ($systems as $sys): ?>
-                                    if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
-                                <?php endforeach; ?>
-                                approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${sysName}</small>`;
+                                if (isReviewer) {
+                                    approvalsContent += `<small class="d-block mb-1"><strong>Department:</strong> ${htmlEscape(a.dept_name || a.department_id)}</small>`;
+                                } else {
+                                    let sysName = '';
+                                    <?php foreach ($systems as $sys): ?>
+                                        if (<?= $sys['id'] ?> == a.system_id) sysName = '<?= htmlspecialchars($sys['full_name'] ?? $sys['name']) ?>';
+                                    <?php endforeach; ?>
+                                    approvalsContent += `<small class="d-block mb-1"><strong>System:</strong> ${htmlEscape(sysName)}</small>`;
+                                }
                             });
                         } else {
-                            approvalsContent = '<small class="text-muted">No systems assigned yet</small>';
+                            approvalsContent = '<small class="text-muted">No assignments yet</small>';
                         }
                         item.find('.user-approvals .ps-2').html(approvalsContent);
                     } else {
                         item.find('.toggle-user-approvals').remove();
-                        item.find('.user-approvals').hide().find('.ps-2').html('<small class="text-muted">No systems assigned yet</small>');
+                        item.find('.user-approvals').hide().find('.ps-2').html('<small class="text-muted">No assignments yet</small>');
                     }
                     item.find('.user-role-label').text(res.user_type);
                 }

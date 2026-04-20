@@ -31,7 +31,24 @@ try {
 $action = $_POST['action'] ?? null;
 
 // Roles that can have system assignments
-$rolesWithSystemAssignment = ['Approver', 'Requestor', 'Reviewer'];
+$rolesWithSystemAssignment = ['Approver', 'Requestor'];
+
+// Roles that can have department assignments
+$rolesWithDepartmentAssignment = ['Reviewer'];
+
+/**
+ * Look up department name from HR DB given a Dept_Code.
+ */
+function getDeptName($hrPdo, $deptCode) {
+    try {
+        $stmt = $hrPdo->prepare("SELECT Dept_Name FROM tbl_department WHERE Dept_Code = ? LIMIT 1");
+        $stmt->execute([$deptCode]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? trim($row['Dept_Name']) : $deptCode;
+    } catch (Exception $e) {
+        return $deptCode;
+    }
+}
 
 try {
     if ($action === 'addUser') {
@@ -77,11 +94,11 @@ try {
         $stmt->execute([$employeeId, $reqhubRole, $systemId]);
         $userId = $pdo->lastInsertId();
 
-        // System assignments for Approver and Requestor
         $assignments = [];
-        if (in_array($userType, $rolesWithSystemAssignment)) {
-            $systemIds = $_POST['system_ids'] ?? [];
 
+        if (in_array($userType, $rolesWithSystemAssignment)) {
+            // System assignments for Approver / Requestor
+            $systemIds = $_POST['system_ids'] ?? [];
             if (!empty($systemIds)) {
                 $insertStmt = $pdo->prepare("
                     INSERT INTO user_approver_assignments (user_id, system_id, department_id)
@@ -90,7 +107,25 @@ try {
                 ");
                 foreach ($systemIds as $sysId) {
                     $insertStmt->execute([$userId, $sysId]);
-                    $assignments[] = ['system_id' => (int)$sysId];
+                    $assignments[] = ['system_id' => (int)$sysId, 'department_id' => null];
+                }
+            }
+        } elseif (in_array($userType, $rolesWithDepartmentAssignment)) {
+            // Department assignments for Reviewer
+            $deptCodes = $_POST['department_codes'] ?? [];
+            if (!empty($deptCodes)) {
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+                    VALUES (?, NULL, ?)
+                    ON DUPLICATE KEY UPDATE id = id
+                ");
+                foreach ($deptCodes as $deptCode) {
+                    $insertStmt->execute([$userId, $deptCode]);
+                    $assignments[] = [
+                        'system_id'     => null,
+                        'department_id' => $deptCode,
+                        'dept_name'     => getDeptName($hrPdo, $deptCode),
+                    ];
                 }
             }
         }
@@ -157,13 +192,14 @@ try {
         ");
         $stmt->execute([$employeeId, $reqhubRole, $systemId, $userId]);
 
-        // Handle system assignments for Approver and Requestor
-        $assignments = [];
-        if (in_array($userType, $rolesWithSystemAssignment)) {
-            // Clear old assignments
-            $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
-            $delStmt->execute([$userId]);
+        // Clear all existing assignments first
+        $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
+        $delStmt->execute([$userId]);
 
+        $assignments = [];
+
+        if (in_array($userType, $rolesWithSystemAssignment)) {
+            // System assignments for Approver / Requestor
             $systemIds = $_POST['system_ids'] ?? [];
             if (!empty($systemIds)) {
                 $insertStmt = $pdo->prepare("
@@ -172,14 +208,28 @@ try {
                 ");
                 foreach ($systemIds as $sysId) {
                     $insertStmt->execute([$userId, $sysId]);
-                    $assignments[] = ['system_id' => (int)$sysId];
+                    $assignments[] = ['system_id' => (int)$sysId, 'department_id' => null];
+                }
+            }
+        } elseif (in_array($userType, $rolesWithDepartmentAssignment)) {
+            // Department assignments for Reviewer
+            $deptCodes = $_POST['department_codes'] ?? [];
+            if (!empty($deptCodes)) {
+                $insertStmt = $pdo->prepare("
+                    INSERT INTO user_approver_assignments (user_id, system_id, department_id)
+                    VALUES (?, NULL, ?)
+                ");
+                foreach ($deptCodes as $deptCode) {
+                    $insertStmt->execute([$userId, $deptCode]);
+                    $assignments[] = [
+                        'system_id'     => null,
+                        'department_id' => $deptCode,
+                        'dept_name'     => getDeptName($hrPdo, $deptCode),
+                    ];
                 }
             }
         } else {
-            // Clear assignments and notifications if not an assignable role
-            $delStmt = $pdo->prepare("DELETE FROM user_approver_assignments WHERE user_id = ?");
-            $delStmt->execute([$userId]);
-
+            // No assignable role — also clean up pending_approval notifications
             $delNotifStmt = $pdo->prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'pending_approval'");
             $delNotifStmt->execute([$userId]);
         }
