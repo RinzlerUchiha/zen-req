@@ -14,7 +14,7 @@ $userRole    = $currentUser['reqhub_role'];
 
 try {
     // ── Systems: Requestors see only their assigned systems; Approvers see all ──
-    if ($userRole === 'Requestor' || $userRole === 'Reviewer') {
+    if ($userRole === 'Requestor' || $userRole === 'Reviewer' || $userRole === 'Approver') {
         // Get the users.id
         $stmtUid = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");
         $stmtUid->execute([$emp_no]);

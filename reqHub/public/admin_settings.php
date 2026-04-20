@@ -278,7 +278,8 @@ try {
                             $ra = $roleAssignments[$role['id']] ?? [];
                             if (!empty($ra)):
                                 foreach ($ra as $sysKey => $perms):
-                                    $sysLabel = 'Global';
+                                if ($sysKey === 'null') continue; // hide global
+                                $sysLabel = '(unknown system)';
                                     if ($sysKey !== 'null') {
                                         foreach ($systems as $s) {
                                             if ($s['id'] == $sysKey) {
@@ -821,7 +822,7 @@ try {
 
                     const moduleBlocks = [];
                     $(this).find('.role-modal-module-card').each(function() {
-                        const moduleName = $(this).find('.role-modal-module-header strong').text().trim();
+                        const moduleName = $(this).find('.role-modal-module-header label').text().trim();
                         const checkedActions = $(this).find('.role-permission-checkbox:checked').map(function() {
                             return $(this).closest('label').find('span').text().trim();
                         }).get();
@@ -903,7 +904,55 @@ try {
         });
         $(document).on('click', '.toggle-system-roles', function(e) {
             e.stopPropagation();
-            $(this).closest('.system-item').find('.system-roles-container').slideToggle(150);
+            const systemItem = $(this).closest('.system-item');
+            const container = systemItem.find('.system-roles-container');
+            const systemId = systemItem.data('system-id').toString();
+
+            // Rebuild content from live roleAssignments + systemRoles on every open
+            if ($(this).text() === '+') {
+                const roles = systemRoles[systemId] || [];
+                if (roles.length === 0) {
+                    container.html('<span class="text-muted">No roles assigned to this system</span>');
+                } else {
+                    let html = '<strong class="d-block mb-2">▼ Roles</strong><div class="ps-3">';
+                    roles.forEach(sysRole => {
+                        const roleId = sysRole.role_id;
+                        const roleName = sysRole.role_name;
+                        const perms = roleAssignments[roleId] || {};
+                        const scopedPerms = perms[systemId] || [];
+
+                        html += `<div class="system-role-item mb-3">
+                            <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-role-modules">+</button>
+                            <span>${htmlEscape(roleName)}</span>
+                            <div class="system-role-modules mt-2 ps-3" style="display:none;">`;
+
+                        if (scopedPerms.length === 0) {
+                            html += '<span class="text-muted small">No permissions assigned</span>';
+                        } else {
+                            const modulesByName = {};
+                            scopedPerms.forEach(p => {
+                                if (!modulesByName[p.module_id]) modulesByName[p.module_id] = { name: p.module_name || '', actions: [] };
+                                if (p.action_name) modulesByName[p.module_id].actions.push(p.action_name);
+                            });
+                            Object.keys(modulesByName).forEach(modId => {
+                                const mod = modulesByName[modId];
+                                html += `<div class="system-module-item mb-2">
+                                    <span>${htmlEscape(mod.name)}</span>
+                                    <div class="mt-1 ps-3">`;
+                                mod.actions.forEach(a => {
+                                    html += `<span class="badge bg-light text-dark me-2 mb-2">• ${htmlEscape(a)}</span>`;
+                                });
+                                html += `</div></div>`;
+                            });
+                        }
+                        html += `</div></div>`;
+                    });
+                    html += '</div>';
+                    container.html(html);
+                }
+            }
+
+            container.slideToggle(150);
             $(this).text($(this).text() === '+' ? '-' : '+');
         });
         $(document).on('click', '.toggle-system-role-modules', function(e) {
@@ -1022,41 +1071,41 @@ try {
             });
         }
 
-        $(document).on('click', '.system-item', function(e) {
-            if ($(e.target).closest('button').length > 0 || $(e.target).is('.toggle-system-roles') || $(e.target).is('.editable-label')) return;
-            const systemId = $(this).find('.editable-label').data('id');
-            const systemName = $(this).find('.editable-label').text();
-            if (!systemId) return;
+        // $(document).on('click', '.system-item', function(e) {
+        //     if ($(e.target).closest('button').length > 0 || $(e.target).is('.toggle-system-roles') || $(e.target).is('.editable-label')) return;
+        //     const systemId = $(this).find('.editable-label').data('id');
+        //     const systemName = $(this).find('.editable-label').text();
+        //     if (!systemId) return;
 
-            $('#accessTypeModal .modal-dialog').removeClass('modal-sm modal-md modal-lg modal-xl').addClass('modal-xl');
-            $('#modalAction').val('editSystem');
-            $('#modalSystem').val(systemId);
-            $('#modalInputGroup').show();
-            $('#modalInputLabel').text('System Name');
-            $('#modalInput').val(systemName.trim()).attr('disabled', true);
+        //     $('#accessTypeModal .modal-dialog').removeClass('modal-sm modal-md modal-lg modal-xl').addClass('modal-xl');
+        //     $('#modalAction').val('editSystem');
+        //     $('#modalSystem').val(systemId);
+        //     $('#modalInputGroup').show();
+        //     $('#modalInputLabel').text('System Name');
+        //     $('#modalInput').val(systemName.trim()).attr('disabled', true);
 
-            const assignedRoles = systemRoles[systemId] ? systemRoles[systemId].map(r => r.role_id) : [];
-            let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Assign Roles to This System</strong><input type="text" class="form-control" id="searchSystemRolesEdit" placeholder="Search..." style="max-width:250px;"></div><div class="module-modal-grid">';
-            $('.role-item').each(function() {
-                const rid = $(this).find('.editable-label').data('id');
-                const rname = $(this).find('.editable-label').text().trim();
-                html += `<label class="role-modal-action-item" data-role-name="${rname.toLowerCase()}"><input type="checkbox" class="system-role-checkbox" value="${rid}" ${assignedRoles.includes(parseInt(rid)) ? 'checked' : ''}><span>${htmlEscape(rname)}</span></label>`;
-            });
-            html += '</div>';
-            $('#permissionsContainer').html(html);
+        //     const assignedRoles = systemRoles[systemId] ? systemRoles[systemId].map(r => r.role_id) : [];
+        //     let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Assign Roles to This System</strong><input type="text" class="form-control" id="searchSystemRolesEdit" placeholder="Search..." style="max-width:250px;"></div><div class="module-modal-grid">';
+        //     $('.role-item').each(function() {
+        //         const rid = $(this).find('.editable-label').data('id');
+        //         const rname = $(this).find('.editable-label').text().trim();
+        //         html += `<label class="role-modal-action-item" data-role-name="${rname.toLowerCase()}"><input type="checkbox" class="system-role-checkbox" value="${rid}" ${assignedRoles.includes(parseInt(rid)) ? 'checked' : ''}><span>${htmlEscape(rname)}</span></label>`;
+        //     });
+        //     html += '</div>';
+        //     $('#permissionsContainer').html(html);
 
-            setTimeout(() => {
-                $(document).off('keyup', '#searchSystemRolesEdit').on('keyup', '#searchSystemRolesEdit', function() {
-                    const q = $(this).val().toLowerCase();
-                    $('.role-modal-action-item').each(function() {
-                        $(this).toggle($(this).data('role-name').includes(q));
-                    });
-                });
-                $(document).off('change', '.system-role-checkbox').on('change', '.system-role-checkbox', updateModalSummary);
-                updateModalSummary();
-            }, 100);
-            getModal().show();
-        });
+        //     setTimeout(() => {
+        //         $(document).off('keyup', '#searchSystemRolesEdit').on('keyup', '#searchSystemRolesEdit', function() {
+        //             const q = $(this).val().toLowerCase();
+        //             $('.role-modal-action-item').each(function() {
+        //                 $(this).toggle($(this).data('role-name').includes(q));
+        //             });
+        //         });
+        //         $(document).off('change', '.system-role-checkbox').on('change', '.system-role-checkbox', updateModalSummary);
+        //         updateModalSummary();
+        //     }, 100);
+        //     getModal().show();
+        // });
 
         // ============================================================
         // INLINE EDITING
@@ -1279,37 +1328,50 @@ try {
             }
 
             // ---- System ----
+            // Role assignment via system modal disabled — managed from Roles tab instead
             if (action.includes('System')) {
+                if (action === 'editSystem') return; // editing disabled
+                // addSystem: name only
                 $('#modalInputGroup').show();
                 $('#modalInputLabel').text('System Name');
-                $('#modalInput').val(name.trim()).attr('placeholder', 'Enter name');
-                $('#modalInput').attr('disabled', action === 'editSystem');
-                if (action !== 'editSystem') $('#modalInput').focus();
-
-                const systemId = $(this).data('system-id');
-                const assignedRoles = systemRoles[systemId] ? systemRoles[systemId].map(r => r.role_id) : [];
-                let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Assign Roles to This System</strong><input type="text" class="form-control" id="searchSystemRoles" placeholder="Search..." style="max-width:250px;"></div><div class="module-modal-grid">';
-                $('.role-item').each(function() {
-                    const rid = $(this).find('.editable-label').data('id');
-                    const rname = $(this).find('.editable-label').text().trim();
-                    html += `<label class="role-modal-action-item" data-role-name="${rname.toLowerCase()}"><input type="checkbox" class="system-role-checkbox" value="${rid}" ${assignedRoles.includes(parseInt(rid)) ? 'checked' : ''}><span>${htmlEscape(rname)}</span></label>`;
-                });
-                html += '</div>';
-                $('#permissionsContainer').html(html);
-
-                setTimeout(() => {
-                    $(document).off('keyup', '#searchSystemRoles').on('keyup', '#searchSystemRoles', function() {
-                        const q = $(this).val().toLowerCase();
-                        $('.role-modal-action-item').each(function() {
-                            $(this).toggle($(this).data('role-name').includes(q));
-                        });
-                    });
-                    $('#permissionsContainer').off('change', '.system-role-checkbox').on('change', '.system-role-checkbox', updateModalSummary);
-                    updateModalSummary();
-                }, 100);
+                $('#modalInput').val('').attr('placeholder', 'Enter name').attr('disabled', false).focus();
+                $('#permissionsContainer').html('');
                 getModal().show();
                 return;
             }
+
+            // // ---- System ----
+            // if (action.includes('System')) {
+            //     $('#modalInputGroup').show();
+            //     $('#modalInputLabel').text('System Name');
+            //     $('#modalInput').val(name.trim()).attr('placeholder', 'Enter name');
+            //     $('#modalInput').attr('disabled', action === 'editSystem');
+            //     if (action !== 'editSystem') $('#modalInput').focus();
+
+            //     const systemId = $(this).data('system-id');
+            //     const assignedRoles = systemRoles[systemId] ? systemRoles[systemId].map(r => r.role_id) : [];
+            //     let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Assign Roles to This System</strong><input type="text" class="form-control" id="searchSystemRoles" placeholder="Search..." style="max-width:250px;"></div><div class="module-modal-grid">';
+            //     $('.role-item').each(function() {
+            //         const rid = $(this).find('.editable-label').data('id');
+            //         const rname = $(this).find('.editable-label').text().trim();
+            //         html += `<label class="role-modal-action-item" data-role-name="${rname.toLowerCase()}"><input type="checkbox" class="system-role-checkbox" value="${rid}" ${assignedRoles.includes(parseInt(rid)) ? 'checked' : ''}><span>${htmlEscape(rname)}</span></label>`;
+            //     });
+            //     html += '</div>';
+            //     $('#permissionsContainer').html(html);
+
+            //     setTimeout(() => {
+            //         $(document).off('keyup', '#searchSystemRoles').on('keyup', '#searchSystemRoles', function() {
+            //             const q = $(this).val().toLowerCase();
+            //             $('.role-modal-action-item').each(function() {
+            //                 $(this).toggle($(this).data('role-name').includes(q));
+            //             });
+            //         });
+            //         $('#permissionsContainer').off('change', '.system-role-checkbox').on('change', '.system-role-checkbox', updateModalSummary);
+            //         updateModalSummary();
+            //     }, 100);
+            //     getModal().show();
+            //     return;
+            // }
 
             // ---- User ----
             if (action.includes('User')) {
@@ -1388,6 +1450,27 @@ try {
                 });
                 html += `</div></div>`;
 
+                // System checkboxes (shown for Reviewer alongside departments)
+                html += `<div class="mt-3 reviewer-system-assignment-selectors" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label mb-0">System(s)</label>
+                    <div class="form-check mb-0">
+                        <input type="checkbox" class="form-check-input" id="selectAllReviewerSystems">
+                        <label class="form-check-label small text-muted" for="selectAllReviewerSystems">Select All</label>
+                    </div>
+                </div>
+                <div class="border rounded p-2 bg-light" style="max-height:200px; overflow-y:auto;">`;
+                $('.system-item').each(function() {
+                    const sysId = $(this).data('system-id');
+                    const sysName = $(this).find('.editable-label').text().trim();
+                    const isSelected = selectedSystems.includes(parseInt(sysId));
+                    html += `<div class="form-check">
+                        <input type="checkbox" class="form-check-input reviewer-system-checkbox" id="reviewer-system-${sysId}" value="${sysId}" ${isSelected ? 'checked' : ''}>
+                        <label class="form-check-label" for="reviewer-system-${sysId}">${htmlEscape(sysName)}</label>
+                    </div>`;
+                });
+                html += `</div></div>`;
+
                 // Department checkboxes (shown for Reviewer)
                 html += `<div class="mt-3 department-assignment-selectors" style="display:none;">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -1420,16 +1503,21 @@ try {
                     if (rolesWithSystemAssignment.includes(type)) {
                         $('.system-assignment-selectors').show();
                         $('.department-assignment-selectors').hide();
+                        $('.reviewer-system-assignment-selectors').hide();
                         $('.department-checkbox').prop('checked', false);
+                        $('.reviewer-system-checkbox').prop('checked', false);
                     } else if (rolesWithDepartmentAssignment.includes(type)) {
                         $('.department-assignment-selectors').show();
+                        $('.reviewer-system-assignment-selectors').show();
                         $('.system-assignment-selectors').hide();
                         $('.system-checkbox').prop('checked', false);
                     } else {
                         $('.system-assignment-selectors').hide();
                         $('.department-assignment-selectors').hide();
+                        $('.reviewer-system-assignment-selectors').hide();
                         $('.system-checkbox').prop('checked', false);
                         $('.department-checkbox').prop('checked', false);
+                        $('.reviewer-system-checkbox').prop('checked', false);
                     }
                 };
 
@@ -1445,6 +1533,17 @@ try {
                     const checked = $('.system-checkbox:checked').length;
                     $('#selectAllSystems').prop('checked', total > 0 && checked === total)
                                          .prop('indeterminate', checked > 0 && checked < total);
+                });
+
+                // Select All — reviewer systems
+                $(document).off('change', '#selectAllReviewerSystems').on('change', '#selectAllReviewerSystems', function() {
+                    $('.reviewer-system-checkbox').prop('checked', $(this).is(':checked'));
+                });
+                $(document).off('change', '.reviewer-system-checkbox').on('change', '.reviewer-system-checkbox', function() {
+                    const total = $('.reviewer-system-checkbox').length;
+                    const checked = $('.reviewer-system-checkbox:checked').length;
+                    $('#selectAllReviewerSystems').prop('checked', total > 0 && checked === total)
+                                                  .prop('indeterminate', checked > 0 && checked < total);
                 });
 
                 // Select All — departments
@@ -1526,17 +1625,6 @@ try {
         // ============================================================
         $(document).on('change', '.module-action-checkbox', updateModalSummary);
         $(document).on('change', '.system-role-checkbox', updateModalSummary);
-        $(document).on('change', '.module-master-checkbox', function() {
-            const mid = $(this).data('module');
-            $(`.role-permission-checkbox[data-module="${mid}"]`).prop('checked', $(this).is(':checked'));
-            updateModalSummary();
-        });
-        $(document).on('change', '.role-permission-checkbox', function() {
-            const mid = $(this).data('module');
-            const checked = $(`.role-permission-checkbox[data-module="${mid}"]:checked`).length;
-            $(`.module-master-checkbox[data-module="${mid}"]`).prop('checked', checked > 0);
-            updateModalSummary();
-        });
 
         // ============================================================
         // SEARCH
@@ -1673,19 +1761,17 @@ try {
             return html;
         }
 
-        function buildSystemCardHtml(id, name, rolesHtml) {
+        // buildSystemCardHtml: simplified — no editable label, no duplicate, no roles container (display-only tab)
+        function buildSystemCardHtml(id, name) {
             return `<div class="system-item card p-3 mb-3" data-system-id="${id}">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="d-flex align-items-center flex-grow-1">
-                    <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-roles">+</button>
-                    <span class="editable-label flex-grow-1" data-type="system" data-id="${id}">${htmlEscape(name)}</span>
+                    <span class="flex-grow-1 ps-1 system-display-name">${htmlEscape(name)}</span>
                 </div>
                 <div class="btn-group" role="group">
-                    <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="${id}" data-system-name="${htmlEscape(name)}">Duplicate</button>
                     <button class="btn btn-sm btn-danger" data-action="deleteSystem" data-system-id="${id}">×</button>
                 </div>
             </div>
-            <div class="system-roles-container mt-3" style="display:none;">${rolesHtml}</div>
         </div>`;
         }
 
@@ -1703,15 +1789,15 @@ try {
 
             // Build tab bar: Global + one per assigned system + Add System button
             let tabBarHtml = '<div class="d-flex align-items-center gap-1 flex-wrap mb-3" id="rolePanelTabBar">';
-            tabBarHtml += `<button type="button" class="btn btn-sm role-panel-tab active" data-tab-target="panel-null">Global</button>`;
+            // tabBarHtml += `<button type="button" class="btn btn-sm role-panel-tab active" data-tab-target="panel-null">Global</button>`;
             assignedSystemIds.forEach(sysId => {
                 const sysName = $(`.system-item[data-system-id="${sysId}"]`).find('.editable-label').text().trim();
                 tabBarHtml += `<button type="button" class="btn btn-sm role-panel-tab" data-tab-target="panel-${sysId}">${htmlEscape(sysName)}</button>`;
             });
-            tabBarHtml += `<div class="position-relative ms-1" id="addSystemPanelWrapper">
+            tabBarHtml += `<div class="position-relative ms-1" id="addSystemPanelWrapper" style="flex-shrink:0;">
                 <button type="button" class="btn btn-sm btn-outline-secondary" id="addSystemPanelBtn">+ Add System</button>
-                <div id="addSystemPanelMenu" style="display:none; position:absolute; top:100%; left:0; z-index:9999;
-                    background:#fff; border:1px solid var(--color-border-secondary);
+                <div id="addSystemPanelMenu" style="display:none; position:fixed; z-index:9999;
+                    background:#fff; border:1px solid #dee2e6;
                     border-radius:6px; min-width:180px; padding:4px 0; box-shadow:0 4px 12px rgba(0,0,0,.15);">`;
             $('.system-item').each(function() {
                 const sysId = $(this).data('system-id').toString();
@@ -1726,7 +1812,7 @@ try {
             tabBarHtml += `</div></div></div>`;
 
             // Build panels (one per tab, all rendered but hidden)
-            const allPanelSysKeys = ['null', ...assignedSystemIds.map(String)];
+            const allPanelSysKeys = [...assignedSystemIds.map(String)];
             let panelsHtml = '';
             allPanelSysKeys.forEach((sysKey, idx) => {
                 const isGlobal = sysKey === 'null';
@@ -1745,8 +1831,10 @@ try {
                     const mname = $(this).find('.editable-label').text().trim();
                     panelsHtml += `<div class="role-modal-module-card" data-module-name="${mname.toLowerCase()}">
                         <div class="role-modal-module-header d-flex align-items-center gap-1 mb-1">
-                            <input type="checkbox" class="module-master-checkbox" data-panel="${sysKey}" data-module="${mid}">
-                            <strong style="font-size:0.82rem;">${htmlEscape(mname)}</strong>
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:4px; margin:0; font-size:0.82rem; font-weight:600;">
+                                <input type="checkbox" class="module-master-checkbox" data-panel="${sysKey}" data-module="${mid}">
+                                ${htmlEscape(mname)}
+                            </label>
                         </div>
                         <div class="d-flex flex-column gap-1">`;
                     (moduleAssignments[mid] || []).forEach(aid => {
@@ -1797,7 +1885,13 @@ try {
             });
             $(document).off('click.addSysBtn').on('click.addSysBtn', '#addSystemPanelBtn', function(e) {
                 e.stopPropagation();
-                $('#addSystemPanelMenu').toggle();
+                const menu = $('#addSystemPanelMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                    return;
+                }
+                const rect = $(this)[0].getBoundingClientRect();
+                menu.css({ top: rect.bottom + 4, left: rect.left }).show();
             });
 
             $(document).off('click.closeSysMenu').on('click.closeSysMenu', function() {
@@ -1833,8 +1927,10 @@ try {
                     const mname = $(this).find('.editable-label').text().trim();
                     newPanel += `<div class="role-modal-module-card" data-module-name="${mname.toLowerCase()}">
                         <div class="role-modal-module-header d-flex align-items-center gap-1 mb-1">
-                            <input type="checkbox" class="module-master-checkbox" data-panel="${sysId}" data-module="${mid}">
-                            <strong style="font-size:0.82rem;">${htmlEscape(mname)}</strong>
+                            <label style="cursor:pointer; display:flex; align-items:center; gap:4px; margin:0; font-size:0.82rem; font-weight:600;">
+                                <input type="checkbox" class="module-master-checkbox" data-panel="${sysId}" data-module="${mid}">
+                                ${htmlEscape(mname)}
+                            </label>
                         </div>
                         <div class="d-flex flex-column gap-1">`;
                     (moduleAssignments[mid] || []).forEach(aid => {
@@ -1866,6 +1962,13 @@ try {
             });
 
             // ── Remove system panel tab ──
+            $(document).off('keyup', '.role-module-search').on('keyup', '.role-module-search', function() {
+                const q = $(this).val().toLowerCase();
+                $(this).closest('.role-system-panel').find('.role-modal-module-card').each(function() {
+                    $(this).toggle($(this).data('module-name').includes(q));
+                });
+            });
+
             $(document).off('click', '.remove-system-panel-tab').on('click', '.remove-system-panel-tab', function() {
                 const sysKey = $(this).data('sys-key').toString();
 
@@ -1879,9 +1982,10 @@ try {
                     .text($menuItem.data('sys-name'));
 
                 $('.role-panel-tab').removeClass('active btn-dark').addClass('btn-outline-secondary');
-                $(`.role-panel-tab[data-tab-target="panel-null"]`).removeClass('btn-outline-secondary').addClass('active btn-dark');
+               const $firstTab = $('.role-panel-tab').first();
+                $firstTab.removeClass('btn-outline-secondary').addClass('active btn-dark');
                 $('.role-system-panel').hide();
-                $('#panel-null').show();
+                $(`#${$firstTab.data('tab-target')}`).show();
 
                 updateModalSummary();
             });
@@ -1930,7 +2034,8 @@ try {
 
             if (action.includes('Role')) {
                 data.role_id = $('#modalRole').val();
-                data.system_permissions = [];
+
+                const systemPermissions = [];
 
                 $('#permissionsContainer .role-system-panel').each(function() {
                     const panelSystemId = $(this).data('panel-system-id');
@@ -1942,11 +2047,13 @@ try {
                         const actionName = $(this).closest('label').find('span').text().trim();
                         permissions.push({ module_id: moduleId, action_id: actionId, module_name: moduleName, action_name: actionName });
                     });
-                    data.system_permissions.push({
+                    systemPermissions.push({
                         system_id: panelSystemId === 'null' ? null : panelSystemId,
                         permissions: permissions
                     });
                 });
+
+                data.system_permissions = JSON.stringify(systemPermissions);
 
                 url = '/zen/reqHub/actions/role_action.php';
             }
@@ -1976,7 +2083,7 @@ try {
                 data.user_type = $('#permissionsContainer select[name="user_type"]').val();
                 data.system_ids = [];
                 data.department_codes = [];
-                $('#permissionsContainer .system-checkbox:checked').each(function() {
+                $('#permissionsContainer .system-checkbox:checked, #permissionsContainer .reviewer-system-checkbox:checked').each(function() {
                     data.system_ids.push($(this).val().toString());
                 });
                 $('#permissionsContainer .department-checkbox:checked').each(function() {
@@ -2032,7 +2139,9 @@ try {
                     const dn = res.name || data.name;
                     roleAssignments[res.id] = {};
 
-                    (data.system_permissions || []).forEach(sp => {
+                    const parsedSysPerms = JSON.parse(data.system_permissions || '[]');
+
+                    parsedSysPerms.forEach(sp => {
                         const sysKey = sp.system_id || 'null';
                         roleAssignments[res.id][sysKey] = (sp.permissions || []).map(p => ({
                             module_id: parseInt(p.module_id),
@@ -2044,8 +2153,8 @@ try {
                     });
 
                     let permHtml = '';
-                    if (data.system_permissions && data.system_permissions.length > 0) {
-                        data.system_permissions.forEach(sp => {
+                    if (parsedSysPerms.length > 0) {
+                        parsedSysPerms.forEach(sp => {
                             let sysLabel = 'Global';
                             if (sp.system_id) {
                                 $('.system-item').each(function() {
@@ -2081,7 +2190,7 @@ try {
 
                     if (!roleAssignments[res.id]) roleAssignments[res.id] = {};
 
-                    (data.system_permissions || []).forEach(sp => {
+                    (JSON.parse(data.system_permissions || '[]')).forEach(sp => {
                         const sysKey = sp.system_id || 'null';
                         roleAssignments[res.id][sysKey] = (sp.permissions || []).map(p => ({
                             module_id: parseInt(p.module_id),
@@ -2096,6 +2205,7 @@ try {
                     const allSysKeys = Object.keys(roleAssignments[res.id]);
                     if (allSysKeys.length > 0) {
                         allSysKeys.forEach(sk => {
+                            if (sk === 'null') return; // hide global
                             const sysPerms = roleAssignments[res.id][sk];
                             if (!sysPerms || sysPerms.length === 0) return;
                             let sysLabel = 'Global';
@@ -2129,16 +2239,13 @@ try {
 
                 if (action === 'addSystem') {
                     const dn = res.name || data.name;
-                    systemRoles[res.id] = res.roles || [];
-                    $('.systems-list').append(buildSystemCardHtml(res.id, dn, buildRolesHtml(res.roles || [])));
+                    systemRoles[res.id] = [];
+                    $('.systems-list').append(buildSystemCardHtml(res.id, dn));
                 }
+                // editSystem: systems tab is now display-only; just update the name label
                 if (action === 'editSystem') {
                     const dn = res.name || data.name;
-                    $(`.system-item .editable-label[data-id="${res.id}"]`).text(dn);
-                    $(`.system-item [data-action="duplicateSystem"][data-system-id="${res.id}"]`).data('system-name', dn);
-                    const newRoles = res.roles || [];
-                    systemRoles[res.id] = newRoles;
-                    $(`.system-item[data-system-id="${res.id}"] .system-roles-container`).html(newRoles.length > 0 ? buildRolesHtml(newRoles) : '<span class="text-muted">No roles assigned</span>');
+                    $(`.system-item[data-system-id="${res.id}"] .system-display-name`).text(dn);
                 }
 
                 if (action === 'addUser') {
