@@ -124,7 +124,7 @@ switch ($status) {
             }
         } elseif ($role === 'Approver') {
             if ($pending_tab === 'needs_revision') {
-                $sql .= " AND r.status = 'needs_revision'";
+                $sql .= " AND 1=0";
             } else {
                 $sql .= " AND r.status = 'reviewed'";
             }
@@ -336,6 +336,7 @@ try {
     data-served-by="<?= htmlspecialchars($req['served_by_name'] ?? '') ?>"
     data-served-at="<?= htmlspecialchars($req['served_at'] ?? '') ?>"
     data-has-chat="<?= ($req['human_chat_count'] ?? 0) > 0 ? '1' : '0' ?>"
+    data-user-id="<?= $req['user_id'] ?>"
     data-denied-by="<?= htmlspecialchars($req['denied_by_name'] ?? '') ?>"
     data-denied-at="<?= htmlspecialchars($req['denied_at'] ?? '') ?>"
 >
@@ -605,6 +606,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const container     = document.getElementById('modalActions');
         container.innerHTML = '';
         const role = "<?= $role ?>";
+        const currentUserId = <?= $actual_user_id ?? 0 ?>;
 
         const chatInput     = document.getElementById('chatInput');
         const chatSubmitBtn = document.getElementById('chatSubmitBtn');
@@ -664,7 +666,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 ${data.status === 'reviewed' ? `<button class="btn btn-warning btn-sm ms-2" onclick="openReviseModal('${data.id}')">Revise</button>` : ''}`;
         }
 
-        if ((role === 'Requestor' || role === 'Reviewer') && data.status === 'needs_revision') {
+        if ((role === 'Requestor' || (role === 'Reviewer' && parseInt(data.userId) === currentUserId)) && data.status === 'needs_revision') {
             container.innerHTML = `<a href="/zen/reqHub/request_revise?request_id=${data.id}" class="btn btn-primary btn-sm">Edit & Resubmit</a>`;
         }
 
