@@ -88,21 +88,40 @@ function resolveSystemName(PDO $pdo, int $systemId): string
 function notifyReviewers(PDO $pdo, int $requestId, string $requestorName = '', string $systemName = ''): void
 {
     try {
-        // If not passed in, resolve from the request row
+        $deptId = null;
+
         if (!$requestorName || !$systemName) {
-            $stmt = $pdo->prepare("SELECT r.user_id, r.system_id FROM requests r WHERE r.id = ?");
+            $stmt = $pdo->prepare("SELECT r.user_id, r.system_id, r.department_id FROM requests r WHERE r.id = ?");
             $stmt->execute([$requestId]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($row) {
                 if (!$requestorName) $requestorName = resolveEmployeeNameByUserId($pdo, (int)$row['user_id']);
                 if (!$systemName)    $systemName    = resolveSystemName($pdo, (int)$row['system_id']);
+                $deptId = $row['department_id'] ?? null;
             }
+        } else {
+            $stmt = $pdo->prepare("SELECT department_id FROM requests WHERE id = ?");
+            $stmt->execute([$requestId]);
+            $deptId = $stmt->fetchColumn();
         }
 
         $message = "{$requestorName} submitted a new [{$systemName}] request pending your review.";
 
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Reviewer' AND is_active = 1");
-        $stmt->execute();
+        if ($deptId !== null) {
+            $stmt = $pdo->prepare("
+                SELECT DISTINCT u.id
+                FROM users u
+                INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+                WHERE u.reqhub_role = 'Reviewer'
+                  AND u.is_active = 1
+                  AND uaa.department_id = ?
+            ");
+            $stmt->execute([$deptId]);
+        } else {
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Reviewer' AND is_active = 1");
+            $stmt->execute();
+        }
+
         $reviewers = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($reviewers as $reviewerId) {
