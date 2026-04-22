@@ -47,7 +47,7 @@ try {
     $result = $stmt->execute([$id]);
     error_log("revise_action: UPDATE result: " . ($result ? 'true' : 'false') . ", rowCount: " . $stmt->rowCount());
 
-    $system_message = "[REVISION REQUESTED]: \n\n" . $revision_message;
+    $system_message = "[REVISION REQUESTED BY {$current_user['reqhub_role']}]: \n\n" . $revision_message;
     $stmt2 = $pdo->prepare("INSERT INTO request_chats (request_id, sender_id, message, created_at) VALUES (?, 1, ?, NOW())");
     $result2 = $stmt2->execute([$id, $system_message]);
     error_log("revise_action: INSERT result: " . ($result2 ? 'true' : 'false'));

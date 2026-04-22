@@ -664,7 +664,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 ${data.status === 'reviewed' ? `<button class="btn btn-warning btn-sm ms-2" onclick="openReviseModal('${data.id}')">Revise</button>` : ''}`;
         }
 
-        if (role === 'Requestor' && data.status === 'needs_revision') {
+        if ((role === 'Requestor' || role === 'Reviewer') && data.status === 'needs_revision') {
             container.innerHTML = `<a href="/zen/reqHub/request_revise?request_id=${data.id}" class="btn btn-primary btn-sm">Edit & Resubmit</a>`;
         }
 

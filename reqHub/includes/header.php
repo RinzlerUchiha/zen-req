@@ -165,9 +165,9 @@ body,
         <span class="text-white">Dev Role:</span>
         <select onchange="switchRole(this.value)" class="form-select form-select-sm w-auto">
             <option value="Requestor" <?= $role === 'Requestor' ? 'selected' : '' ?>>Requestor</option>
+            <option value="Reviewer"  <?= $role === 'Reviewer'  ? 'selected' : '' ?>>Reviewer</option>
             <option value="Approver"  <?= $role === 'Approver'  ? 'selected' : '' ?>>Approver</option>
             <option value="Admin"     <?= $role === 'Admin'     ? 'selected' : '' ?>>Admin</option>
-            <option value="Reviewer"  <?= $role === 'Reviewer'  ? 'selected' : '' ?>>Reviewer</option>
         </select>
         <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($role) ?></strong></span>
     </div>

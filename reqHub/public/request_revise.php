@@ -3,9 +3,9 @@ require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 
 // Only Requestors can revise their own requests
-if (!userHasRoleIn('Requestor')) {
+if (!userHasRoleIn('Requestor', 'Reviewer')) {
     http_response_code(403);
-    die('Access denied: Only requestors can revise requests');
+    die('Access denied: Only requestors and reviewers can revise requests');
 }
 
 $pdo = ReqHubDatabase::getConnection('reqhub');
@@ -185,7 +185,7 @@ $revisionComment = '';
 try {
     $stmt = $pdo->prepare("
         SELECT message FROM request_chats 
-        WHERE request_id = ? AND message LIKE '[REVISION REQUESTED]%'
+        WHERE request_id = ? AND message LIKE '[REVISION REQUESTED%'
         ORDER BY created_at DESC 
         LIMIT 1
     ");
@@ -523,7 +523,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const moduleCard = document.createElement("div");
             moduleCard.className = "module-card";
-            moduleCard.style.cssText = "border:1px solid #555; border-radius:4px; padding:10px; background-color:#fffcfc; display:flex; flex-direction:column; min-height:250px;";
+            moduleCard.style.cssText = "border:1px solid #555; border-radius:4px; padding:10px; background-color:#fffcfc; display:flex; flex-direction:column;";
 
             const headerDiv = document.createElement("div");
             headerDiv.style.display = "flex";
@@ -552,6 +552,7 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleTitle.style.cursor = "pointer";
             moduleTitle.style.marginBottom = "0";
             moduleTitle.textContent = moduleName;
+            moduleTitle.addEventListener("click", function() { moduleCheckbox.click(); });
 
             const badge = document.createElement("span");
             badge.style.backgroundColor = "#555";
@@ -676,12 +677,12 @@ document.addEventListener("DOMContentLoaded", function() {
     const storeContainer = document.getElementById('storeContainer');
     const storeInput = document.getElementById('storeInput');
 
-    function initFromDatabase() {
+        function initFromDatabase() {
         autoSelectedItems.clear();
         autoSelectedModules.clear();
 
         allAccessTypesList.forEach(type => {
-            if (roleAccessTypeIds.includes(type.id)) {
+            if (currentAccessTypeIds.includes(type.id)) {
                 autoSelectedItems.add(type.id.toString());
                 autoSelectedModules.add(type.module);
             }

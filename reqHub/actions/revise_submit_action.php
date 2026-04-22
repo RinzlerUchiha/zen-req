@@ -20,7 +20,7 @@ if (!isAuthenticated()) {
 }
 
 $current_user = getCurrentUser();
-if (!in_array($current_user['reqhub_role'], ['Requestor', 'Approver'])) {
+if (!in_array($current_user['reqhub_role'], ['Requestor', 'Approver', 'Reviewer'])) {
     error_log("revise_submit_action: User role is " . $current_user['reqhub_role']);
     http_response_code(403);
     die(json_encode(['success' => false, 'message' => 'Only requestors can submit revisions']));
@@ -34,7 +34,7 @@ $request_id    = isset($_POST['request_id'])    ? (int)$_POST['request_id']    :
 $system_id     = isset($_POST['system_id'])     ? (int)$_POST['system_id']     : null;
 $department_id = isset($_POST['department_id']) ? (int)$_POST['department_id'] : null;
 $request_for   = isset($_POST['request_for'])   ? (int)$_POST['request_for']   : null;
-$remove_from   = isset($_POST['remove_from'])   && $_POST['remove_from'] !== '' ? (int)$_POST['remove_from'] : null;
+$remove_from   = isset($_POST['remove_from'])   && $_POST['remove_from'] !== '' ? $_POST['remove_from'] : null;
 $description   = trim($_POST['description'] ?? '');
 $access_types  = $_POST['access_types'] ?? [];
 if (empty($access_types) && isset($_POST['access_types[]'])) {
@@ -83,6 +83,7 @@ try {
 
     // Verify the request belongs to the current user and is in needs_revision status
     $stmt = $pdo->prepare("SELECT id, status FROM requests WHERE id = ? AND user_id = ? AND status = 'needs_revision'");
+    
     $stmt->execute([$request_id, $actual_user_id]);
     $existingRequest = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -93,6 +94,15 @@ try {
         http_response_code(400);
         die(json_encode(['success' => false, 'message' => 'Request not found or cannot be revised']));
     }
+    // Determine who triggered the revision
+    $stmt = $pdo->prepare("
+        SELECT message FROM request_chats 
+        WHERE request_id = ? AND message LIKE '[REVISION REQUESTED BY%'
+        ORDER BY created_at DESC LIMIT 1
+    ");
+    $stmt->execute([$request_id]);
+    $revisionMsg = $stmt->fetchColumn();
+    $newStatus = (strpos($revisionMsg, 'BY Approver') !== false) ? 'reviewed' : 'pending';
 
     // Update the request
     $sql = "UPDATE requests SET 
@@ -102,7 +112,7 @@ try {
         remove_from = ?, 
         description = ?, 
         chosen_role = ?,
-        status = 'pending',
+        status = ?,
         updated_at = NOW()
         WHERE id = ?";
 
@@ -117,6 +127,7 @@ try {
         $remove_from,
         $description,
         $chosen_role,
+        $newStatus,
         (int)$request_id
     ]);
 
@@ -139,7 +150,8 @@ try {
         INSERT INTO request_chats (request_id, sender_id, message, created_at)
         VALUES (?, 1, ?, NOW())
     ");
-    $system_message = "[REQUEST RESUBMITTED]\n\nRevisions have been submitted. The request is back in pending for approver review.";
+    $routedTo = ($newStatus === 'reviewed') ? 'approver' : 'reviewer';
+    $system_message = "[REQUEST RESUBMITTED]\n\nRevisions have been submitted. The request has been sent back to the {$routedTo} for review.";
     $stmt->execute([$request_id, $system_message]);
     error_log("revise_submit_action: System message inserted");
 
@@ -148,7 +160,7 @@ try {
     $systemName    = resolveSystemName($pdo, (int)$system_id);
 
     // Notify reviewers that the revised request needs re-signing
-    notifyReviewers($pdo, (int)$request_id, $requestorName, $systemName);
+    notifyApproversForSystem($pdo, (int)$system_id, (int)$request_id, $requestorName, $systemName);
 
     error_log("revise_submit_action: SUCCESS");
 
