@@ -208,6 +208,64 @@ if ($userRecord) {
     }
 }
 
+// Count query for tab badges
+$countParams = [];
+$countSql = "
+    SELECT r.status, r.admin_status
+    FROM requests r
+    WHERE 1=1
+";
+
+if ($role === 'Requestor') {
+    $countSql .= " AND r.user_id = ?";
+    $countParams[] = $actual_user_id;
+} elseif ($role === 'Approver') {
+    if (!empty($systemIds)) {
+        $ph2 = implode(',', array_fill(0, count($systemIds), '?'));
+        $countSql .= " AND r.system_id IN ($ph2)";
+        foreach ($systemIds as $sid) $countParams[] = $sid;
+    } else {
+        $countSql .= " AND 1=0";
+    }
+} elseif ($role === 'Reviewer') {
+    if (!empty($assignedDeptIds)) {
+        $ph2 = implode(',', array_fill(0, count($assignedDeptIds), '?'));
+        $countSql .= " AND r.department_id IN ($ph2)";
+        foreach ($assignedDeptIds as $did) $countParams[] = $did;
+    } else {
+        $countSql .= " AND 1=0";
+    }
+}
+
+$countStmt = $pdo->prepare($countSql);
+$countStmt->execute($countParams);
+$allRows = $countStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$counts = [
+    'pending_all'            => 0,
+    'pending_needs_revision' => 0,
+    'approved'               => 0,
+];
+
+foreach ($allRows as $row) {
+    $s  = $row['status'];
+    $as = $row['admin_status'];
+
+    if ($s === 'approved' && ($as === 'pending' || $as === null)) {
+        $counts['approved']++;
+    }
+
+    if ($role === 'Reviewer') {
+        if ($s === 'pending')        $counts['pending_all']++;
+        if ($s === 'needs_revision') $counts['pending_needs_revision']++;
+    } elseif ($role === 'Approver') {
+        if ($s === 'reviewed')       $counts['pending_all']++;
+    } else {
+        if (in_array($s, ['pending', 'reviewed'])) $counts['pending_all']++;
+        if ($s === 'needs_revision')               $counts['pending_needs_revision']++;
+    }
+}
+
 $sql .= " GROUP BY r.id ORDER BY r.id DESC";
 
 try {
@@ -228,9 +286,12 @@ try {
             SELECT rc.request_id
             FROM request_chats rc
             JOIN users ru ON rc.sender_id = ru.id
+            JOIN requests r ON rc.request_id = r.id
             WHERE rc.request_id IN ($ph)
             AND rc.sender_id != 1
             AND ru.employee_id != ?
+            AND r.status != 'denied'
+            AND (r.admin_status IS NULL OR r.admin_status != 'served')
             AND rc.created_at > COALESCE(
                 (
                     SELECT last_viewed_at
@@ -280,6 +341,12 @@ try {
         <?php if ($tab === 'pending' && $role === 'Reviewer'): ?>
             <small class="text-muted">(to sign)</small>
         <?php endif; ?>
+        <?php if ($tab === 'pending' && ($counts['pending_all'] + $counts['pending_needs_revision']) > 0): ?>
+            <span class="badge bg-secondary ms-1"><?= $counts['pending_all'] + $counts['pending_needs_revision'] ?></span>
+        <?php endif; ?>
+        <?php if ($tab === 'approved' && $counts['approved'] > 0): ?>
+            <span class="badge bg-secondary ms-1"><?= $counts['approved'] ?></span>
+        <?php endif; ?>
     </a>
 </li>
 <?php endforeach; ?>
@@ -294,12 +361,18 @@ try {
             <?php if ($role === 'Reviewer'): ?>Awaiting Signature<?php
             elseif ($role === 'Approver'): ?>All Pending<?php
             else: ?>All Pending<?php endif; ?>
+            <?php if ($counts['pending_all'] > 0): ?>
+                <span class="badge bg-secondary ms-1"><?= $counts['pending_all'] ?></span>
+            <?php endif; ?>
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link <?= $pending_tab === 'needs_revision' ? 'active' : '' ?>"
            href="?status=pending&pending_tab=needs_revision">
             Needs Revision
+            <?php if ($counts['pending_needs_revision'] > 0): ?>
+                <span class="badge bg-secondary ms-1"><?= $counts['pending_needs_revision'] ?></span>
+            <?php endif; ?>
         </a>
     </li>
 </ul>

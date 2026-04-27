@@ -37,9 +37,12 @@ try {
         SELECT rc.request_id
         FROM request_chats rc
         JOIN users ru ON rc.sender_id = ru.id
+        JOIN requests r ON rc.request_id = r.id
         WHERE rc.request_id IN ($placeholders)
         AND rc.sender_id != 1
         AND ru.employee_id != ?
+        AND r.status != 'denied'
+        AND (r.admin_status IS NULL OR r.admin_status != 'served')
         AND rc.created_at > COALESCE(
             (
                 SELECT last_viewed_at
