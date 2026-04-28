@@ -205,6 +205,11 @@ try {
             error_log("HR lookup failed for $employeeId: " . $e->getMessage());
         }
 
+        // Capture old role before updating
+        $oldRoleStmt = $pdo->prepare("SELECT reqhub_role FROM users WHERE id = ?");
+        $oldRoleStmt->execute([$userId]);
+        $oldRole = $oldRoleStmt->fetchColumn();
+
         $stmt = $pdo->prepare("
             UPDATE users
             SET employee_id = ?, reqhub_role = ?
@@ -271,6 +276,59 @@ try {
             // No assignable role — also clean up pending_approval notifications
             $delNotifStmt = $pdo->prepare("DELETE FROM notifications WHERE user_id = ? AND type = 'pending_approval'");
             $delNotifStmt->execute([$userId]);
+        }
+
+        // Re-route orphaned pending requests if a Reviewer was demoted
+        if ($oldRole === 'Reviewer' && $userType !== 'Reviewer') {
+            require_once(__DIR__ . '/../includes/notifications.php');
+
+            // Find pending requests in departments this user was assigned to
+            // that now have no active Reviewer
+            $orphanedStmt = $pdo->prepare("
+                SELECT r.id, r.system_id, r.user_id
+                FROM requests r
+                WHERE r.status = 'pending'
+                AND r.department_id IN (
+                    SELECT uaa.department_id
+                    FROM user_approver_assignments uaa
+                    WHERE uaa.user_id = ?
+                    AND uaa.department_id IS NOT NULL
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM users u2
+                        INNER JOIN user_approver_assignments uaa2 ON uaa2.user_id = u2.id
+                        WHERE u2.reqhub_role = 'Reviewer'
+                        AND u2.is_active = 1
+                        AND u2.id != ?
+                        AND uaa2.department_id = uaa.department_id
+                    )
+                )
+            ");
+            $orphanedStmt->execute([$userId, $userId]);
+            $orphanedRequests = $orphanedStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($orphanedRequests)) {
+                $rerouteStmt = $pdo->prepare("
+                    UPDATE requests SET status = 'reviewed', updated_at = NOW() WHERE id = ?
+                ");
+                $systemMsgStmt = $pdo->prepare("
+                    INSERT INTO request_chats (request_id, sender_id, message, created_at)
+                    VALUES (?, 1, ?, NOW())
+                ");
+
+                foreach ($orphanedRequests as $orphan) {
+                    $rerouteStmt->execute([$orphan['id']]);
+
+                    $systemMsgStmt->execute([
+                        $orphan['id'],
+                        "[SYSTEM] The reviewer assigned to this department is no longer active. This request has been automatically forwarded to the approver."
+                    ]);
+
+                    $requestorName = resolveEmployeeNameByUserId($pdo, (int)$orphan['user_id']);
+                    $systemName    = resolveSystemName($pdo, (int)$orphan['system_id']);
+                    notifyApproversForSystem($pdo, (int)$orphan['system_id'], (int)$orphan['id'], $requestorName, $systemName);
+                }
+            }
         }
 
         echo json_encode([

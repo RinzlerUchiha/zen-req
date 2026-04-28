@@ -102,7 +102,20 @@ try {
     ");
     $stmt->execute([$request_id]);
     $revisionMsg = $stmt->fetchColumn();
-    $newStatus = (strpos($revisionMsg, 'BY Approver') !== false) ? 'reviewed' : 'pending';
+
+    // Check if the department has an assigned reviewer
+    $stmtReviewerCheck = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM users u
+        INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+        WHERE u.reqhub_role = 'Reviewer'
+        AND u.is_active = 1
+        AND uaa.department_id = ?
+    ");
+    $stmtReviewerCheck->execute([$department_id]);
+    $hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
+
+    $newStatus = (strpos($revisionMsg, 'BY Approver') !== false || !$hasReviewer) ? 'reviewed' : 'pending';
 
     // Update the request
     $sql = "UPDATE requests SET 
@@ -160,7 +173,11 @@ try {
     $systemName    = resolveSystemName($pdo, (int)$system_id);
 
     // Notify reviewers that the revised request needs re-signing
-    notifyApproversForSystem($pdo, (int)$system_id, (int)$request_id, $requestorName, $systemName);
+    if ($newStatus === 'pending') {
+        notifyReviewers($pdo, (int)$request_id, $requestorName, $systemName);
+    } elseif ($newStatus === 'reviewed') {
+        notifyApproversForSystem($pdo, (int)$system_id, (int)$request_id, $requestorName, $systemName);
+    }
 
     error_log("revise_submit_action: SUCCESS");
 

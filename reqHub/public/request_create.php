@@ -236,11 +236,11 @@ try {
 document.addEventListener("DOMContentLoaded", function() {
 
     // ── All users data for remove_from rebuilding ──
-    const allUsersData = <?= json_encode(array_map(fn($u) => [
+    const allUsersData = <?= json_encode(array_map(function($u) { return [
         'id'          => $u['id'],
         'name'        => $u['name'],
         'employee_id' => $u['employee_id'],
-    ], $allUsers)) ?>;
+    ]; }, $allUsers)) ?>;
 
     // ── Form submit ──
     const requestForm = document.getElementById('requestForm');

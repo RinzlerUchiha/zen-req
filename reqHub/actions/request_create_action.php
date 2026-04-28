@@ -76,7 +76,20 @@ $requestorName = resolveEmployeeName($pdo, $currentUser['emp_no']);
 $systemName    = resolveSystemName($pdo, (int)$system_id);
 
 try {
-    $status       = ($userRole === 'Approver') ? 'approved' : (($userRole === 'Reviewer') ? 'reviewed' : 'pending');
+    $stmtReviewerCheck = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM users u
+    INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+    WHERE u.reqhub_role = 'Reviewer'
+      AND u.is_active = 1
+      AND uaa.department_id = ?
+");
+$stmtReviewerCheck->execute([$department_id]);
+$hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
+
+$status = ($userRole === 'Approver') ? 'approved'
+        : (($userRole === 'Reviewer') ? 'reviewed'
+        : ($hasReviewer ? 'pending' : 'reviewed'));
     $admin_status = 'pending';
     $approved_by  = ($userRole === 'Approver') ? $user_id : null;
     $approved_at  = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
@@ -116,12 +129,8 @@ try {
 
     // Notifications
     if ($status === 'pending') {
-        // Notify Reviewers with requestor name + system
-        notifyReviewers($pdo, $request_id, $requestorName, $systemName);
-    }
-
-    if ($status === 'reviewed') {
-        // Reviewer-created request goes straight to reviewed, notify Approvers
+    notifyReviewers($pdo, $request_id, $requestorName, $systemName);
+    } elseif ($status === 'reviewed') {
         notifyApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName);
     }
 

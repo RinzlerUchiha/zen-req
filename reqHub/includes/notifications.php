@@ -4,7 +4,7 @@
  * File: /zen/reqHub/includes/notifications.php
  */
 
-function createNotification(PDO $pdo, int $userId, string $type, ?int $requestId, string $message): void
+function createNotification(PDO $pdo, $userId, $type, $requestId, $message)
 {
     try {
         $stmt = $pdo->prepare("
@@ -85,7 +85,7 @@ function resolveSystemName(PDO $pdo, int $systemId): string
  * Notify Reviewers when a new request is created.
  * Message: "[Requestor Name] submitted a new request for [System]."
  */
-function notifyReviewers(PDO $pdo, int $requestId, string $requestorName = '', string $systemName = ''): void
+function notifyReviewers(PDO $pdo, $requestId, $requestorName = '', $systemName = '')
 {
     try {
         $deptId = null;
@@ -136,7 +136,7 @@ function notifyReviewers(PDO $pdo, int $requestId, string $requestorName = '', s
  * Notify Approvers assigned to a system once the request is reviewed/signed.
  * Message: "[Requestor Name]'s [System] request has been reviewed and is pending your approval."
  */
-function notifyApproversForSystem(PDO $pdo, int $systemId, int $requestId, string $requestorName = '', string $systemName = ''): void
+function notifyApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorName = '', $systemName = '')
 {
     try {
         if (!$requestorName || !$systemName) {
@@ -174,7 +174,7 @@ function notifyApproversForSystem(PDO $pdo, int $systemId, int $requestId, strin
  * Notify Admins.
  * Callers should pass a fully-formed message string.
  */
-function notifyAdmins(PDO $pdo, int $requestId, string $message): void
+function notifyAdmins(PDO $pdo, $requestId, $message)
 {
     try {
         $stmt = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Admin' AND is_active = 1");
@@ -193,7 +193,7 @@ function notifyAdmins(PDO $pdo, int $requestId, string $message): void
  * Notify chat participants when a new message is sent.
  * Message: "[Sender Name] sent a message on a [System] request."
  */
-function notifyChatParticipants(PDO $pdo, int $requestId, int $senderUserId): void
+function notifyChatParticipants(PDO $pdo, $requestId, $senderUserId)
 {
     try {
         $stmt = $pdo->prepare("SELECT user_id, system_id FROM requests WHERE id = :id");

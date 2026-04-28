@@ -368,11 +368,11 @@ try {
 document.addEventListener("DOMContentLoaded", function() {
 
     // ADD after: document.addEventListener("DOMContentLoaded", function() {
-    const allUsersData = <?= json_encode(array_map(fn($u) => [
+    const allUsersData = <?= json_encode(array_map(function($u) { return [
         'id'          => $u['id'],
         'name'        => $u['name'],
         'employee_id' => $u['employee_id'],
-    ], $allUsers)) ?>;
+    ]; }, $allUsers)) ?>;
 
     const requestForm = document.getElementById('requestForm');
     requestForm.addEventListener('submit', function(e) {
