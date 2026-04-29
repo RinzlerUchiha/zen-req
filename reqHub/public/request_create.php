@@ -149,7 +149,7 @@ try {
                 </select>
             </div>
             <div class="col">
-                <label class="form-label">Request For</label>
+                <label class="form-label">Requested For</label>
                 <select name="request_for" id="requestForSelect" class="form-select" required>
                     <option value="">Select User</option>
                     <?php foreach ($users as $u): ?>
@@ -190,19 +190,19 @@ try {
         </div>
 
         <div class="mb-4">
-            <label class="form-label fw-bold">Access Types</label>
+            <label class="form-label fw-bold">Access Details</label>
 
             <div class="mb-3">
-                <label class="form-label">Select Role (Auto-selects all its modules)</label>
-                <select id="roleSelect" class="form-select">
+                <label class="form-label">Selecting a role automatically includes all associated modules</label>
+                <select id="roleSelect" class="form-select" style="font-weight:bold;" onchange="this.style.fontWeight=this.value?'normal':'bold'">
                     <option value="">-- Choose a role --</option>
                 </select>
             </div>
 
             <div class="row g-3">
-                <!-- Modules & Actions (62%) -->
+                <!-- Available Modules & Actions (62%) -->
                 <div style="flex:0 0 62.333333%; max-width:62.333333%;">
-                    <h6>Modules & Actions</h6>
+                    <h6>Available Modules &amp; Actions</h6>
                     <div class="mb-2">
                         <input type="text" id="searchModules" class="form-control form-control-sm" placeholder="Search modules..." style="font-size:0.9rem;">
                     </div>
@@ -606,7 +606,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const departmentSelect = document.getElementById('departmentSelect');
     const storeContainer   = document.getElementById('storeContainer');
 
-    // When "Request For" changes: auto-fill department + filter Remove From by company
+    // When "Requested For" changes: auto-fill department + filter Remove From by company
     requestForSelect.addEventListener('change', async function() {
         const employeeId = this.options[this.selectedIndex]?.getAttribute('data-employee-id');
         if (!employeeId) {

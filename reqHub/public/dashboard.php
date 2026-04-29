@@ -124,7 +124,7 @@ switch ($status) {
             }
         } elseif ($role === 'Approver') {
             if ($pending_tab === 'needs_revision') {
-                $sql .= " AND 1=0";
+                $sql .= " AND r.status = 'needs_revision'";
             } else {
                 $sql .= " AND r.status = 'reviewed'";
             }
@@ -260,6 +260,7 @@ foreach ($allRows as $row) {
         if ($s === 'needs_revision') $counts['pending_needs_revision']++;
     } elseif ($role === 'Approver') {
         if ($s === 'reviewed')       $counts['pending_all']++;
+        if ($s === 'needs_revision') $counts['pending_needs_revision']++;
     } else {
         if (in_array($s, ['pending', 'reviewed'])) $counts['pending_all']++;
         if ($s === 'needs_revision')               $counts['pending_needs_revision']++;
@@ -337,7 +338,7 @@ try {
 <?php foreach (['pending', 'approved', 'denied', 'served'] as $tab): ?>
 <li class="nav-item">
     <a class="nav-link <?= $status === $tab ? 'active' : '' ?>" href="?status=<?= $tab ?>">
-        <?= ucfirst($tab) ?>
+        <?= $tab === 'served' ? 'Fulfilled' : ucfirst($tab) ?>
         <?php if ($tab === 'pending' && $role === 'Reviewer'): ?>
             <small class="text-muted">(to sign)</small>
         <?php endif; ?>
@@ -369,7 +370,7 @@ try {
     <li class="nav-item">
         <a class="nav-link <?= $pending_tab === 'needs_revision' ? 'active' : '' ?>"
            href="?status=pending&pending_tab=needs_revision">
-            Needs Revision
+            Action Required
             <?php if ($counts['pending_needs_revision'] > 0): ?>
                 <span class="badge bg-secondary ms-1"><?= $counts['pending_needs_revision'] ?></span>
             <?php endif; ?>
@@ -382,7 +383,7 @@ try {
 <thead>
 <tr>
     <th>System</th>
-    <th>Access For</th>
+    <th>Requested For</th>
     <th>Role</th>
     <th>Status</th>
 </tr>
@@ -427,11 +428,11 @@ try {
     <td><?= htmlspecialchars($req['chosen_role'] ?? '(Not specified)') ?></td>
     <td>
         <?php if ($req['status'] === 'needs_revision'): ?>
-            <span class="badge bg-warning text-dark">Needs revision!</span>
+            <span class="badge bg-warning text-dark">Action Required</span>
         <?php elseif ($req['status'] === 'reviewed'): ?>
             <span class="badge bg-info text-dark">Reviewed</span>
         <?php elseif (($req['admin_status'] ?? '') === 'served'): ?>
-            Served
+            Fulfilled
         <?php else: ?>
             <?= ucfirst($req['status'] ?? '') ?>
         <?php endif; ?>
@@ -454,7 +455,7 @@ try {
 <div class="row">
 <div class="col-md-6 d-flex flex-column">
     <p><strong>Requestor:</strong><br><span id="modalSubmitter"></span></p>
-    <p><strong>Access For:</strong><br><span id="modalAccessFor"></span></p>
+    <p><strong>Requested For:</strong><br><span id="modalAccessFor"></span></p>
     <p><strong>System:</strong><br><span id="modalSystem"></span></p>
     <p><strong>Role:</strong><br><span id="modalRole" style="color:#333; font-weight:bold;"></span></p>
     <p><strong>Remove From:</strong><br><span id="modalRemove"></span></p>

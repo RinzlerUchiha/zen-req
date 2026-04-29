@@ -63,6 +63,9 @@ if ($actualUserId) {
         error_log("Header: failed to fetch notifications - " . $e->getMessage());
     }
 }
+
+// Display label: show "Requester" instead of "Requestor"
+$roleDisplay = ($role === 'Requestor') ? 'Requester' : $role;
 ?>
 
 <!DOCTYPE html>
@@ -169,7 +172,7 @@ body,
             <option value="Approver"  <?= $role === 'Approver'  ? 'selected' : '' ?>>Approver</option>
             <option value="Admin"     <?= $role === 'Admin'     ? 'selected' : '' ?>>Admin</option>
         </select>
-        <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($role) ?></strong></span>
+        <span class="text-white-50">Current: <strong class="text-white"><?= htmlspecialchars($roleDisplay) ?></strong></span>
     </div>
 
     <script>
@@ -246,7 +249,7 @@ body,
 
         <div class="text-dark d-flex flex-column align-items-end" style="font-size: 18px; line-height: 1.2;">
             <span>Hello, <?= htmlspecialchars($user['name']) ?></span>
-            <span class="text-muted" style="font-size: 1rem;"><?= htmlspecialchars($role) ?></span>
+            <span class="text-muted" style="font-size: 1rem;"><?= htmlspecialchars($roleDisplay) ?></span>
             <?php if (in_array($role, ['Approver', 'Reviewer']) && $actualUserId): ?>
                 <?php
                 try {

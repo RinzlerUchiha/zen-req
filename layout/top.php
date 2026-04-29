@@ -554,10 +554,11 @@ if (isset($_SESSION['user_id'])) {
 										</div>
 									</a>
 									<a class="media-left" href="/zen/reqHub/" style="text-align: center;">
-										<div>
-											<img src="/zen/assets/img/flight_logo.png" width="40" height="40"><br>Access Portal
-										</div>
-									</a>
+										    <div style="position: relative; display: inline-block;">
+										        <img src="/zen/assets/img/access portal.png" width="40" height="40">
+										    </div>
+										    Access Portal
+										</a>
 								</div>
 							</div>
 						</div>

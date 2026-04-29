@@ -232,7 +232,7 @@ try {
 </style>
 
 <div class="container-fluid mt-4 px-3 px-lg-5">
-    <h2>Edit & Resubmit Request</h2>
+    <h2>Edit &amp; Resubmit Request</h2>
     <div class="alert alert-warning">
         <strong>This request needs revision.</strong> Please review the comments in the request and make the necessary changes below.
     </div>
@@ -260,7 +260,7 @@ try {
                         </select>
                     </div>
                     <div class="col">
-                        <label class="form-label">Request For</label>
+                        <label class="form-label">Requested For</label>
                         <select name="request_for" id="requestForSelect" class="form-select" required>
                             <option value="">Select User</option>
                             <?php foreach ($users as $u): ?>
@@ -321,10 +321,10 @@ try {
         </div><!-- end top row -->
 
         <div class="mb-4">
-            <label class="form-label fw-bold">Access Types</label>
+            <label class="form-label fw-bold">Access Details</label>
 
             <div class="mb-3">
-                <label class="form-label">Select Role (Auto-selects all its modules)</label>
+                <label class="form-label">Selecting a role automatically includes all associated modules</label>
                 <select id="roleSelect" class="form-select">
                     <option value="">-- Choose a role --</option>
                 </select>
@@ -332,7 +332,7 @@ try {
 
             <div class="row g-3">
                 <div style="flex: 0 0 62.333333%; max-width: 62.333333%;">
-                    <h6>Modules & Actions</h6>
+                    <h6>Available Modules &amp; Actions</h6>
                     <div class="mb-2">
                         <input type="text" id="searchModules" class="form-control form-control-sm" placeholder="Search modules..." style="font-size: 0.9rem;">
                     </div>
@@ -367,7 +367,6 @@ try {
 <script>
 document.addEventListener("DOMContentLoaded", function() {
 
-    // ADD after: document.addEventListener("DOMContentLoaded", function() {
     const allUsersData = <?= json_encode(array_map(function($u) { return [
         'id'          => $u['id'],
         'name'        => $u['name'],
@@ -464,7 +463,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // ADD before renderModules():
     function rebuildRemoveFrom(filteredUsers) {
         const sel = document.getElementById('removeFromSelect');
         const currentVal = sel.value;
@@ -677,7 +675,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const storeContainer = document.getElementById('storeContainer');
     const storeInput = document.getElementById('storeInput');
 
-        function initFromDatabase() {
+    function initFromDatabase() {
         autoSelectedItems.clear();
         autoSelectedModules.clear();
 
