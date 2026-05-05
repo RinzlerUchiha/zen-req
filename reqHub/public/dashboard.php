@@ -313,10 +313,18 @@ try {
         }
         unset($req);
     }
-} catch (PDOException $e) {
-    error_log("Dashboard SQL error: " . $e->getMessage());
-    die("<h1>Database Error</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>");
-}
+
+        // Pagination
+        $perPage     = 20;
+        $totalItems  = count($requests);
+        $totalPages  = max(1, (int)ceil($totalItems / $perPage));
+        $currentPage = max(1, min((int)($_GET['page'] ?? 1), $totalPages));
+        $requests    = array_slice($requests, ($currentPage - 1) * $perPage, $perPage);
+
+    } catch (PDOException $e) {
+        error_log("Dashboard SQL error: " . $e->getMessage());
+        die("<h1>Database Error</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>");
+    }
 ?>
 
 <?php include __DIR__ . '/../includes/header.php'; ?>
@@ -441,6 +449,57 @@ try {
 <?php endforeach; ?>
 </tbody>
 </table>
+
+<?php if ($totalPages > 1): ?>
+<nav class="mt-3">
+<ul class="pagination pagination-sm justify-content-center">
+
+    <?php
+    $baseParams = $_GET;
+    unset($baseParams['page']);
+    $baseQuery = $baseParams ? '&' . http_build_query($baseParams) : '';
+    ?>
+
+    <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+        <a class="page-link" href="?page=<?= $currentPage - 1 ?><?= $baseQuery ?>">«</a>
+    </li>
+
+    <?php
+    $start = max(1, $currentPage - 2);
+    $end   = min($totalPages, $currentPage + 2);
+    ?>
+
+    <?php if ($start > 1): ?>
+        <li class="page-item"><a class="page-link" href="?page=1<?= $baseQuery ?>">1</a></li>
+        <?php if ($start > 2): ?>
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <?php for ($p = $start; $p <= $end; $p++): ?>
+        <li class="page-item <?= $p === $currentPage ? 'active' : '' ?>">
+            <a class="page-link" href="?page=<?= $p ?><?= $baseQuery ?>"><?= $p ?></a>
+        </li>
+    <?php endfor; ?>
+
+    <?php if ($end < $totalPages): ?>
+        <?php if ($end < $totalPages - 1): ?>
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+        <?php endif; ?>
+        <li class="page-item"><a class="page-link" href="?page=<?= $totalPages ?><?= $baseQuery ?>"><?= $totalPages ?></a></li>
+    <?php endif; ?>
+
+    <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+        <a class="page-link" href="?page=<?= $currentPage + 1 ?><?= $baseQuery ?>">»</a>
+    </li>
+
+</ul>
+<p class="text-center text-muted small">
+    Showing <?= (($currentPage - 1) * $perPage) + 1 ?>–<?= min($currentPage * $perPage, $totalItems) ?> of <?= $totalItems ?>
+</p>
+</nav>
+<?php endif; ?>
+
 </div>
 
 <!-- REQUEST DETAIL MODAL -->
