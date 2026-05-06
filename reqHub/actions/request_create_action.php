@@ -89,7 +89,7 @@ $hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
 
 $status = ($userRole === 'Approver') ? 'approved'
         : (($userRole === 'Reviewer') ? 'reviewed'
-        : ($hasReviewer ? 'pending' : 'reviewed'));
+        : 'pending');
     $admin_status = 'pending';
     $approved_by  = ($userRole === 'Approver') ? $user_id : null;
     $approved_at  = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;

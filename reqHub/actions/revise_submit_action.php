@@ -115,7 +115,7 @@ try {
     $stmtReviewerCheck->execute([$department_id]);
     $hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
 
-    $newStatus = (strpos($revisionMsg, 'BY Approver') !== false || !$hasReviewer) ? 'reviewed' : 'pending';
+    $newStatus = (strpos($revisionMsg, 'BY Approver') !== false) ? 'reviewed' : 'pending';
 
     // Update the request
     $sql = "UPDATE requests SET 

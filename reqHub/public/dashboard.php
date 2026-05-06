@@ -76,7 +76,14 @@ SELECT
         SEPARATOR '##'
     ) AS access_type,
 
-0 AS human_chat_count
+    (
+        SELECT COUNT(*) FROM user_approver_assignments uaa
+        JOIN users u ON uaa.user_id = u.id
+        WHERE uaa.department_id = r.department_id
+        AND u.reqhub_role = 'Reviewer'
+    ) AS reviewer_count,
+
+    0 AS human_chat_count
 
 FROM requests r
 LEFT JOIN systems s ON r.system_id = s.id
@@ -126,7 +133,18 @@ switch ($status) {
             if ($pending_tab === 'needs_revision') {
                 $sql .= " AND r.status = 'needs_revision'";
             } else {
-                $sql .= " AND r.status = 'reviewed'";
+                $sql .= " AND (
+                    r.status = 'reviewed'
+                    OR (
+                        r.status = 'pending'
+                        AND NOT EXISTS (
+                            SELECT 1 FROM user_approver_assignments uaa
+                            JOIN users u ON uaa.user_id = u.id
+                            WHERE uaa.department_id = r.department_id
+                            AND u.reqhub_role = 'Reviewer'
+                        )
+                    )
+                )";
             }
         } else {
             if ($pending_tab === 'needs_revision') {
@@ -211,7 +229,13 @@ if ($userRecord) {
 // Count query for tab badges
 $countParams = [];
 $countSql = "
-    SELECT r.status, r.admin_status
+    SELECT r.status, r.admin_status,
+    (
+        SELECT COUNT(*) FROM user_approver_assignments uaa
+        JOIN users u ON uaa.user_id = u.id
+        WHERE uaa.department_id = r.department_id
+        AND u.reqhub_role = 'Reviewer'
+    ) AS reviewer_count
     FROM requests r
     WHERE 1=1
 ";
@@ -259,8 +283,9 @@ foreach ($allRows as $row) {
         if ($s === 'pending')        $counts['pending_all']++;
         if ($s === 'needs_revision') $counts['pending_needs_revision']++;
     } elseif ($role === 'Approver') {
-        if ($s === 'reviewed')       $counts['pending_all']++;
-        if ($s === 'needs_revision') $counts['pending_needs_revision']++;
+        $noReviewer = (int)($row['reviewer_count'] ?? 0) === 0;
+        if ($s === 'reviewed' || ($s === 'pending' && $noReviewer)) $counts['pending_all']++;
+        if ($s === 'needs_revision')                                 $counts['pending_needs_revision']++;
     } else {
         if (in_array($s, ['pending', 'reviewed'])) $counts['pending_all']++;
         if ($s === 'needs_revision')               $counts['pending_needs_revision']++;
@@ -314,24 +339,24 @@ try {
         unset($req);
     }
 
-        // Pagination
-        $perPage     = 20;
-        $totalItems  = count($requests);
-        $totalPages  = max(1, (int)ceil($totalItems / $perPage));
-        $currentPage = max(1, min((int)($_GET['page'] ?? 1), $totalPages));
-        $requests    = array_slice($requests, ($currentPage - 1) * $perPage, $perPage);
+    // Pagination
+    $perPage     = 20;
+    $totalItems  = count($requests);
+    $totalPages  = max(1, (int)ceil($totalItems / $perPage));
+    $currentPage = max(1, min((int)($_GET['page'] ?? 1), $totalPages));
+    $requests    = array_slice($requests, ($currentPage - 1) * $perPage, $perPage);
 
-    } catch (PDOException $e) {
-        error_log("Dashboard SQL error: " . $e->getMessage());
-        die("<h1>Database Error</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>");
-    }
+} catch (PDOException $e) {
+    error_log("Dashboard SQL error: " . $e->getMessage());
+    die("<h1>Database Error</h1><p>" . htmlspecialchars($e->getMessage()) . "</p>");
+}
 ?>
 
 <?php include __DIR__ . '/../includes/header.php'; ?>
 
 <div class="container mt-4">
 
-<?php if (in_array($role, ['Requestor', 'Approver', 'Reviewer'])): ?>
+<?php if (in_array($role, ['Requestor', 'Reviewer'])): ?>
 <div class="d-flex justify-content-end mb-3">
     <a href="/zen/reqHub/request" class="btn btn-lg btn-success">+ Create Request</a>
 </div>
@@ -421,6 +446,7 @@ try {
     data-user-id="<?= $req['user_id'] ?>"
     data-denied-by="<?= htmlspecialchars($req['denied_by_name'] ?? '') ?>"
     data-denied-at="<?= htmlspecialchars($req['denied_at'] ?? '') ?>"
+    data-reviewer-count="<?= (int)($req['reviewer_count'] ?? 0) ?>"
 >
     <td>
         <div class="d-flex align-items-center gap-2">
@@ -786,7 +812,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        if (role === 'Approver' && (data.status === 'reviewed' || data.status === 'needs_revision')) {
+        const noReviewer = parseInt(data.reviewerCount ?? 0) === 0;
+        if (role === 'Approver' && (data.status === 'reviewed' || data.status === 'needs_revision' || (data.status === 'pending' && noReviewer))) {
             container.innerHTML = `
                 <form method="post" action="/zen/reqHub/approve" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
@@ -796,7 +823,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-danger btn-sm">Deny</button>
                 </form>
-                ${data.status === 'reviewed' ? `<button class="btn btn-warning btn-sm ms-2" onclick="openReviseModal('${data.id}')">Revise</button>` : ''}`;
+                ${(data.status === 'reviewed' || (data.status === 'pending' && noReviewer)) ? `<button class="btn btn-warning btn-sm ms-2" onclick="openReviseModal('${data.id}')">Revise</button>` : ''}`;
         }
 
         if ((role === 'Requestor' || (role === 'Reviewer' && parseInt(data.userId) === currentUserId)) && data.status === 'needs_revision') {
