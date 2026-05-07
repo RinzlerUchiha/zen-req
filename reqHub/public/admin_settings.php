@@ -72,7 +72,9 @@ foreach ($users as &$user) {
 }
 unset($user);
 
-usort($users, fn($a, $b) => strcasecmp($a['user_name'], $b['user_name']));
+usort($users, function($a, $b) {
+    return strcasecmp($a['user_name'], $b['user_name']);
+});
 
 // Systems
 $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
@@ -547,6 +549,28 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     </div>
                     <div id="assignmentSystemList">
 
+                        <!-- OVERVIEW NAV ITEM -->
+                        <button type="button"
+                            class="assignment-nav-item active"
+                            data-target-id="assign-overview">
+                            <span class="assign-type-badge" style="background:#f3e8ff;color:#6b21a8;">ALL</span> Overview
+                        </button>
+
+                        <?php
+                        $firstItem = true; // keep this, but remove the active class logic below since overview is now first
+                        foreach ($systems as $sys):
+                            if (!in_array($sys['id'], $assignedSystemIds)) continue;
+                            $label = htmlspecialchars($sys['full_name'] ?? $sys['name']);
+                            $firstItem = false; // no longer marking first system as active
+                        ?>
+                            <button type="button"
+                                class="assignment-nav-item"
+                                data-target-id="assign-sys-<?= $sys['id'] ?>">
+                                <span class="assign-type-badge badge-sys">SYS</span><?= $label ?>
+                            </button>
+                        <?php endforeach; ?>
+                        
+
                         <?php
                         $firstItem = true;
                         foreach ($systems as $sys):
@@ -563,7 +587,13 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                         <?php endforeach; ?>
 
                         <?php foreach ($assignedDeptCodes as $deptCode):
-                            $deptLabel = $deptDescriptions[strtoupper(trim($deptCode))] ?? $deptCode;
+                            $deptLabel = $deptCode; // fallback to raw ID
+                            foreach ($departments as $d) {
+                                if ((string)$d['id'] === (string)$deptCode) {
+                                    $deptLabel = $d['name'];
+                                    break;
+                                }
+                            }
                         ?>
                             <button type="button"
                                 class="assignment-nav-item"
@@ -581,6 +611,100 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
                 <!-- RIGHT: Detail panel -->
                 <div class="assignment-right-panel" id="assignmentDetailPane">
+
+                <!-- OVERVIEW PANEL -->
+                    <div class="assignment-detail-panel" id="assign-overview">
+
+                        <div class="assign-detail-header">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="assign-type-badge" style="background:#f3e8ff;color:#6b21a8;">OVERVIEW</span>
+                                <h5 class="mb-0">All Assignments</h5>
+                            </div>
+                            <div class="text-muted small">
+                                <?php
+                                $totalAssigned = 0;
+                                foreach ($users as $u) {
+                                    if (!empty($approverAssignments[$u['id'] ?? null])) $totalAssigned++;
+                                }
+                                echo $totalAssigned . ' user' . ($totalAssigned !== 1 ? 's' : '') . ' with assignments';
+                                ?>
+                            </div>
+                        </div>
+
+                        <?php
+                        $overviewByRole = ['Requestor' => [], 'Approver' => [], 'Reviewer' => []];
+                        foreach ($users as $user) {
+                            if (!isset($user['id'])) continue;
+                            $role = $user['reqhub_role'];
+                            if (!isset($overviewByRole[$role])) continue;
+                            if (!empty($approverAssignments[$user['id']])) {
+                                $overviewByRole[$role][] = $user;
+                            }
+                        }
+
+                        $roleColorMap = [
+                            'Approver'  => 'role-badge-approver',
+                            'Requestor' => 'role-badge-requestor',
+                            'Reviewer'  => 'role-badge-reviewer',
+                        ];
+
+                        foreach ($overviewByRole as $roleName => $roleUsers):
+                            if (empty($roleUsers)) continue;
+                            $roleColorClass = $roleColorMap[$roleName] ?? 'role-badge-default';
+                        ?>
+                            <div class="assign-role-group">
+                                <div class="assign-role-group-header">
+                                    <span class="assign-role-badge <?= $roleColorClass ?>"><?= $roleName ?></span>
+                                    <span class="text-muted small"><?= count($roleUsers) ?> user<?= count($roleUsers) !== 1 ? 's' : '' ?></span>
+                                </div>
+                                <div class="assign-user-grid">
+                                    <?php foreach ($roleUsers as $u):
+                                        $initials = strtoupper(substr($u['user_name'] ?? $u['employee_id'], 0, 1));
+                                        $avatarColors = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+                                        $avatarColor  = $avatarColors[abs(crc32($u['employee_id'])) % count($avatarColors)];
+
+                                        // Collect what they're assigned to
+                                        $assignedTo = [];
+                                        foreach (($approverAssignments[$u['id']] ?? []) as $a) {
+                                            if (!empty($a['system_id'])) {
+                                                foreach ($systems as $s) {
+                                                    if ($s['id'] == $a['system_id']) {
+                                                        $assignedTo[] = $s['full_name'] ?? $s['name'];
+                                                        break;
+                                                    }
+                                                }
+                                            } elseif (!empty($a['department_id'])) {
+                                                foreach ($departments as $d) {
+                                                    if ((string)$d['id'] === (string)$a['department_id']) {
+                                                        $assignedTo[] = $d['name'];
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        $assignedTo = array_unique($assignedTo);
+                                    ?>
+                                        <div class="assign-user-card">
+                                            <div class="assign-avatar" style="background:<?= $avatarColor ?>;"><?= $initials ?></div>
+                                            <div class="assign-user-info">
+                                                <div class="assign-user-name"><?= htmlspecialchars($u['user_name'] ?? $u['employee_id']) ?></div>
+                                                <div class="assign-user-id"><?= htmlspecialchars($u['employee_id']) ?></div>
+                                                <?php if (!empty($u['hr_department'])): ?>
+                                                    <div class="assign-user-dept"><?= htmlspecialchars($u['hr_department']) ?></div>
+                                                <?php endif; ?>
+                                                <?php if (!empty($assignedTo)): ?>
+                                                    <div style="font-size:0.68rem; color:#9ca3af; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                        <?= htmlspecialchars(implode(', ', $assignedTo)) ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+
+                    </div>
 
                     <!-- Empty state shown when nothing is selected -->
                     <div id="assignmentEmptyState" style="display:none;">
@@ -612,8 +736,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                             }
                         }
 
-                        $display   = $firstPanel ? '' : 'display:none;';
-                        $firstPanel = false;
+                        $display = 'display:none;';
 
                         // Total user count across all roles
                         $totalCount = array_sum(array_map('count', $byRole));
@@ -633,12 +756,12 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                             <?php foreach ($byRole as $roleName => $roleUsers): ?>
                                 <?php if (empty($roleUsers)) continue; ?>
                                 <?php
-                                $roleColorClass = match($roleName) {
+                                $roleColorMap = [
                                     'Approver'  => 'role-badge-approver',
                                     'Requestor' => 'role-badge-requestor',
                                     'Reviewer'  => 'role-badge-reviewer',
-                                    default     => 'role-badge-default'
-                                };
+                                ];
+                                $roleColorClass = $roleColorMap[$roleName] ?? 'role-badge-default';
                                 ?>
                                 <div class="assign-role-group">
                                     <div class="assign-role-group-header">
@@ -650,7 +773,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                                             $initials = strtoupper(substr($u['user_name'] ?? $u['employee_id'], 0, 1));
                                             // Pick avatar color based on name hash
                                             $avatarColors = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
-                                            $avatarColor  = $avatarColors[crc32($u['employee_id']) % count($avatarColors)];
+                                            $avatarColor = $avatarColors[abs(crc32($u['employee_id'])) % count($avatarColors)];
                                         ?>
                                             <div class="assign-user-card">
                                                 <div class="assign-avatar" style="background:<?= $avatarColor ?>;"><?= $initials ?></div>
@@ -677,7 +800,14 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     <?php
                     // ── Department panels (Reviewer assignments) ──
                     foreach ($assignedDeptCodes as $deptCode):
-                        $deptLabel    = htmlspecialchars($deptDescriptions[strtoupper(trim($deptCode))] ?? $deptCode);
+                        $deptLabel = $deptCode; // fallback
+                            foreach ($departments as $d) {
+                                if ((string)$d['id'] === (string)$deptCode) {
+                                    $deptLabel = $d['name'];
+                                    break;
+                                }
+                            }
+                            $deptLabel = htmlspecialchars($deptLabel);
                         $reviewersHere = [];
                         foreach ($users as $user) {
                             if (!isset($user['id']) || $user['reqhub_role'] !== 'Reviewer') continue;
