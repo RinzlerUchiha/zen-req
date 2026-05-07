@@ -556,31 +556,12 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                             <span class="assign-type-badge" style="background:#f3e8ff;color:#6b21a8;">ALL</span> Overview
                         </button>
 
-                        <?php
-                        $firstItem = true; // keep this, but remove the active class logic below since overview is now first
-                        foreach ($systems as $sys):
+                        <?php foreach ($systems as $sys):
                             if (!in_array($sys['id'], $assignedSystemIds)) continue;
                             $label = htmlspecialchars($sys['full_name'] ?? $sys['name']);
-                            $firstItem = false; // no longer marking first system as active
                         ?>
                             <button type="button"
                                 class="assignment-nav-item"
-                                data-target-id="assign-sys-<?= $sys['id'] ?>">
-                                <span class="assign-type-badge badge-sys">SYS</span><?= $label ?>
-                            </button>
-                        <?php endforeach; ?>
-                        
-
-                        <?php
-                        $firstItem = true;
-                        foreach ($systems as $sys):
-                            if (!in_array($sys['id'], $assignedSystemIds)) continue;
-                            $label = htmlspecialchars($sys['full_name'] ?? $sys['name']);
-                            $isFirst = $firstItem ? 'active' : '';
-                            $firstItem = false;
-                        ?>
-                            <button type="button"
-                                class="assignment-nav-item <?= $isFirst ?>"
                                 data-target-id="assign-sys-<?= $sys['id'] ?>">
                                 <span class="assign-type-badge badge-sys">SYS</span><?= $label ?>
                             </button>
@@ -602,10 +583,6 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                             </button>
                         <?php endforeach; ?>
 
-                        <?php if ($firstItem && empty($assignedDeptCodes)): ?>
-                            <div class="p-3 text-muted small">No assignments found.</div>
-                        <?php endif; ?>
-
                     </div>
                 </div>
 
@@ -613,98 +590,192 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                 <div class="assignment-right-panel" id="assignmentDetailPane">
 
                 <!-- OVERVIEW PANEL -->
-                    <div class="assignment-detail-panel" id="assign-overview">
+<div class="assignment-detail-panel" id="assign-overview">
 
-                        <div class="assign-detail-header">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="assign-type-badge" style="background:#f3e8ff;color:#6b21a8;">OVERVIEW</span>
-                                <h5 class="mb-0">All Assignments</h5>
-                            </div>
-                            <div class="text-muted small">
-                                <?php
-                                $totalAssigned = 0;
-                                foreach ($users as $u) {
-                                    if (!empty($approverAssignments[$u['id'] ?? null])) $totalAssigned++;
+    <div class="assign-detail-header">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <div class="d-flex align-items-center gap-2">
+                <span class="assign-type-badge" style="background:#f3e8ff;color:#6b21a8;">OVERVIEW</span>
+                <h5 class="mb-0">All Assignments</h5>
+            </div>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-dark" id="viewCards">Cards</button>
+                <button class="btn btn-outline-secondary" id="viewList">List</button>
+            </div>
+        </div>
+        <div class="text-muted small">
+            <?php
+            $totalAssigned = 0;
+            foreach ($users as $u) {
+                if (!empty($approverAssignments[$u['id'] ?? null])) $totalAssigned++;
+            }
+            echo $totalAssigned . ' user' . ($totalAssigned !== 1 ? 's' : '') . ' with assignments';
+            ?>
+        </div>
+    </div>
+
+    <?php
+    $overviewByRole = ['Requestor' => [], 'Approver' => [], 'Reviewer' => []];
+    foreach ($users as $user) {
+        if (!isset($user['id'])) continue;
+        $role = $user['reqhub_role'];
+        if (!isset($overviewByRole[$role])) continue;
+        if (!empty($approverAssignments[$user['id']])) {
+            $overviewByRole[$role][] = $user;
+        }
+    }
+
+    $roleColorMap = [
+        'Approver'  => 'role-badge-approver',
+        'Requestor' => 'role-badge-requestor',
+        'Reviewer'  => 'role-badge-reviewer',
+    ];
+    ?>
+
+    <!-- CARD VIEW -->
+    <div id="overviewCardView">
+        <?php foreach ($overviewByRole as $roleName => $roleUsers):
+            if (empty($roleUsers)) continue;
+            $roleColorClass = $roleColorMap[$roleName] ?? 'role-badge-default';
+        ?>
+            <div class="assign-role-group">
+                <div class="assign-role-group-header">
+                    <span class="assign-role-badge <?= $roleColorClass ?>"><?= $roleName ?></span>
+                    <span class="text-muted small"><?= count($roleUsers) ?> user<?= count($roleUsers) !== 1 ? 's' : '' ?></span>
+                </div>
+                <div class="assign-user-grid">
+                    <?php foreach ($roleUsers as $u):
+                        $initials = strtoupper(substr($u['user_name'] ?? $u['employee_id'], 0, 1));
+                        $avatarColors = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+                        $avatarColor  = $avatarColors[abs(crc32($u['employee_id'])) % count($avatarColors)];
+
+                        $assignedTo = [];
+                        foreach (($approverAssignments[$u['id']] ?? []) as $a) {
+                            if (!empty($a['system_id'])) {
+                                foreach ($systems as $s) {
+                                    if ($s['id'] == $a['system_id']) {
+                                        $assignedTo[$a['system_id']] = $s['full_name'] ?? $s['name'];
+                                        break;
+                                    }
                                 }
-                                echo $totalAssigned . ' user' . ($totalAssigned !== 1 ? 's' : '') . ' with assignments';
-                                ?>
-                            </div>
-                        </div>
-
-                        <?php
-                        $overviewByRole = ['Requestor' => [], 'Approver' => [], 'Reviewer' => []];
-                        foreach ($users as $user) {
-                            if (!isset($user['id'])) continue;
-                            $role = $user['reqhub_role'];
-                            if (!isset($overviewByRole[$role])) continue;
-                            if (!empty($approverAssignments[$user['id']])) {
-                                $overviewByRole[$role][] = $user;
+                            } elseif (!empty($a['department_id'])) {
+                                foreach ($departments as $d) {
+                                    if ((string)$d['id'] === (string)$a['department_id']) {
+                                        $assignedTo['dept_'.$a['department_id']] = $d['name'];
+                                        break;
+                                    }
+                                }
                             }
                         }
+                        $assignedTo = array_values($assignedTo);
+                    ?>
+                        <div class="assign-user-card">
+                            <div class="assign-avatar" style="background:<?= $avatarColor ?>;"><?= $initials ?></div>
+                            <div class="assign-user-info">
+                                <div class="assign-user-name"><?= htmlspecialchars($u['user_name'] ?? $u['employee_id']) ?></div>
+                                <div class="assign-user-id"><?= htmlspecialchars($u['employee_id']) ?></div>
+                                <?php if (!empty($u['hr_department'])): ?>
+                                    <div class="assign-user-dept"><?= htmlspecialchars($u['hr_department']) ?></div>
+                                <?php endif; ?>
+                                <?php if (!empty($assignedTo)): ?>
+                                    <div style="font-size:0.68rem; color:#9ca3af; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        <?= htmlspecialchars(implode(', ', $assignedTo)) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
 
-                        $roleColorMap = [
-                            'Approver'  => 'role-badge-approver',
-                            'Requestor' => 'role-badge-requestor',
-                            'Reviewer'  => 'role-badge-reviewer',
-                        ];
+    <!-- LIST VIEW -->
+    <div id="overviewListView" style="display:none;">
 
-                        foreach ($overviewByRole as $roleName => $roleUsers):
-                            if (empty($roleUsers)) continue;
-                            $roleColorClass = $roleColorMap[$roleName] ?? 'role-badge-default';
-                        ?>
-                            <div class="assign-role-group">
-                                <div class="assign-role-group-header">
-                                    <span class="assign-role-badge <?= $roleColorClass ?>"><?= $roleName ?></span>
-                                    <span class="text-muted small"><?= count($roleUsers) ?> user<?= count($roleUsers) !== 1 ? 's' : '' ?></span>
-                                </div>
-                                <div class="assign-user-grid">
-                                    <?php foreach ($roleUsers as $u):
-                                        $initials = strtoupper(substr($u['user_name'] ?? $u['employee_id'], 0, 1));
-                                        $avatarColors = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
-                                        $avatarColor  = $avatarColors[abs(crc32($u['employee_id'])) % count($avatarColors)];
+        <!-- Search + filter bar (sticky) -->
+        <div class="overview-list-sticky-bar">
+            <input type="text" id="overviewListSearch" class="form-control form-control-sm" placeholder="Search by name or ID..." style="max-width:260px;">
+            <select id="overviewListRoleFilter" class="form-select form-select-sm" style="max-width:160px;">
+                <option value="">All Roles</option>
+                <option value="Requestor">Requestor</option>
+                <option value="Approver">Approver</option>
+                <option value="Reviewer">Reviewer</option>
+            </select>
+        </div>
 
-                                        // Collect what they're assigned to
-                                        $assignedTo = [];
-                                        foreach (($approverAssignments[$u['id']] ?? []) as $a) {
-                                            if (!empty($a['system_id'])) {
-                                                foreach ($systems as $s) {
-                                                    if ($s['id'] == $a['system_id']) {
-                                                        $assignedTo[] = $s['full_name'] ?? $s['name'];
-                                                        break;
-                                                    }
-                                                }
-                                            } elseif (!empty($a['department_id'])) {
-                                                foreach ($departments as $d) {
-                                                    if ((string)$d['id'] === (string)$a['department_id']) {
-                                                        $assignedTo[] = $d['name'];
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        $assignedTo = array_unique($assignedTo);
-                                    ?>
-                                        <div class="assign-user-card">
-                                            <div class="assign-avatar" style="background:<?= $avatarColor ?>;"><?= $initials ?></div>
-                                            <div class="assign-user-info">
-                                                <div class="assign-user-name"><?= htmlspecialchars($u['user_name'] ?? $u['employee_id']) ?></div>
-                                                <div class="assign-user-id"><?= htmlspecialchars($u['employee_id']) ?></div>
-                                                <?php if (!empty($u['hr_department'])): ?>
-                                                    <div class="assign-user-dept"><?= htmlspecialchars($u['hr_department']) ?></div>
-                                                <?php endif; ?>
-                                                <?php if (!empty($assignedTo)): ?>
-                                                    <div style="font-size:0.68rem; color:#9ca3af; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                                        <?= htmlspecialchars(implode(', ', $assignedTo)) ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
+        <table class="table table-sm overview-summary-table">
+        <colgroup><col><col><col><col><col></colgroup>
+            <thead>
+                <tr>
+                    <th class="overview-sort" data-col="name" style="cursor:pointer;">Name <span class="sort-icon">↕</span></th>
+                    <th>Employee ID</th>
+                    <th class="overview-sort" data-col="role" style="cursor:pointer;">Role <span class="sort-icon">↕</span></th>
+                    <th class="overview-sort" data-col="dept" style="cursor:pointer;">HR Department <span class="sort-icon">↕</span></th>
+                    <th>Assigned To</th>
+                </tr>
+            </thead>
+            <tbody id="overviewListBody">
+                <?php foreach ($overviewByRole as $roleName => $roleUsers):
+                    if (empty($roleUsers)) continue;
+                    $roleColorClass = $roleColorMap[$roleName] ?? 'role-badge-default';
+                    foreach ($roleUsers as $u):
+                        $assignedTo = [];
+                        foreach (($approverAssignments[$u['id']] ?? []) as $a) {
+                            if (!empty($a['system_id'])) {
+                                foreach ($systems as $s) {
+                                    if ($s['id'] == $a['system_id']) {
+                                        $assignedTo[$a['system_id']] = $s['full_name'] ?? $s['name'];
+                                        break;
+                                    }
+                                }
+                            } elseif (!empty($a['department_id'])) {
+                                foreach ($departments as $d) {
+                                    if ((string)$d['id'] === (string)$a['department_id']) {
+                                        $assignedTo['dept_'.$a['department_id']] = $d['name'];
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        $assignedTo = array_values($assignedTo);
+                        $avatarColors = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+                        $avatarColor  = $avatarColors[abs(crc32($u['employee_id'])) % count($avatarColors)];
+                        $initials     = strtoupper(substr($u['user_name'] ?? $u['employee_id'], 0, 1));
+                ?>
+                    <tr data-name="<?= htmlspecialchars(strtolower($u['user_name'] ?? $u['employee_id'])) ?>"
+                        data-empno="<?= htmlspecialchars(strtolower($u['employee_id'])) ?>"
+                        data-role="<?= htmlspecialchars($roleName) ?>"
+                        data-dept="<?= htmlspecialchars(strtolower($u['hr_department'] ?? '')) ?>">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="assign-avatar" style="background:<?= $avatarColor ?>; width:26px; height:26px; font-size:0.7rem; flex-shrink:0;"><?= $initials ?></div>
+                                <span><?= htmlspecialchars($u['user_name'] ?? $u['employee_id']) ?></span>
+                            </div>
+                        </td>
+                        <td class="text-muted"><?= htmlspecialchars($u['employee_id']) ?></td>
+                        <td><span class="assign-role-badge <?= $roleColorClass ?>"><?= $roleName ?></span></td>
+                        <td class="text-muted"><?= htmlspecialchars($u['hr_department'] ?? '—') ?></td>
+                        <td>
+                            <?php if (!empty($assignedTo)): ?>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <?php foreach ($assignedTo as $aName): ?>
+                                        <span class="assign-badge"><?= htmlspecialchars($aName) ?></span>
                                     <?php endforeach; ?>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
+                            <?php else: ?>
+                                <span class="text-muted">—</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; endforeach; ?>
+            </tbody>
+        </table>
 
-                    </div>
+        <div id="overviewListEmpty" class="text-muted small text-center py-3" style="display:none;">No users match your search.</div>
+    </div>
+
+</div>
 
                     <!-- Empty state shown when nothing is selected -->
                     <div id="assignmentEmptyState" style="display:none;">
@@ -1137,7 +1208,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
     /* Right panel */
     .assignment-right-panel {
         flex-grow: 1;
-        padding: 1.25rem 1.5rem;
+        padding: 0;
         overflow-y: auto;
         max-height: 680px;
     }
@@ -1220,12 +1291,99 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
         text-overflow: ellipsis;
     }
     .assign-user-dept {
-        font-size: 0.7rem;
+    font-size: 0.7rem;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+    }
+
+    /* ============================================================
+    OVERVIEW SUMMARY TABLE
+    ============================================================ */
+    .overview-summary-table {
+        width: 100%;
+        table-layout: fixed;
+    }
+    .overview-summary-table thead th {
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
         color: #6b7280;
+        border-bottom: 2px solid #e5e7eb;
+        padding: 0.6rem 0.75rem;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-top: 1px;
+    }
+    .overview-summary-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: background 0.1s;
+    }
+    .overview-summary-table tbody tr:hover {
+        background: #f8faff;
+    }
+    .overview-summary-table tbody td {
+        padding: 0.65rem 0.75rem;
+        vertical-align: middle;
+    }
+    .overview-summary-table col:nth-child(1) { width: 22%; }
+    .overview-summary-table col:nth-child(2) { width: 13%; }
+    .overview-summary-table col:nth-child(3) { width: 11%; }
+    .overview-summary-table col:nth-child(4) { width: 16%; }
+    .overview-summary-table col:nth-child(5) { width: 38%; }
+    .overview-name-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+    .overview-name-text {
+        font-weight: 500;
+        font-size: 0.875rem;
+        line-height: 1.3;
+    }
+    .assign-badge {
+        display: inline-block;
+        padding: 0.2em 0.6em;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        white-space: nowrap;
+    }
+
+    /* Sticky search bar in overview list */
+    .overview-list-sticky-bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #fff;
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 0;
+    }
+
+    /* Restore padding for the detail panels */
+    .assignment-detail-panel {
+        padding: 1.25rem 1.5rem;
+    }
+
+    /* But overview panel itself needs no extra top padding since sticky bar handles it */
+    #assign-overview {
+        padding: 0;
+    }
+
+    #assign-overview .assign-detail-header {
+        padding: 1.25rem 1.5rem 0.75rem;
+        margin-bottom: 0;
+    }
+
+    #assign-overview #overviewCardView,
+    #assign-overview #overviewListView {
+        padding: 0 1.5rem 1.25rem;
     }
 </style>
 
@@ -2518,6 +2676,70 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                 submitBtn.prop('disabled', false).text(origText);
             });
         });
+
+        // ============================================================
+// OVERVIEW — CARD / LIST TOGGLE
+// ============================================================
+$(document).on('click', '#viewCards', function() {
+    $(this).removeClass('btn-outline-secondary').addClass('btn-dark');
+    $('#viewList').removeClass('btn-dark').addClass('btn-outline-secondary');
+    $('#overviewCardView').show();
+    $('#overviewListView').hide();
+});
+
+$(document).on('click', '#viewList', function() {
+    $(this).removeClass('btn-outline-secondary').addClass('btn-dark');
+    $('#viewCards').removeClass('btn-dark').addClass('btn-outline-secondary');
+    $('#overviewCardView').hide();
+    $('#overviewListView').show();
+});
+
+// OVERVIEW LIST — search + role filter
+function applyOverviewListFilters() {
+    const q    = $('#overviewListSearch').val().toLowerCase();
+    const role = $('#overviewListRoleFilter').val();
+    let visible = 0;
+
+    $('#overviewListBody tr').each(function() {
+        const matchSearch = !q
+            || $(this).data('name').includes(q)
+            || $(this).data('empno').includes(q);
+        const matchRole = !role || $(this).data('role') === role;
+        const show = matchSearch && matchRole;
+        $(this).toggle(show);
+        if (show) visible++;
+    });
+
+    $('#overviewListEmpty').toggle(visible === 0);
+}
+
+$(document).on('keyup',  '#overviewListSearch',     applyOverviewListFilters);
+$(document).on('change', '#overviewListRoleFilter', applyOverviewListFilters);
+
+// OVERVIEW LIST — column sorting
+let overviewSortCol = null;
+let overviewSortDir = 1;
+
+$(document).on('click', '.overview-sort', function() {
+    const col = $(this).data('col');
+    if (overviewSortCol === col) {
+        overviewSortDir *= -1;
+    } else {
+        overviewSortCol = col;
+        overviewSortDir = 1;
+    }
+
+    $('.overview-sort .sort-icon').text('↕');
+    $(this).find('.sort-icon').text(overviewSortDir === 1 ? '↑' : '↓');
+
+    const rows = $('#overviewListBody tr').toArray();
+    rows.sort((a, b) => {
+        const aVal = $(a).data(col) || '';
+        const bVal = $(b).data(col) || '';
+        return aVal.localeCompare(bVal) * overviewSortDir;
+    });
+    $('#overviewListBody').append(rows);
+});
 
     });
 </script>
