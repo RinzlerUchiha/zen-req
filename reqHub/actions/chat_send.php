@@ -2,6 +2,7 @@
 require_once ($reqhub_root . '/includes/auth.php');
 require_once ($reqhub_root . '/database/db.php');
 require_once ($reqhub_root . '/includes/notifications.php');
+require_once ($reqhub_root . '/includes/sms.php');
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -43,6 +44,7 @@ try {
 
     // Notify other participants
     notifyChatParticipants($pdo, (int)$request_id, (int)$userRow['id']);
+    smsChatParticipants($pdo, (int)$request_id, (int)$userRow['id']);
 
     echo "Message sent.";
 } catch (Exception $e) {

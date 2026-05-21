@@ -10,6 +10,7 @@ error_log("revise_action.php START");
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 require_once (__DIR__ . '/../includes/notifications.php');
+require_once (__DIR__ . '/../includes/sms.php');
 
 error_log("revise_action: Auth and DB loaded");
 
@@ -61,15 +62,16 @@ try {
         $requestorName = resolveEmployeeNameByUserId($pdo, (int)$revRequest['user_id']);
         $approverName  = resolveEmployeeName($pdo, $current_user['emp_no']);
         $systemName    = resolveSystemName($pdo, (int)$revRequest['system_id']);
+        $revisionMsg   = "Your [{$systemName}] request has been sent back for revision by {$approverName}. Please review their comments.";
 
-        // Notify requestor
         createNotification(
             $pdo,
             (int)$revRequest['user_id'],
             'status_change',
             (int)$id,
-            "Your [{$systemName}] request has been sent back for revision by {$approverName}. Please review their comments."
+            $revisionMsg
         );
+        smsUserById($pdo, (int)$revRequest['user_id'], $revisionMsg);
     }
 
     error_log("revise_action: SUCCESS");

@@ -10,6 +10,7 @@ error_log("revise_submit_action.php START");
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 require_once (__DIR__ . '/../includes/notifications.php');
+require_once (__DIR__ . '/../includes/sms.php');
 
 error_log("revise_submit_action: Auth and DB loaded");
 
@@ -81,9 +82,7 @@ try {
     $actual_user_id = $userRecord['id'];
     error_log("revise_submit_action: Mapped emp_no=$emp_no to users.id=$actual_user_id");
 
-    // Verify the request belongs to the current user and is in needs_revision status
     $stmt = $pdo->prepare("SELECT id, status FROM requests WHERE id = ? AND user_id = ? AND status = 'needs_revision'");
-    
     $stmt->execute([$request_id, $actual_user_id]);
     $existingRequest = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -94,7 +93,7 @@ try {
         http_response_code(400);
         die(json_encode(['success' => false, 'message' => 'Request not found or cannot be revised']));
     }
-    // Determine who triggered the revision
+
     $stmt = $pdo->prepare("
         SELECT message FROM request_chats 
         WHERE request_id = ? AND message LIKE '[REVISION REQUESTED BY%'
@@ -103,7 +102,6 @@ try {
     $stmt->execute([$request_id]);
     $revisionMsg = $stmt->fetchColumn();
 
-    // Check if the department has an assigned reviewer
     $stmtReviewerCheck = $pdo->prepare("
         SELECT COUNT(*)
         FROM users u
@@ -117,7 +115,6 @@ try {
 
     $newStatus = (strpos($revisionMsg, 'BY Approver') !== false) ? 'reviewed' : 'pending';
 
-    // Update the request
     $sql = "UPDATE requests SET 
         system_id = ?, 
         department_id = ?, 
@@ -146,19 +143,16 @@ try {
 
     error_log("revise_submit_action: UPDATE rowCount: " . $stmt->rowCount());
 
-    // Delete old access types
     $stmt = $pdo->prepare("DELETE FROM request_access_types WHERE request_id = ?");
     $stmt->execute([$request_id]);
     error_log("revise_submit_action: Deleted old access types");
 
-    // Insert new access types
     $stmt = $pdo->prepare("INSERT INTO request_access_types (request_id, access_type_id) VALUES (?, ?)");
     foreach ($access_types as $access_type_id) {
         $stmt->execute([$request_id, $access_type_id]);
     }
     error_log("revise_submit_action: Inserted " . count($access_types) . " new access types");
 
-    // System chat message
     $stmt = $pdo->prepare("
         INSERT INTO request_chats (request_id, sender_id, message, created_at)
         VALUES (?, 1, ?, NOW())
@@ -168,15 +162,15 @@ try {
     $stmt->execute([$request_id, $system_message]);
     error_log("revise_submit_action: System message inserted");
 
-    // Resolve names for notifications
     $requestorName = resolveEmployeeName($pdo, $emp_no);
     $systemName    = resolveSystemName($pdo, (int)$system_id);
 
-    // Notify reviewers that the revised request needs re-signing
     if ($newStatus === 'pending') {
         notifyReviewers($pdo, (int)$request_id, $requestorName, $systemName);
+        smsReviewers($pdo, (int)$request_id, $requestorName, $systemName);
     } elseif ($newStatus === 'reviewed') {
         notifyApproversForSystem($pdo, (int)$system_id, (int)$request_id, $requestorName, $systemName);
+        smsApproversForSystem($pdo, (int)$system_id, (int)$request_id, $requestorName, $systemName);
     }
 
     error_log("revise_submit_action: SUCCESS");

@@ -2,6 +2,7 @@
 require_once ($reqhub_root . '/includes/auth.php');
 require_once ($reqhub_root . '/database/db.php');
 require_once ($reqhub_root . '/includes/notifications.php');
+require_once ($reqhub_root . '/includes/sms.php');
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -77,19 +78,19 @@ $systemName    = resolveSystemName($pdo, (int)$system_id);
 
 try {
     $stmtReviewerCheck = $pdo->prepare("
-    SELECT COUNT(*)
-    FROM users u
-    INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
-    WHERE u.reqhub_role = 'Reviewer'
-      AND u.is_active = 1
-      AND uaa.department_id = ?
-");
-$stmtReviewerCheck->execute([$department_id]);
-$hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
+        SELECT COUNT(*)
+        FROM users u
+        INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+        WHERE u.reqhub_role = 'Reviewer'
+          AND u.is_active = 1
+          AND uaa.department_id = ?
+    ");
+    $stmtReviewerCheck->execute([$department_id]);
+    $hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
 
-$status = ($userRole === 'Approver') ? 'approved'
-        : (($userRole === 'Reviewer') ? 'reviewed'
-        : 'pending');
+    $status = ($userRole === 'Approver') ? 'approved'
+            : (($userRole === 'Reviewer') ? 'reviewed'
+            : 'pending');
     $admin_status = 'pending';
     $approved_by  = ($userRole === 'Approver') ? $user_id : null;
     $approved_at  = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
@@ -127,19 +128,22 @@ $status = ($userRole === 'Approver') ? 'approved'
         $stmt->execute([':request_id' => $request_id, ':access_type_id' => $at_id]);
     }
 
-    // Notifications
+    // Notifications + SMS
     if ($status === 'pending') {
-    notifyReviewers($pdo, $request_id, $requestorName, $systemName);
+        notifyReviewers($pdo, $request_id, $requestorName, $systemName);
+        smsReviewers($pdo, $request_id, $requestorName, $systemName);
     } elseif ($status === 'reviewed') {
         notifyApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName);
+        smsApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName);
     }
 
     if ($status === 'approved') {
-        // Approver-created request goes straight to approved
         $adminMsg     = "{$requestorName}'s [{$systemName}] request has been approved and is waiting to be served.";
         $requestorMsg = "Your [{$systemName}] request has been approved.";
         notifyAdmins($pdo, $request_id, $adminMsg);
+        smsAdmins($pdo, $adminMsg);
         createNotification($pdo, (int)$request_for_id, 'status_change', $request_id, $requestorMsg);
+        smsUserById($pdo, (int)$request_for_id, $requestorMsg);
     }
 
     header('Location: /zen/reqHub/dashboard?status=pending');

@@ -2,6 +2,7 @@
 require_once ($reqhub_root . '/includes/auth.php');
 require_once ($reqhub_root . '/database/db.php');
 require_once ($reqhub_root . '/includes/notifications.php');
+require_once ($reqhub_root . '/includes/sms.php');
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -79,22 +80,20 @@ try {
     $requestorName = resolveEmployeeNameByUserId($pdo, (int)$requestorId);
     $approverName  = resolveEmployeeName($pdo, $currentUser['emp_no']);
     $systemName    = resolveSystemName($pdo, (int)$systemId);
+    $approveMsg    = "Your [{$systemName}] request has been approved by {$approverName}.";
+    $adminMsg      = "{$requestorName}'s [{$systemName}] request has been approved by {$approverName} and is waiting to be served.";
 
-    // Notify requestor
     createNotification(
         $pdo,
         (int)$requestorId,
         'status_change',
         (int)$request_id,
-        "Your [{$systemName}] request has been approved by {$approverName}."
+        $approveMsg
     );
+    smsUserById($pdo, (int)$requestorId, $approveMsg);
 
-    // Notify admins to serve
-    notifyAdmins(
-        $pdo,
-        (int)$request_id,
-        "{$requestorName}'s [{$systemName}] request has been approved by {$approverName} and is waiting to be served."
-    );
+    notifyAdmins($pdo, (int)$request_id, $adminMsg);
+    smsAdmins($pdo, $adminMsg);
 
     header('Location: /zen/reqHub/dashboard?status=pending');
     exit;

@@ -2,6 +2,7 @@
 require_once ($reqhub_root . '/includes/auth.php');
 require_once ($reqhub_root . '/database/db.php');
 require_once ($reqhub_root . '/includes/notifications.php');
+require_once ($reqhub_root . '/includes/sms.php');
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -57,13 +58,12 @@ try {
             denied_at = NOW(),
             updated_at = NOW()
         WHERE id = :id
-        
     ");
     $stmt->execute([
         ':id'        => $request_id,
         ':denied_by' => $denier_id
     ]);
-    
+
     $pdo->prepare("DELETE FROM request_chat_views WHERE request_id = ?")->execute([$request_id]);
     $pdo->prepare("DELETE FROM notifications WHERE request_id = ?")->execute([$request_id]);
     error_log("Request $request_id denied by " . $currentUser['emp_no']);
@@ -72,15 +72,16 @@ try {
     $requestorName = resolveEmployeeNameByUserId($pdo, (int)$requestorId);
     $denierName    = resolveEmployeeName($pdo, $currentUser['emp_no']);
     $systemName    = resolveSystemName($pdo, (int)$request['system_id']);
+    $denyMsg       = "Your [{$systemName}] request has been denied by {$denierName}.";
 
-    // Notify requestor
     createNotification(
         $pdo,
         (int)$requestorId,
         'status_change',
         (int)$request_id,
-        "Your [{$systemName}] request has been denied by {$denierName}."
+        $denyMsg
     );
+    smsUserById($pdo, (int)$requestorId, $denyMsg);
 
     header('Location: /zen/reqHub/dashboard?status=pending');
     exit;

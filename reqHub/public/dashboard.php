@@ -123,16 +123,17 @@ WHERE 1=1
 ================================================================ */
 switch ($status) {
     case 'pending':
-        if ($role === 'Reviewer') {
-            if ($pending_tab === 'needs_revision') {
-                $sql .= " AND r.status = 'needs_revision'";
-            } else {
+        if ($pending_tab === 'needs_revision') {
+            $sql .= " AND r.status = 'needs_revision'";
+        } elseif ($pending_tab === 'reviewed' && $role === 'Reviewer') {
+            // Only Reviewer can use the Reviewed sub-tab
+            $sql .= " AND r.status = 'reviewed'";
+        } else {
+            // 'all' tab — role-specific logic
+            if ($role === 'Reviewer') {
+                // Reviewed requests are in their own sub-tab; all tab = pending only
                 $sql .= " AND r.status = 'pending'";
-            }
-        } elseif ($role === 'Approver') {
-            if ($pending_tab === 'needs_revision') {
-                $sql .= " AND r.status = 'needs_revision'";
-            } else {
+            } elseif ($role === 'Approver') {
                 $sql .= " AND (
                     r.status = 'reviewed'
                     OR (
@@ -145,11 +146,8 @@ switch ($status) {
                         )
                     )
                 )";
-            }
-        } else {
-            if ($pending_tab === 'needs_revision') {
-                $sql .= " AND r.status = 'needs_revision'";
             } else {
+                // Requestor and Admin: all pending includes pending + reviewed
                 $sql .= " AND r.status IN ('pending','reviewed')";
             }
         }
@@ -268,6 +266,7 @@ $allRows = $countStmt->fetchAll(PDO::FETCH_ASSOC);
 $counts = [
     'pending_all'            => 0,
     'pending_needs_revision' => 0,
+    'pending_reviewed'       => 0,
     'approved'               => 0,
 ];
 
@@ -279,6 +278,11 @@ foreach ($allRows as $row) {
         $counts['approved']++;
     }
 
+    // Reviewed sub-tab count — only Reviewer
+    if ($s === 'reviewed' && $role === 'Reviewer') {
+        $counts['pending_reviewed']++;
+    }
+
     if ($role === 'Reviewer') {
         if ($s === 'pending')        $counts['pending_all']++;
         if ($s === 'needs_revision') $counts['pending_needs_revision']++;
@@ -287,6 +291,7 @@ foreach ($allRows as $row) {
         if ($s === 'reviewed' || ($s === 'pending' && $noReviewer)) $counts['pending_all']++;
         if ($s === 'needs_revision')                                 $counts['pending_needs_revision']++;
     } else {
+        // Requestor + Admin: reviewed stays in all pending
         if (in_array($s, ['pending', 'reviewed'])) $counts['pending_all']++;
         if ($s === 'needs_revision')               $counts['pending_needs_revision']++;
     }
@@ -375,8 +380,12 @@ try {
         <?php if ($tab === 'pending' && $role === 'Reviewer'): ?>
             <small class="text-muted">(to sign)</small>
         <?php endif; ?>
-        <?php if ($tab === 'pending' && ($counts['pending_all'] + $counts['pending_needs_revision']) > 0): ?>
-            <span class="badge bg-secondary ms-1"><?= $counts['pending_all'] + $counts['pending_needs_revision'] ?></span>
+        <?php
+        $pendingBadgeTotal = $counts['pending_all'] + $counts['pending_needs_revision'];
+        if ($role === 'Reviewer') $pendingBadgeTotal += $counts['pending_reviewed'];
+        ?>
+        <?php if ($tab === 'pending' && $pendingBadgeTotal > 0): ?>
+            <span class="badge bg-secondary ms-1"><?= $pendingBadgeTotal ?></span>
         <?php endif; ?>
         <?php if ($tab === 'approved' && $counts['approved'] > 0): ?>
             <span class="badge bg-secondary ms-1"><?= $counts['approved'] ?></span>
@@ -400,6 +409,17 @@ try {
             <?php endif; ?>
         </a>
     </li>
+    <?php if ($role === 'Reviewer'): ?>
+    <li class="nav-item">
+        <a class="nav-link <?= $pending_tab === 'reviewed' ? 'active' : '' ?>"
+           href="?status=pending&pending_tab=reviewed">
+            Reviewed
+            <?php if ($counts['pending_reviewed'] > 0): ?>
+                <span class="badge bg-secondary ms-1"><?= $counts['pending_reviewed'] ?></span>
+            <?php endif; ?>
+        </a>
+    </li>
+    <?php endif; ?>
     <li class="nav-item">
         <a class="nav-link <?= $pending_tab === 'needs_revision' ? 'active' : '' ?>"
            href="?status=pending&pending_tab=needs_revision">
@@ -677,7 +697,15 @@ document.addEventListener('DOMContentLoaded', function () {
         loadChat(row.dataset.id);
 
         if (chatInterval) clearInterval(chatInterval);
-        chatInterval = setInterval(() => loadChat(row.dataset.id), 5000);
+        chatInterval = setInterval(() => {
+            loadChat(row.dataset.id);
+            // Heartbeat — keeps last_viewed_at fresh while modal is open
+            fetch('/zen/reqHub/chat_view', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'request_id=' + encodeURIComponent(row.dataset.id)
+            }).catch(() => {});
+        }, 5000);
 
         modal.show();
     }

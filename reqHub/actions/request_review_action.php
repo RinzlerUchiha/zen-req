@@ -6,6 +6,7 @@ header('Content-Type: application/json');
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
 require_once (__DIR__ . '/../includes/notifications.php');
+require_once (__DIR__ . '/../includes/sms.php');
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -27,7 +28,6 @@ if (!$id) {
 try {
     $pdo = ReqHubDatabase::getConnection('reqhub');
 
-    // Must be in 'pending' status to be signed
     $stmt = $pdo->prepare("SELECT id, user_id, system_id FROM requests WHERE id = ? AND status = 'pending'");
     $stmt->execute([$id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -37,33 +37,34 @@ try {
         die(json_encode(['success' => false, 'message' => 'Request not found or not in pending status']));
     }
 
-    // Update status to 'reviewed' — now visible to Approvers
     $stmt = $pdo->prepare("UPDATE requests SET status = 'reviewed', updated_at = NOW() WHERE id = ?");
     $stmt->execute([$id]);
 
-    // System message in chat
     $stmt = $pdo->prepare("
         INSERT INTO request_chats (request_id, sender_id, message, created_at)
         VALUES (?, 1, ?, NOW())
     ");
     $stmt->execute([$id, "[REQUEST REVIEWED]\n\nThis request has been signed by a Reviewer and is now visible to the Approver."]);
 
-    // Resolve names for notification
+    // Resolve names
     $requestorName = resolveEmployeeNameByUserId($pdo, (int)$request['user_id']);
     $systemName    = resolveSystemName($pdo, (int)$request['system_id']);
     $reviewerName  = resolveEmployeeName($pdo, $current_user['emp_no']);
+    $reviewMsg     = "Your [{$systemName}] request has been reviewed by {$reviewerName} and is now pending approval.";
 
-    // Notify requestor that their request has been reviewed
+    // Notify + SMS requestor
     createNotification(
         $pdo,
         (int)$request['user_id'],
         'status_change',
         (int)$id,
-        "Your [{$systemName}] request has been reviewed by {$reviewerName} and is now pending approval."
+        $reviewMsg
     );
+    smsUserById($pdo, (int)$request['user_id'], $reviewMsg);
 
-    // Notify approvers assigned to this system
+    // Notify + SMS approvers
     notifyApproversForSystem($pdo, (int)$request['system_id'], (int)$id, $requestorName, $systemName);
+    smsApproversForSystem($pdo, (int)$request['system_id'], (int)$id, $requestorName, $systemName);
 
     error_log("review_action: Request $id reviewed/signed by " . $current_user['emp_no']);
 

@@ -2,6 +2,7 @@
 require_once ($reqhub_root . '/includes/auth.php');
 require_once ($reqhub_root . '/database/db.php');
 require_once ($reqhub_root . '/includes/notifications.php');
+require_once ($reqhub_root . '/includes/sms.php');
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -71,15 +72,16 @@ try {
     $requestorName = resolveEmployeeNameByUserId($pdo, (int)$requestorId);
     $adminName     = resolveEmployeeName($pdo, $currentUser['emp_no']);
     $systemName    = resolveSystemName($pdo, (int)$request['system_id']);
+    $serveMsg      = "Your [{$systemName}] request has been served by {$adminName}. Access has been granted.";
 
-    // Notify requestor
     createNotification(
         $pdo,
         (int)$requestorId,
         'status_change',
         (int)$request_id,
-        "Your [{$systemName}] request has been served by {$adminName}. Access has been granted."
+        $serveMsg
     );
+    smsUserById($pdo, (int)$requestorId, $serveMsg);
 
     header('Location: /zen/reqHub/dashboard?status=approved');
     exit;
