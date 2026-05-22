@@ -383,6 +383,10 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
+
         const formData = new FormData(this);
 
         const disabledSelects = this.querySelectorAll('select:disabled');
@@ -416,6 +420,8 @@ document.addEventListener("DOMContentLoaded", function() {
             window.location.href = data.redirect || '/zen/reqHub/dashboard?status=pending';
         })
         .catch(error => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Resubmit Request';
             alert('Error: ' + error.message);
         });
     });

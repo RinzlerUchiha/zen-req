@@ -253,6 +253,10 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
+
         const disabledSelects = this.querySelectorAll('select:disabled');
         disabledSelects.forEach(s => s.disabled = false);
 
@@ -273,7 +277,11 @@ document.addEventListener("DOMContentLoaded", function() {
             }
             return response.text().then(() => { window.location.href = '/zen/reqHub/dashboard?status=pending'; });
         })
-        .catch(error => { alert('Error: ' + error.message); });
+        .catch(error => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Submit Request';
+            alert('Error: ' + error.message);
+        });
     });
 
     // ── Choices.js init ──
