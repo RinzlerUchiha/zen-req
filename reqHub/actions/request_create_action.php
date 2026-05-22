@@ -130,14 +130,22 @@ try {
 
     // Notifications + SMS
     if ($status === 'pending') {
-        notifyReviewers($pdo, $request_id, $requestorName, $systemName);
-        smsReviewers($pdo, $request_id, $requestorName, $systemName);
+        if ($hasReviewer) {
+            // Dept has Reviewer — notify Reviewers
+            notifyReviewers($pdo, $request_id, $requestorName, $systemName);
+            smsReviewers($pdo, $request_id, $requestorName, $systemName);
+        } else {
+            // No Reviewer in dept — skip straight to Approver
+            $noReviewerMsg = "{$requestorName} submitted a new [{$systemName}] request pending your approval.";
+            notifyApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName, $noReviewerMsg);
+            smsApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName, $noReviewerMsg);
+        }
     } elseif ($status === 'reviewed') {
+        // Reviewer-created request — go straight to Approver
         notifyApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName);
         smsApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName);
-    }
-
-    if ($status === 'approved') {
+    } elseif ($status === 'approved') {
+        // Approver-created request — auto-approved
         $adminMsg     = "{$requestorName}'s [{$systemName}] request has been approved and is waiting to be served.";
         $requestorMsg = "Your [{$systemName}] request has been approved.";
         notifyAdmins($pdo, $request_id, $adminMsg);

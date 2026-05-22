@@ -136,7 +136,7 @@ function notifyReviewers(PDO $pdo, $requestId, $requestorName = '', $systemName 
  * Notify Approvers assigned to a system once the request is reviewed/signed.
  * Message: "[Requestor Name]'s [System] request has been reviewed and is pending your approval."
  */
-function notifyApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorName = '', $systemName = '')
+function notifyApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorName = '', $systemName = '', $message = '')
 {
     try {
         if (!$requestorName || !$systemName) {
@@ -149,7 +149,9 @@ function notifyApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorNam
             }
         }
 
-        $message = "{$requestorName}'s [{$systemName}] request has been reviewed and is pending your approval.";
+        if (!$message) {
+            $message = "{$requestorName}'s [{$systemName}] request has been reviewed and is pending your approval.";
+        }
 
         $stmt = $pdo->prepare("
             SELECT DISTINCT u.id

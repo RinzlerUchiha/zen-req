@@ -59,7 +59,7 @@ function smsReviewers(PDO $pdo, $requestId, $requestorName = '', $systemName = '
 /**
  * SMS Approvers assigned to a system.
  */
-function smsApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorName = '', $systemName = '')
+function smsApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorName = '', $systemName = '', $message = '')
 {
     try {
         if (!$requestorName || !$systemName) {
@@ -72,7 +72,9 @@ function smsApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorName =
             }
         }
 
-        $message = "{$requestorName}'s [{$systemName}] request has been reviewed and is pending your approval.";
+        if (!$message) {
+            $message = "{$requestorName}'s [{$systemName}] request has been reviewed and is pending your approval.";
+        }
 
         $stmt = $pdo->prepare("
             SELECT DISTINCT u.employee_id
