@@ -46,10 +46,10 @@ if (is_string($system_permissions_raw)) {
     $system_permissions = (array) $system_permissions_raw;
 }
 
+// NEW
 function normalizeSystemPermissions(array $raw): array {
     $out = [];
     foreach ($raw as $sp) {
-        // Inner entry may still be a JSON string
         if (is_string($sp)) {
             $sp = json_decode($sp, true);
             if (!is_array($sp)) continue;
@@ -63,16 +63,17 @@ function normalizeSystemPermissions(array $raw): array {
         if (!empty($sp['permissions']) && is_array($sp['permissions'])) {
             foreach ($sp['permissions'] as $p) {
                 if (is_string($p)) $p = json_decode($p, true);
-                if (!is_array($p) || empty($p['module_id']) || empty($p['action_id'])) continue;
+                if (!is_array($p) || empty($p['module_id'])) continue;
                 $perms[] = [
                     'module_id'   => intval($p['module_id']),
-                    'action_id'   => intval($p['action_id']),
+                    'action_id'   => (!empty($p['action_id'])) ? intval($p['action_id']) : null,
                     'module_name' => $p['module_name'] ?? '',
                     'action_name' => $p['action_name'] ?? '',
                 ];
             }
         }
 
+        // Include this system block even if it has zero permissions
         $out[] = ['system_id' => $sysId, 'permissions' => $perms];
     }
     return $out;
@@ -95,19 +96,22 @@ try {
 
         $systemPermissions = normalizeSystemPermissions($system_permissions);
 
-        if (!empty($systemPermissions)) {
-            // ON DUPLICATE KEY UPDATE is a no-op update — it just silently skips
-            // duplicate rows without throwing, which is safer than INSERT IGNORE
-            // on strict PDO configurations.
-            $ins = $pdo->prepare("
-                INSERT INTO role_permissions (role_id, module_id, action_id, system_id)
-                VALUES (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE role_id = role_id
-            ");
-            foreach ($systemPermissions as $sp) {
-                foreach ($sp['permissions'] as $perm) {
-                    $ins->execute([$newRoleId, $perm['module_id'], $perm['action_id'], $sp['system_id']]);
-                }
+        // NEW
+        $insSystemRole = $pdo->prepare("
+            INSERT IGNORE INTO system_roles (system_id, role_id)
+            VALUES (?, ?)
+        ");
+        $insPermission = $pdo->prepare("
+            INSERT INTO role_permissions (role_id, module_id, action_id, system_id)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE role_id = role_id
+        ");
+        foreach ($systemPermissions as $sp) {
+            if ($sp['system_id']) {
+                $insSystemRole->execute([$sp['system_id'], $newRoleId]);
+            }
+            foreach ($sp['permissions'] as $perm) {
+                $insPermission->execute([$newRoleId, $perm['module_id'], $perm['action_id'], $sp['system_id']]);
             }
         }
 
@@ -136,18 +140,25 @@ try {
         // Wipe ALL permissions for this role first.
         // Re-inserting the full submitted state handles removed panels correctly —
         // they simply won't be in the payload so won't be re-inserted.
+        // NEW
         $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ?")->execute([$role_id]);
+        $pdo->prepare("DELETE FROM system_roles WHERE role_id = ?")->execute([$role_id]);
 
-        if (!empty($systemPermissions)) {
-            $ins = $pdo->prepare("
-                INSERT INTO role_permissions (role_id, module_id, action_id, system_id)
-                VALUES (?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE role_id = role_id
-            ");
-            foreach ($systemPermissions as $sp) {
-                foreach ($sp['permissions'] as $perm) {
-                    $ins->execute([$role_id, $perm['module_id'], $perm['action_id'], $sp['system_id']]);
-                }
+        $insSystemRole = $pdo->prepare("
+            INSERT IGNORE INTO system_roles (system_id, role_id)
+            VALUES (?, ?)
+        ");
+        $insPermission = $pdo->prepare("
+            INSERT INTO role_permissions (role_id, module_id, action_id, system_id)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE role_id = role_id
+        ");
+        foreach ($systemPermissions as $sp) {
+            if ($sp['system_id']) {
+                $insSystemRole->execute([$sp['system_id'], $role_id]);
+            }
+            foreach ($sp['permissions'] as $perm) {
+                $insPermission->execute([$role_id, $perm['module_id'], $perm['action_id'], $sp['system_id']]);
             }
         }
 

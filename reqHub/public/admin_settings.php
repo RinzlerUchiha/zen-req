@@ -2224,24 +2224,31 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                 $('.module-item').each(function() {
                     const mid   = $(this).find('.editable-label').data('id');
                     const mname = $(this).find('.editable-label').text().trim();
+                    // NEW
+                    const modActions = moduleAssignments[mid] || [];
                     panelsHtml += `<div class="role-modal-module-card" data-module-name="${mname.toLowerCase()}">
                         <div class="role-modal-module-header d-flex align-items-center gap-1 mb-1">
                             <label style="cursor:pointer; display:flex; align-items:center; gap:4px; margin:0; font-size:0.82rem; font-weight:600;">
                                 <input type="checkbox" class="module-master-checkbox" data-panel="${sysKey}" data-module="${mid}">
                                 ${htmlEscape(mname)}
                             </label>
+                            ${modActions.length === 0 ? `<span class="badge bg-secondary ms-1" style="font-size:0.65rem; font-weight:normal;">no actions</span>` : ''}
                         </div>
                         <div class="d-flex flex-column gap-1">`;
-                    (moduleAssignments[mid] || []).forEach(aid => {
-                        const actionItem = $(`.action-item .editable-label[data-id="${aid}"]`).closest('.action-item');
-                        if (actionItem.length) {
-                            const aname = actionItem.find('.editable-label').text().trim();
-                            panelsHtml += `<label class="role-modal-action-item" style="font-size:0.78rem; padding:2px 6px;">
-                                <input type="checkbox" class="role-permission-checkbox" data-panel="${sysKey}" data-module="${mid}" value="${aid}">
-                                <span>${htmlEscape(aname)}</span>
-                            </label>`;
-                        }
-                    });
+                    if (modActions.length === 0) {
+                        panelsHtml += `<span class="text-muted" style="font-size:0.75rem; padding:2px 6px; font-style:italic;">No actions — check module name to grant access</span>`;
+                    } else {
+                        modActions.forEach(aid => {
+                            const actionItem = $(`.action-item .editable-label[data-id="${aid}"]`).closest('.action-item');
+                            if (actionItem.length) {
+                                const aname = actionItem.find('.editable-label').text().trim();
+                                panelsHtml += `<label class="role-modal-action-item" style="font-size:0.78rem; padding:2px 6px;">
+                                    <input type="checkbox" class="role-permission-checkbox" data-panel="${sysKey}" data-module="${mid}" value="${aid}">
+                                    <span>${htmlEscape(aname)}</span>
+                                </label>`;
+                            }
+                        });
+                    }
                     panelsHtml += `</div></div>`;
                 });
                 panelsHtml += `</div></div>`;
@@ -2252,8 +2259,13 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
             if (roleId && roleAssignments[roleId]) {
                 allPanelSysKeys.forEach(sysKey => {
                     const perms = roleAssignments[roleId][sysKey] || [];
+                    // NEW
                     perms.forEach(p => {
-                        $(`#panel-${sysKey} .role-permission-checkbox[data-module="${p.module_id}"][value="${p.action_id}"]`).prop('checked', true);
+                        if (p.action_id) {
+                            $(`#panel-${sysKey} .role-permission-checkbox[data-module="${p.module_id}"][value="${p.action_id}"]`).prop('checked', true);
+                        } else {
+                            $(`#panel-${sysKey} .module-master-checkbox[data-module="${p.module_id}"]`).prop('checked', true);
+                        }
                     });
                     $(`#panel-${sysKey} .module-master-checkbox`).each(function() {
                         const mid   = $(this).data('module');
@@ -2410,17 +2422,33 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
             if (action.includes('Role')) {
                 data.role_id = $('#modalRole').val();
+                // NEW
                 const systemPermissions = [];
                 $('#permissionsContainer .role-system-panel').each(function() {
                     const panelSystemId = $(this).data('panel-system-id');
                     const permissions   = [];
+                    // Collect action-level permissions
                     $(this).find('.role-permission-checkbox:checked').each(function() {
                         permissions.push({
                             module_id:   $(this).data('module'),
                             action_id:   $(this).val(),
-                            module_name: $(this).closest('.role-modal-module-card').find('.role-modal-module-header strong').text().trim(),
+                            module_name: $(this).closest('.role-modal-module-card').find('.role-modal-module-header label').contents().filter(function(){ return this.nodeType === 3; }).text().trim(),
                             action_name: $(this).closest('label').find('span').text().trim()
                         });
+                    });
+                    // Collect module-only permissions (master checked, no action checkboxes exist)
+                    $(this).find('.module-master-checkbox:checked').each(function() {
+                        const mid = $(this).data('module');
+                        const card = $(this).closest('.role-modal-module-card');
+                        if (card.find('.role-permission-checkbox').length === 0) {
+                            const mname = card.find('.role-modal-module-header label').contents().filter(function(){ return this.nodeType === 3; }).text().trim();
+                            permissions.push({
+                                module_id:   mid,
+                                action_id:   null,
+                                module_name: mname,
+                                action_name: null
+                            });
+                        }
                     });
                     systemPermissions.push({ system_id: panelSystemId === 'null' ? null : panelSystemId, permissions });
                 });
