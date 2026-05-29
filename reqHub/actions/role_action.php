@@ -14,6 +14,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once (__DIR__ . '/../includes/auth.php');
 require_once (__DIR__ . '/../database/db.php');
+require_once (__DIR__ . '/../includes/access_types_rebuild.php');
 
 // Set header immediately so nothing bleeds HTML before it
 header('Content-Type: application/json');
@@ -115,6 +116,8 @@ try {
             }
         }
 
+        rebuildAccessTypes($pdo);
+
         echo json_encode([
             'success' => true,
             'id'      => $newRoleId,
@@ -161,6 +164,8 @@ try {
                 $insPermission->execute([$role_id, $perm['module_id'], $perm['action_id'], $sp['system_id']]);
             }
         }
+
+        rebuildAccessTypes($pdo);
 
         echo json_encode([
             'success' => true,

@@ -211,11 +211,11 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
     <h4 class="mb-4">Admin Settings</h4>
 
     <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#actionsTab" type="button">Actions</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#modulesTab" type="button">Modules</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#rolesTab" type="button">Roles</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#systemsTab" type="button">Systems</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#userSettingsTab" type="button">User Settings</button></li>
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#actionsTab" type="button">Actions <span class="tab-badge"><?= count($actions) ?></span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#modulesTab" type="button">Modules <span class="tab-badge"><?= count($modules) ?></span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#rolesTab" type="button">Roles <span class="tab-badge"><?= count($roles) ?></span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#systemsTab" type="button">Systems <span class="tab-badge"><?= count($systems) ?></span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#userSettingsTab" type="button">Users <span class="tab-badge" id="usersTabBadge"><?= count($users) ?></span></button></li>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#assignmentsTab" type="button">Assignments</button></li>
     </ul>
 
@@ -223,12 +223,12 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
         <!-- ACTIONS TAB -->
         <div class="tab-pane fade show active" id="actionsTab">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="tab-toolbar d-flex justify-content-between align-items-center">
                 <div class="d-flex gap-2">
                     <button class="btn btn-primary" data-action="addAction">Add Action</button>
                     <button class="btn btn-outline-danger" id="toggleDeleteModeActions">Delete Mode</button>
                 </div>
-                <input type="text" class="form-control search-input" id="searchActions" placeholder="Search actions..." style="max-width:300px;">
+                <input type="text" class="form-control search-input" id="searchActions" placeholder="Search actions..." style="max-width:300px;" autocomplete="off">
             </div>
             <div class="actions-grid">
                 <?php foreach ($actions as $action): ?>
@@ -244,9 +244,9 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
         <!-- MODULES TAB -->
         <div class="tab-pane fade" id="modulesTab">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="tab-toolbar d-flex justify-content-between align-items-center">
                 <button class="btn btn-primary" data-action="addModule">Add Module</button>
-                <input type="text" class="form-control search-input" id="searchModules" placeholder="Search modules..." style="max-width:300px;">
+                <input type="text" class="form-control search-input" id="searchModules" placeholder="Search modules..." style="max-width:300px;" autocomplete="off">
             </div>
             <div class="modules-grid">
                 <?php foreach ($modules as $module): ?>
@@ -276,9 +276,9 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
         <!-- ROLES TAB -->
         <div class="tab-pane fade" id="rolesTab">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="tab-toolbar d-flex justify-content-between align-items-center">
                 <button class="btn btn-primary" data-action="addRole">Add Role</button>
-                <input type="text" class="form-control search-input" id="searchRoles" placeholder="Search roles..." style="max-width:300px;">
+                <input type="text" class="form-control search-input" id="searchRoles" placeholder="Search roles..." style="max-width:300px;" autocomplete="off">
             </div>
             <div class="roles-grid">
                 <?php foreach ($roles as $role): ?>
@@ -335,9 +335,9 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
         <!-- SYSTEMS TAB -->
         <div class="tab-pane fade" id="systemsTab">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="tab-toolbar d-flex justify-content-between align-items-center">
                 <button class="btn btn-primary" data-action="addSystem">Add System</button>
-                <input type="text" class="form-control search-input" id="searchSystems" placeholder="Search systems..." style="max-width:300px;">
+                <input type="text" class="form-control search-input" id="searchSystems" placeholder="Search systems..." style="max-width:300px;" autocomplete="off">
             </div>
             <div class="systems-list">
                 <?php foreach ($systems as $system): ?>
@@ -407,10 +407,10 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
         <!-- USER SETTINGS TAB -->
         <div class="tab-pane fade" id="userSettingsTab">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="tab-toolbar d-flex justify-content-between align-items-center">
                 <button class="btn btn-primary" data-action="addUser">Add User</button>
                 <div class="d-flex gap-2 align-items-center">
-                    <input type="text" class="form-control search-input" id="searchUsers" placeholder="Search users..." style="max-width:300px;">
+                    <input type="text" class="form-control search-input" id="searchUsers" placeholder="Search users..." style="max-width:300px;" autocomplete="off">
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="filterUsersBtn">Filter</button>
                         <div class="dropdown-menu p-3" style="min-width:220px;" id="filterUsersDropdown">
@@ -545,7 +545,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                 <!-- LEFT: System / Department nav list -->
                 <div class="assignment-left-panel">
                     <div class="p-2 pb-1">
-                        <input type="text" class="form-control form-control-sm" id="searchAssignmentSystems" placeholder="Search...">
+                        <input type="text" class="form-control form-control-sm" id="searchAssignmentSystems" placeholder="Search..." autocomplete="off">
                     </div>
                     <div id="assignmentSystemList">
 
@@ -695,7 +695,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
         <!-- Search + filter bar (sticky) -->
         <div class="overview-list-sticky-bar">
-            <input type="text" id="overviewListSearch" class="form-control form-control-sm" placeholder="Search by name or ID..." style="max-width:260px;">
+            <input type="text" id="overviewListSearch" class="form-control form-control-sm" placeholder="Search by name or ID..." style="max-width:260px;" autocomplete="off">
             <select id="overviewListRoleFilter" class="form-select form-select-sm" style="max-width:160px;">
                 <option value="">All Roles</option>
                 <option value="Requestor">Requestor</option>
@@ -1385,6 +1385,103 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
     #assign-overview #overviewListView {
         padding: 0 1.5rem 1.25rem;
     }
+
+    /* ============================================================
+   STICKY NAV + TOOLBARS
+============================================================ */
+#adminTabs {
+    position: sticky;
+    top: 0;
+    z-index: 120;
+    background: #e9ecf3;
+    padding-top: 0.4rem;
+    margin-bottom: 0 !important;
+    box-shadow: 0 1px 0 #dee2e6;
+}
+.tab-toolbar {
+    position: sticky;
+    top: 47px;          /* height of nav-tabs row */
+    z-index: 110;
+    background: #e9ecf3;
+    padding: 0.65rem 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* ============================================================
+   TAB BADGE (item count)
+============================================================ */
+.tab-badge {
+    display: inline-block;
+    padding: 0.15em 0.5em;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #e2e8f0;
+    color: #475569;
+    margin-left: 4px;
+    vertical-align: middle;
+    line-height: 1.4;
+}
+.nav-link.active .tab-badge {
+    background: #c7d2fe;
+    color: #3730a3;
+}
+
+/* ============================================================
+   SEARCH CLEAR BUTTON
+============================================================ */
+.search-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.search-wrap .form-control {
+    padding-right: 28px;
+}
+.search-clear-btn {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+    color: #9ca3af;
+    cursor: pointer;
+    display: none;
+    font-size: 0.8rem;
+    line-height: 1;
+    z-index: 2;
+}
+.search-clear-btn:hover { color: #374151; }
+
+/* ============================================================
+   PAGINATION BAR
+============================================================ */
+.pagination-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 0;
+    margin-top: 0.5rem;
+    border-top: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+.pagination-bar .pg-count {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-right: 4px;
+}
+.pagination-bar .btn {
+    min-width: 32px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.8rem;
+}
+.pagination-bar .pg-ellipsis {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    align-self: center;
+    padding: 0 2px;
+}
 </style>
 
 <?php include(__DIR__ . '/../includes/footer.php'); ?>
@@ -1584,7 +1681,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
             $('#modalInputLabel').text('Module Name');
             $('#modalInput').val(moduleName.trim()).attr('disabled', true);
 
-            let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Select Actions</strong><input type="text" class="form-control" id="searchModuleActionsEdit" placeholder="Search..." style="max-width:250px;"></div><div class="module-modal-grid">';
+            let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Select Actions</strong><input type="text" class="form-control" id="searchModuleActionsEdit" placeholder="Search..." style="max-width:250px;" autocomplete="off"></div><div class="module-modal-grid">';
             $('.action-item').each(function() {
                 const aid   = $(this).find('.editable-label').data('id');
                 const aname = $(this).find('.editable-label').text().trim();
@@ -1623,7 +1720,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
             </div>
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <strong>Select Modules</strong>
-                <input type="text" class="form-control searchRoleModuleBlockEdit" placeholder="Search..." style="max-width:250px;">
+                <input type="text" class="form-control searchRoleModuleBlockEdit" placeholder="Search..." style="max-width:250px;" autocomplete="off">
             </div>`;
             $('.module-item').each(function() {
                 const mid   = $(this).find('.editable-label').data('id');
@@ -1734,11 +1831,11 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
             $.post(url, data, function(res) {
                 if (!res.success) { alert(res.message || 'Failed to delete'); return; }
                 switch (action) {
-                    case 'deleteAction': button.closest('.action-item').slideUp(200, function() { $(this).remove(); }); break;
-                    case 'deleteModule': button.closest('.module-item').slideUp(200, function() { $(this).remove(); }); delete moduleAssignments[data.module_id]; break;
-                    case 'deleteRole':   button.closest('.role-item').slideUp(200, function()   { $(this).remove(); }); delete roleAssignments[data.role_id]; break;
-                    case 'deleteSystem': button.closest('.system-item').slideUp(200, function() { $(this).remove(); }); delete systemRoles[data.system_id]; break;
-                    case 'deleteUser':   button.closest('.user-item').slideUp(200, function()   { $(this).remove(); }); break;
+                    case 'deleteAction': button.closest('.action-item').slideUp(200, function() { $(this).remove(); renderPage('actionsTab'); }); break;
+                    case 'deleteModule': button.closest('.module-item').slideUp(200, function() { $(this).remove(); renderPage('modulesTab'); }); delete moduleAssignments[data.module_id]; break;
+                    case 'deleteRole':   button.closest('.role-item').slideUp(200, function()   { $(this).remove(); renderPage('rolesTab'); }); delete roleAssignments[data.role_id]; break;
+                    case 'deleteSystem': button.closest('.system-item').slideUp(200, function() { $(this).remove(); renderPage('systemsTab'); }); delete systemRoles[data.system_id]; break;
+                    case 'deleteUser':   button.closest('.user-item').slideUp(200, function()   { $(this).remove(); renderPage('userSettingsTab'); }); break;
                 }
             }, 'json');
         });
@@ -1784,7 +1881,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                 $('#modalInput').attr('disabled', action === 'editModule');
                 if (action !== 'editModule') $('#modalInput').focus();
 
-                let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Select Actions</strong><input type="text" class="form-control" id="searchModuleActions" placeholder="Search..." style="max-width:250px;"></div><div class="module-modal-grid">';
+                let html = '<div class="d-flex justify-content-between align-items-center mb-2"><strong>Select Actions</strong><input type="text" class="form-control" id="searchModuleActions" placeholder="Search..." style="max-width:250px;" autocomplete="off"></div><div class="module-modal-grid">';
                 $('.action-item').each(function() {
                     const aid   = $(this).find('.editable-label').data('id');
                     const aname = $(this).find('.editable-label').text().trim();
@@ -2046,21 +2143,34 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
         // ============================================================
         // SEARCH
         // ============================================================
-        $(document).on('keyup', '#searchActions', function() {
-            const q = $(this).val().toLowerCase();
-            $('.action-item').each(function() { $(this).toggle($(this).find('.editable-label').text().toLowerCase().includes(q)); });
+        function searchWithPaging(tabId, selector, labelFn, q) {
+            if (q) {
+                getPageItems(tabId).css('display', '');   // show all first
+                $(selector).each(function () {
+                    $(this).toggle(labelFn($(this)).toLowerCase().includes(q));
+                });
+                $(`#${tabId} .pagination-bar`).hide();
+            } else {
+                $(`#${tabId} .pagination-bar`).show();
+                renderPage(tabId);
+            }
+        }
+
+        $(document).on('keyup', '#searchActions', function () {
+            searchWithPaging('actionsTab', '#actionsTab .action-item',
+                $el => $el.find('.editable-label').text(), $(this).val().toLowerCase());
         });
-        $(document).on('keyup', '#searchModules', function() {
-            const q = $(this).val().toLowerCase();
-            $('.module-item').each(function() { $(this).toggle($(this).find('.editable-label').text().toLowerCase().includes(q)); });
+        $(document).on('keyup', '#searchModules', function () {
+            searchWithPaging('modulesTab', '#modulesTab .module-item',
+                $el => $el.find('.editable-label').text(), $(this).val().toLowerCase());
         });
-        $(document).on('keyup', '#searchRoles', function() {
-            const q = $(this).val().toLowerCase();
-            $('.role-item').each(function() { $(this).toggle($(this).find('.editable-label').text().toLowerCase().includes(q)); });
+        $(document).on('keyup', '#searchRoles', function () {
+            searchWithPaging('rolesTab', '#rolesTab .role-item',
+                $el => $el.find('.editable-label').text(), $(this).val().toLowerCase());
         });
         $(document).on('keyup', '#searchSystems', function() {
-            const q = $(this).val().toLowerCase();
-            $('.system-item').each(function() { $(this).toggle($(this).find('.editable-label').text().toLowerCase().includes(q)); });
+            searchWithPaging('systemsTab', '#systemsTab .system-item',
+                $el => $el.find('.editable-label').text(), $(this).val().toLowerCase());
         });
 
         function applyUserFilters() {
@@ -2068,17 +2178,28 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
             const checkedDepts  = $('.user-dept-filter:checked').map(function()  { return $(this).val(); }).get();
             const checkedRoles  = $('.user-role-filter:checked').map(function()  { return $(this).val(); }).get();
             const checkedActive = $('.user-active-filter:checked').map(function(){ return $(this).val(); }).get();
+
+            const isFiltering = query || checkedDepts.length || checkedRoles.length || checkedActive.length;
+
+            if (isFiltering) {
+                getPageItems('userSettingsTab').css('display', '');
+                $('#userSettingsTab .pagination-bar').hide();
+            }
+
             $('.user-item').each(function() {
                 const nameText  = $(this).find('strong').first().text().toLowerCase();
                 const matchSearch = nameText.includes(query);
-                let matchDept  = true;
-                if (checkedDepts.length > 0)  { const d = ($(this).data('hr-dept') || '').toString().toLowerCase(); matchDept  = checkedDepts.includes(d); }
-                let matchRole  = true;
-                if (checkedRoles.length > 0)  { const r = ($(this).data('role')    || '').toString().toLowerCase(); matchRole  = checkedRoles.includes(r); }
-                let matchActive = true;
-                if (checkedActive.length > 0) { const a = ($(this).data('active')  || '').toString().toLowerCase(); matchActive = checkedActive.includes(a); }
+                let matchDept = true, matchRole = true, matchActive = true;
+                if (checkedDepts.length)  { const d = ($(this).data('hr-dept') || '').toString().toLowerCase(); matchDept   = checkedDepts.includes(d); }
+                if (checkedRoles.length)  { const r = ($(this).data('role')    || '').toString().toLowerCase(); matchRole   = checkedRoles.includes(r); }
+                if (checkedActive.length) { const a = ($(this).data('active')  || '').toString().toLowerCase(); matchActive = checkedActive.includes(a); }
                 $(this).toggle(matchSearch && matchDept && matchRole && matchActive);
             });
+
+            if (!isFiltering) {
+                $('#userSettingsTab .pagination-bar').show();
+                renderPage('userSettingsTab');
+            }
         }
         $(document).on('keyup',  '#searchUsers',        applyUserFilters);
         $(document).on('change', '.user-dept-filter',   applyUserFilters);
@@ -2163,15 +2284,20 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
 
         function buildSystemCardHtml(id, name) {
             return `<div class="system-item card p-3 mb-3" data-system-id="${id}">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center flex-grow-1">
-                    <span class="flex-grow-1 ps-1 system-display-name">${htmlEscape(name)}</span>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <button class="btn btn-sm btn-outline-secondary me-2 toggle-system-roles">+</button>
+                        <span class="editable-label flex-grow-1" data-type="system" data-id="${id}" title="Click to edit">${htmlEscape(name)}</span>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-secondary" data-action="duplicateSystem"
+                            data-system-id="${id}" data-system-name="${htmlEscape(name)}">Duplicate</button>
+                        <button class="btn btn-sm btn-danger" data-action="deleteSystem"
+                            data-system-id="${id}">×</button>
+                    </div>
                 </div>
-                <div class="btn-group" role="group">
-                    <button class="btn btn-sm btn-danger" data-action="deleteSystem" data-system-id="${id}">×</button>
-                </div>
-            </div>
-        </div>`;
+                <div class="system-roles-container mt-3" style="display:none;"></div>
+            </div>`;
         }
 
         // ============================================================
@@ -2217,7 +2343,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     <span class="text-muted small">${isGlobal ? 'Permissions here apply to all systems this role is assigned to.' : `Permissions exclusive to <strong>${htmlEscape(sysLabel)}</strong>.`}</span>
                     <div class="d-flex gap-2 align-items-center">
                         ${!isGlobal ? `<button type="button" class="btn btn-sm btn-outline-danger remove-system-panel-tab" data-sys-key="${sysKey}">Remove</button>` : ''}
-                        <input type="text" class="form-control form-control-sm role-module-search" placeholder="Search modules..." style="max-width:200px;">
+                        <input type="text" class="form-control form-control-sm role-module-search" placeholder="Search modules..." style="max-width:200px;" autocomplete="off">
                     </div>
                 </div>`;
                 panelsHtml += `<div class="role-module-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">`;
@@ -2314,7 +2440,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     <span class="text-muted small">Permissions exclusive to <strong>${htmlEscape(sysName)}</strong>.</span>
                     <div class="d-flex gap-2 align-items-center">
                         <button type="button" class="btn btn-sm btn-outline-danger remove-system-panel-tab" data-sys-key="${sysId}">Remove</button>
-                        <input type="text" class="form-control form-control-sm role-module-search" placeholder="Search modules..." style="max-width:200px;">
+                        <input type="text" class="form-control form-control-sm role-module-search" placeholder="Search modules..." style="max-width:200px;" autocomplete="off">
                     </div>
                 </div>`;
                 newPanel += `<div class="role-module-grid" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">`;
@@ -2493,6 +2619,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     const dn  = res.name || data.name;
                     const html = `<div class="action-item card p-3 mb-2"><div class="d-flex justify-content-between align-items-center"><span class="editable-label" data-type="action" data-id="${res.id}">${htmlEscape(dn)}</span><div><button class="btn btn-sm btn-danger action-delete-btn" data-action="deleteAction" data-id="${res.id}">×</button></div></div></div>`;
                     $('.actions-grid').append(html);
+                    renderPage('actionsTab');
                     if ($('#toggleDeleteModeActions').hasClass('btn-danger')) {
                         $('.actions-grid .action-item:last .action-delete-btn').show();
                     }
@@ -2512,6 +2639,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     const html = `<div class="module-item card p-3 mb-2"><div class="d-flex justify-content-between align-items-center mb-2 module-item-header"><div class="title d-flex align-items-center flex-shrink-1 overflow-hidden"><button class="btn btn-sm btn-outline-secondary me-2 toggle-module flex-shrink-0">+</button><span class="editable-label flex-grow-1" data-type="module" data-id="${res.id}">${htmlEscape(dn)}</span></div><div class="btn-group flex-shrink-0"><button class="btn btn-sm btn-danger" data-action="deleteModule" data-module-id="${res.id}">×</button></div></div><div class="module-actions mt-2" style="display:none;">${actionsHtml}</div></div>`;
                     $('.modules-grid').append(html);
                     moduleAssignments[res.id] = data.selected_actions ? [...data.selected_actions] : [];
+                    renderPage('modulesTab');
                 }
                 if (action === 'editModule') {
                     const card = $(`.module-item .editable-label[data-id="${res.id}"]`).closest('.module-item');
@@ -2562,6 +2690,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     }
                     const html = `<div class="role-item card p-3 mb-2"><div class="d-flex justify-content-between align-items-center mb-2"><div class="d-flex align-items-center"><button class="btn btn-sm btn-outline-secondary me-2 toggle-role">+</button><span class="editable-label" data-type="role" data-id="${res.id}">${htmlEscape(dn)}</span></div><div><button class="btn btn-sm btn-danger" data-action="deleteRole" data-role-id="${res.id}">×</button></div></div><div class="role-permissions mt-2" style="display:none;">${permHtml}</div></div>`;
                     $('.roles-grid').append(html);
+                    renderPage('rolesTab');
                 }
                 if (action === 'editRole') {
                     const card = $(`.role-item .editable-label[data-id="${res.id}"]`).closest('.role-item');
@@ -2608,6 +2737,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     const dn = res.name || data.name;
                     systemRoles[res.id] = [];
                     $('.systems-list').append(buildSystemCardHtml(res.id, dn));
+                    renderPage('systemsTab');
                 }
                 if (action === 'editSystem') {
                     const dn = res.name || data.name;
@@ -2654,6 +2784,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                 </div>`;
                     $('.users-list').append(html);
                     approverAssignments[res.id] = res.assignments || [];
+                    renderPage('userSettingsTab');
                 }
 
                 if (action === 'editUser') {
@@ -2706,68 +2837,186 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
         });
 
         // ============================================================
-// OVERVIEW — CARD / LIST TOGGLE
-// ============================================================
-$(document).on('click', '#viewCards', function() {
-    $(this).removeClass('btn-outline-secondary').addClass('btn-dark');
-    $('#viewList').removeClass('btn-dark').addClass('btn-outline-secondary');
-    $('#overviewCardView').show();
-    $('#overviewListView').hide();
-});
+        // OVERVIEW — CARD / LIST TOGGLE
+        // ============================================================
+        $(document).on('click', '#viewCards', function() {
+            $(this).removeClass('btn-outline-secondary').addClass('btn-dark');
+            $('#viewList').removeClass('btn-dark').addClass('btn-outline-secondary');
+            $('#overviewCardView').show();
+            $('#overviewListView').hide();
+        });
 
-$(document).on('click', '#viewList', function() {
-    $(this).removeClass('btn-outline-secondary').addClass('btn-dark');
-    $('#viewCards').removeClass('btn-dark').addClass('btn-outline-secondary');
-    $('#overviewCardView').hide();
-    $('#overviewListView').show();
-});
+        $(document).on('click', '#viewList', function() {
+            $(this).removeClass('btn-outline-secondary').addClass('btn-dark');
+            $('#viewCards').removeClass('btn-dark').addClass('btn-outline-secondary');
+            $('#overviewCardView').hide();
+            $('#overviewListView').show();
+        });
 
-// OVERVIEW LIST — search + role filter
-function applyOverviewListFilters() {
-    const q    = $('#overviewListSearch').val().toLowerCase();
-    const role = $('#overviewListRoleFilter').val();
-    let visible = 0;
+        // OVERVIEW LIST — search + role filter
+        function applyOverviewListFilters() {
+            const q    = $('#overviewListSearch').val().toLowerCase();
+            const role = $('#overviewListRoleFilter').val();
+            let visible = 0;
 
-    $('#overviewListBody tr').each(function() {
-        const matchSearch = !q
-            || $(this).data('name').includes(q)
-            || $(this).data('empno').includes(q);
-        const matchRole = !role || $(this).data('role') === role;
-        const show = matchSearch && matchRole;
-        $(this).toggle(show);
-        if (show) visible++;
-    });
+            $('#overviewListBody tr').each(function() {
+                const matchSearch = !q
+                    || $(this).data('name').includes(q)
+                    || $(this).data('empno').includes(q);
+                const matchRole = !role || $(this).data('role') === role;
+                const show = matchSearch && matchRole;
+                $(this).toggle(show);
+                if (show) visible++;
+            });
 
-    $('#overviewListEmpty').toggle(visible === 0);
-}
+            $('#overviewListEmpty').toggle(visible === 0);
+        }
 
-$(document).on('keyup',  '#overviewListSearch',     applyOverviewListFilters);
-$(document).on('change', '#overviewListRoleFilter', applyOverviewListFilters);
+        $(document).on('keyup',  '#overviewListSearch',     applyOverviewListFilters);
+        $(document).on('change', '#overviewListRoleFilter', applyOverviewListFilters);
 
-// OVERVIEW LIST — column sorting
-let overviewSortCol = null;
-let overviewSortDir = 1;
+        // OVERVIEW LIST — column sorting
+        let overviewSortCol = null;
+        let overviewSortDir = 1;
 
-$(document).on('click', '.overview-sort', function() {
-    const col = $(this).data('col');
-    if (overviewSortCol === col) {
-        overviewSortDir *= -1;
-    } else {
-        overviewSortCol = col;
-        overviewSortDir = 1;
-    }
+        $(document).on('click', '.overview-sort', function() {
+            const col = $(this).data('col');
+            if (overviewSortCol === col) {
+                overviewSortDir *= -1;
+            } else {
+                overviewSortCol = col;
+                overviewSortDir = 1;
+            }
 
-    $('.overview-sort .sort-icon').text('↕');
-    $(this).find('.sort-icon').text(overviewSortDir === 1 ? '↑' : '↓');
+            $('.overview-sort .sort-icon').text('↕');
+            $(this).find('.sort-icon').text(overviewSortDir === 1 ? '↑' : '↓');
 
-    const rows = $('#overviewListBody tr').toArray();
-    rows.sort((a, b) => {
-        const aVal = $(a).data(col) || '';
-        const bVal = $(b).data(col) || '';
-        return aVal.localeCompare(bVal) * overviewSortDir;
-    });
-    $('#overviewListBody').append(rows);
-});
+            const rows = $('#overviewListBody tr').toArray();
+            rows.sort((a, b) => {
+                const aVal = $(a).data(col) || '';
+                const bVal = $(b).data(col) || '';
+                return aVal.localeCompare(bVal) * overviewSortDir;
+            });
+            $('#overviewListBody').append(rows);
+        });
+
+        // ============================================================
+        // SEARCH CLEAR BUTTONS + autocomplete guard
+        // ============================================================
+        function initSearchClear($inputs) {
+            $inputs.each(function () {
+                if ($(this).closest('.search-wrap').length) return;
+                const maxW = $(this).css('max-width');
+                $(this)
+                    .attr('autocomplete', 'off')
+                    .attr('spellcheck', 'false')
+                    .wrap(`<div class="search-wrap" style="max-width:${maxW || '300px'};"></div>`);
+                $(this).css('max-width', '');           // let wrapper control width
+                $(this).after('<button type="button" class="search-clear-btn" tabindex="-1">✕</button>');
+            });
+        }
+        initSearchClear($('.search-input, #searchAssignmentSystems, #overviewListSearch'));
+
+        $(document).on('input keyup', '.search-input, #searchAssignmentSystems, #overviewListSearch', function () {
+            $(this).closest('.search-wrap').find('.search-clear-btn').toggle($(this).val().length > 0);
+        });
+        $(document).on('click', '.search-clear-btn', function () {
+            const $input = $(this).closest('.search-wrap').find('input');
+            $input.val('').trigger('keyup').trigger('input');
+            $(this).hide();
+            $input.focus();
+        });
+
+        // ============================================================
+        // PAGINATION
+        // ============================================================
+        const pgCurrent = {};
+        const PG_SIZE = {
+            actionsTab:      60,
+            modulesTab:      30,
+            rolesTab:        30,
+            systemsTab:      20,
+            userSettingsTab: 30,
+        };
+
+        function getPageItems(tabId) {
+            const map = {
+                actionsTab:      '#actionsTab .action-item',
+                modulesTab:      '#modulesTab .module-item',
+                rolesTab:        '#rolesTab .role-item',
+                systemsTab:      '#systemsTab .system-item',
+                userSettingsTab: '#userSettingsTab .user-item',
+            };
+            return $(map[tabId]);
+        }
+
+        function renderPage(tabId) {
+            if (!PG_SIZE[tabId]) return;
+            const perPage    = PG_SIZE[tabId];
+            const page       = pgCurrent[tabId] || 1;
+            const $items     = getPageItems(tabId);
+            const total      = $items.length;
+            const totalPages = Math.ceil(total / perPage);
+            const start      = (page - 1) * perPage;
+
+            $items.each(function (i) {
+                $(this).css('display', (i >= start && i < start + perPage) ? '' : 'none');
+            });
+
+            // Build paginator
+            $(`#${tabId} .pagination-bar`).remove();
+            if (totalPages <= 1) return;
+
+            const end = Math.min(start + perPage, total);
+            let html = `<div class="pagination-bar" data-tab="${tabId}">
+                <span class="pg-count">${start + 1}–${end} of ${total}</span>
+                <button class="btn btn-outline-secondary" data-tab="${tabId}" data-pg="${page - 1}" ${page <= 1 ? 'disabled' : ''}>‹</button>`;
+
+            // Window of page numbers
+            const win = 5;
+            let ps = Math.max(1, page - Math.floor(win / 2));
+            let pe = Math.min(totalPages, ps + win - 1);
+            if (pe - ps < win - 1) ps = Math.max(1, pe - win + 1);
+
+            if (ps > 1) {
+                html += `<button class="btn btn-outline-secondary" data-tab="${tabId}" data-pg="1">1</button>`;
+                if (ps > 2) html += `<span class="pg-ellipsis">…</span>`;
+            }
+            for (let p = ps; p <= pe; p++) {
+                html += `<button class="btn ${p === page ? 'btn-dark' : 'btn-outline-secondary'}" data-tab="${tabId}" data-pg="${p}">${p}</button>`;
+            }
+            if (pe < totalPages) {
+                if (pe < totalPages - 1) html += `<span class="pg-ellipsis">…</span>`;
+                html += `<button class="btn btn-outline-secondary" data-tab="${tabId}" data-pg="${totalPages}">${totalPages}</button>`;
+            }
+            html += `<button class="btn btn-outline-secondary" data-tab="${tabId}" data-pg="${page + 1}" ${page >= totalPages ? 'disabled' : ''}>›</button>`;
+            html += `</div>`;
+
+            $(`#${tabId}`).append(html);
+        }
+
+        function initPagination(tabId) {
+            pgCurrent[tabId] = 1;
+            renderPage(tabId);
+        }
+
+        $(document).on('click', '.pagination-bar button[data-pg]', function () {
+            const tabId = $(this).data('tab');
+            const pg    = parseInt($(this).data('pg'));
+            if (isNaN(pg) || $(this).is(':disabled')) return;
+            pgCurrent[tabId] = pg;
+            renderPage(tabId);
+            // Scroll tab content into view (not whole page)
+            const $pane = $(`#${tabId}`);
+            if ($pane.length) $pane[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // Init on load
+        initPagination('actionsTab');
+        initPagination('modulesTab');
+        initPagination('rolesTab');
+        initPagination('systemsTab');
+        initPagination('userSettingsTab');
 
     });
 </script>

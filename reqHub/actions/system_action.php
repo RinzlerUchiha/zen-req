@@ -21,6 +21,8 @@ try {
     die(json_encode(['success' => false, 'message' => 'Database connection failed']));
 }
 
+require_once (__DIR__ . '/../includes/access_types_rebuild.php');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     exit;
@@ -95,6 +97,8 @@ try {
                 }
             }
 
+            rebuildAccessTypes($pdo);
+
             echo json_encode([
                 'success' => true,
                 'id' => $systemId,
@@ -164,6 +168,8 @@ try {
                     $roles[] = ['role_id' => $roleId, 'role_name' => $role['name']];
                 }
             }
+
+            rebuildAccessTypes($pdo);
 
             echo json_encode([
                 'success' => true,
