@@ -77,7 +77,7 @@ usort($users, function($a, $b) {
 });
 
 // Systems
-$systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$systems = $pdo->query("SELECT id, name, is_locked FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $systemDescriptions = [];
 try {
     $hrSystems = $hrPdo->query("SELECT system_id, sys_desc FROM tbl_systems")->fetchAll(PDO::FETCH_ASSOC);
@@ -348,6 +348,12 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                                 <span class="editable-label flex-grow-1" data-type="system" data-id="<?= $system['id'] ?>" title="Click to edit"><?= htmlspecialchars($system['full_name'] ?? $system['name']) ?></span>
                             </div>
                             <div class="btn-group" role="group">
+                                <button class="btn btn-sm <?= $system['is_locked'] ? 'btn-warning' : 'btn-outline-secondary' ?> toggle-system-lock"
+                                    data-system-id="<?= $system['id'] ?>"
+                                    data-locked="<?= $system['is_locked'] ? '1' : '0' ?>"
+                                    title="<?= $system['is_locked'] ? 'Click to unlock — requestors will be able to modify access selections' : 'Click to lock — requestors will not be able to modify access selections' ?>">
+                                    <?= $system['is_locked'] ? '🔒 Locked' : '🔓 Unlocked' ?>
+                                </button>
                                 <button class="btn btn-sm btn-secondary" data-action="duplicateSystem" data-system-id="<?= $system['id'] ?>" data-system-name="<?= htmlspecialchars($system['full_name'] ?? $system['name'], ENT_QUOTES) ?>">Duplicate</button>
                                 <button class="btn btn-sm btn-danger" data-action="deleteSystem" data-system-id="<?= $system['id'] ?>">×</button>
                             </div>
@@ -2112,6 +2118,36 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
         });
 
         // ============================================================
+        // LOCK / UNLOCK SYSTEM
+        // ============================================================
+        $(document).on('click', '.toggle-system-lock', function (e) {
+            e.stopPropagation();
+            const btn      = $(this);
+            const systemId = btn.data('system-id');
+            const isLocked = btn.data('locked') === 1 || btn.data('locked') === '1';
+            const newLocked = isLocked ? 0 : 1;
+
+            $.post('/zen/reqHub/actions/system_action.php', {
+                action:    'toggleLock',
+                system_id: systemId,
+                is_locked: newLocked
+            }, function (res) {
+                if (!res.success) { alert(res.message || 'Failed to update lock'); return; }
+
+                btn.data('locked', newLocked);
+                if (newLocked) {
+                    btn.removeClass('btn-outline-secondary').addClass('btn-warning')
+                       .text('🔒 Locked')
+                       .attr('title', 'Click to unlock — requestors will be able to modify access selections');
+                } else {
+                    btn.removeClass('btn-warning').addClass('btn-outline-secondary')
+                       .text('🔓 Unlocked')
+                       .attr('title', 'Click to lock — requestors will not be able to modify access selections');
+                }
+            }, 'json');
+        });
+
+        // ============================================================
         // DUPLICATE SYSTEM
         // ============================================================
         $(document).on('click', '[data-action="duplicateSystem"]', function() {
@@ -2282,7 +2318,12 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
             return html;
         }
 
-        function buildSystemCardHtml(id, name) {
+        function buildSystemCardHtml(id, name, isLocked = false) {
+            const lockClass  = isLocked ? 'btn-warning' : 'btn-outline-secondary';
+            const lockLabel  = isLocked ? '🔒 Locked' : '🔓 Unlocked';
+            const lockTitle  = isLocked
+                ? 'Click to unlock — requestors will be able to modify access selections'
+                : 'Click to lock — requestors will not be able to modify access selections';
             return `<div class="system-item card p-3 mb-3" data-system-id="${id}">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div class="d-flex align-items-center flex-grow-1">
@@ -2290,6 +2331,10 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                         <span class="editable-label flex-grow-1" data-type="system" data-id="${id}" title="Click to edit">${htmlEscape(name)}</span>
                     </div>
                     <div class="btn-group" role="group">
+                        <button class="btn btn-sm ${lockClass} toggle-system-lock"
+                            data-system-id="${id}" data-locked="${isLocked ? '1' : '0'}" title="${lockTitle}">
+                            ${lockLabel}
+                        </button>
                         <button class="btn btn-sm btn-secondary" data-action="duplicateSystem"
                             data-system-id="${id}" data-system-name="${htmlEscape(name)}">Duplicate</button>
                         <button class="btn btn-sm btn-danger" data-action="deleteSystem"

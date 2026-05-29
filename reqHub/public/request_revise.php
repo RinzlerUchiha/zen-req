@@ -70,8 +70,8 @@ try {
 // Fetch dropdown data
 try {
     $systems = $pdo->query("
-        SELECT s.id, s.name,
-               COALESCE(NULLIF(ts.sys_desc, ''), s.name) AS full_name
+        SELECT s.id, s.name, s.is_locked,
+            COALESCE(NULLIF(ts.sys_desc, ''), s.name) AS full_name
         FROM systems s
         LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
         ORDER BY s.name
@@ -442,6 +442,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchModules = document.getElementById("searchModules");
 
     const allAccessTypesList = <?= json_encode($accessTypes) ?>;
+    const lockedSystemIds    = new Set(<?= json_encode(array_values(array_map('intval', array_column(array_filter($systems, fn($s) => !empty($s['is_locked'])), 'id')))) ?>);
     const currentAccessTypeIds = <?= json_encode($currentAccessTypes ?? []) ?>;
     const roleAccessTypeIds = <?= json_encode(array_values(array_map('intval', $roleAccessTypeIds ?? []))) ?>;
     const manuallyAddedAccessTypeIds = <?= json_encode(array_values(array_map('intval', $manuallyAddedAccessTypeIds ?? []))) ?>;
@@ -604,8 +605,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.style.flexShrink = "0";
                 checkbox.style.cursor = "pointer";
 
+                const systemIsLocked = lockedSystemIds.has(parseInt(selectedSystemId));
+
                 if (autoSelectedItems.has(matchedType.id.toString()) || currentAccessTypeIdsSet.has(matchedType.id)) {
                     checkbox.checked = true;
+                }
+
+                if (systemIsLocked) {
+                    checkbox.disabled = true;
+                    checkbox.style.cursor = 'not-allowed';
+                    actionDiv.style.opacity = '0.75';
+                    actionDiv.style.cursor  = 'not-allowed';
                 }
 
                 actionCheckboxes.push(checkbox);
@@ -644,10 +654,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 actionsGrid.appendChild(actionDiv);
             });
 
-            moduleCheckbox.addEventListener("change", function() {
-                const role = roleSelect.value;
-                const systemName = systemNameMap[systemSelect.value];
-                actionCheckboxes.forEach(cb => {
+            const systemIsLockedForModule = lockedSystemIds.has(parseInt(selectedSystemId));
+
+                if (systemIsLockedForModule) {
+                    moduleCheckbox.disabled = true;
+                    moduleCheckbox.style.cursor = 'not-allowed';
+                }
+
+                moduleCheckbox.addEventListener("change", function() {
+                    const role = roleSelect.value;
+                    const systemName = systemNameMap[systemSelect.value];
+                    actionCheckboxes.forEach(cb => {
                     cb.checked = this.checked;
                     if (!this.checked) {
                         autoSelectedItems.delete(cb.value);
@@ -806,6 +823,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
         document.getElementById('chosenRoleInput').value = role;
 
+        const lockNotice = document.getElementById('systemLockNotice');
+        if (lockNotice) lockNotice.remove();
+
         if (!role) {
             autoSelectedItems.clear();
             autoSelectedModules.clear();
@@ -816,6 +836,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
         const systemName = systemNameMap[systemSelect.value];
         selectAllModulesForRole(role, systemName);
+
+        if (lockedSystemIds.has(parseInt(systemSelect.value))) {
+            const notice = document.createElement('div');
+            notice.id = 'systemLockNotice';
+            notice.className = 'alert alert-warning mt-2 mb-0 py-2';
+            notice.style.fontSize = '0.85rem';
+            notice.innerHTML = '🔒 <strong>This system is locked.</strong> The modules and actions for the selected role are fixed and cannot be modified.';
+            roleSelect.parentElement.appendChild(notice);
+        }
     });
 
     function selectAllModulesForRole(role, systemName) {

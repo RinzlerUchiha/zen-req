@@ -22,7 +22,7 @@ try {
 
         if ($userRow) {
         $stmtSys = $pdo->prepare("
-            SELECT DISTINCT s.id, s.name, COALESCE(NULLIF(ts.sys_desc,''), s.name) AS full_name
+            SELECT DISTINCT s.id, s.name, s.is_locked, COALESCE(NULLIF(ts.sys_desc,''), s.name) AS full_name
             FROM user_approver_assignments uaa
             JOIN systems s ON uaa.system_id = s.id
             LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
@@ -34,15 +34,15 @@ try {
 
         // Fallback: if no valid system assignments found, show all systems
         if (empty($systems)) {
-            $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+            $systems = $pdo->query("SELECT id, name, is_locked FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
         }
     } else {
-        $systems = $pdo->query("SELECT id, name FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+        $systems = $pdo->query("SELECT id, name, is_locked FROM systems ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
     }
     } else {
         // Approver sees all systems
         $systems = $pdo->query("
-        SELECT s.id, s.name, COALESCE(NULLIF(ts.sys_desc,''), s.name) AS full_name
+        SELECT s.id, s.name, s.is_locked, COALESCE(NULLIF(ts.sys_desc,''), s.name) AS full_name
         FROM systems s
         LEFT JOIN tngc_hrd2.tbl_systems ts ON LOWER(ts.system_id) = LOWER(s.name)
         ORDER BY s.name
@@ -297,6 +297,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchModules     = document.getElementById("searchModules");
 
     const allAccessTypesList = <?= json_encode($accessTypes) ?>;
+    const lockedSystemIds    = new Set(<?= json_encode(array_values(array_map('intval', array_column(array_filter($systems, fn($s) => !empty($s['is_locked'])), 'id')))) ?>);
 
     let systemNameMap = {};
     let systemAcronymMap = {};
@@ -420,8 +421,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.dataset.name   = matchedType.actions;
                 checkbox.style.cssText  = "width:14px; height:14px; flex-shrink:0; cursor:pointer; margin:0;";
 
+                const systemIsLocked = lockedSystemIds.has(parseInt(selectedSystemId));
+
                 if (autoSelectedItems.has(matchedType.id.toString())) {
                     checkbox.checked = true;
+                }
+
+                if (systemIsLocked) {
+                    checkbox.disabled = true;
+                    checkbox.style.cursor = 'not-allowed';
+                    actionDiv.style.opacity = '0.75';
+                    actionDiv.style.cursor  = 'not-allowed';
                 }
 
                 actionCheckboxes.push(checkbox);
@@ -459,6 +469,12 @@ document.addEventListener("DOMContentLoaded", function() {
             });
 
             // Module checkbox handler
+            const systemIsLockedForModule = lockedSystemIds.has(parseInt(selectedSystemId));
+            if (systemIsLockedForModule) {
+                moduleCheckbox.disabled = true;
+                moduleCheckbox.style.cursor = 'not-allowed';
+            }
+
             moduleCheckbox.addEventListener("change", function() {
                 const role       = roleSelect.value;
                 const systemName = systemAcronymMap[systemSelect.value];
@@ -534,6 +550,10 @@ document.addEventListener("DOMContentLoaded", function() {
     roleSelect.addEventListener("change", function() {
         const role = this.value;
         document.getElementById('chosenRoleInput').value = role;
+
+        const lockNotice = document.getElementById('systemLockNotice');
+        if (lockNotice) lockNotice.remove();
+
         if (!role) {
             autoSelectedItems.clear();
             autoSelectedModules.clear();
@@ -541,7 +561,17 @@ document.addEventListener("DOMContentLoaded", function() {
             updateSummary();
             return;
         }
+
         selectAllModulesForRole(role, systemAcronymMap[systemSelect.value]);
+
+        if (lockedSystemIds.has(parseInt(systemSelect.value))) {
+            const notice = document.createElement('div');
+            notice.id = 'systemLockNotice';
+            notice.className = 'alert alert-warning mt-2 mb-0 py-2';
+            notice.style.fontSize = '0.85rem';
+            notice.innerHTML = '🔒 <strong>This system is locked.</strong> The modules and actions for the selected role are fixed and cannot be modified.';
+            roleSelect.parentElement.appendChild(notice);
+        }
     });
 
     function selectAllModulesForRole(role, systemName) {
