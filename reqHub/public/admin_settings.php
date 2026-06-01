@@ -1504,6 +1504,8 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
         let moduleAssignments  = <?= json_encode($moduleAssignments ?? []) ?>;
         let approverAssignments = <?= json_encode($approverAssignments) ?>;
         const deptIdToCode = <?= json_encode($deptIdToCode) ?>;
+        const systemsList    = <?= json_encode($systems) ?>;
+        const departmentsList = <?= json_encode($departments) ?>;
         let systemRoles        = <?= json_encode($systemRoles) ?>;
 
         const rolesWithSystemAssignment     = ['Approver', 'Requestor'];
@@ -1584,6 +1586,282 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
             let html = '<strong>' + label + '</strong><br>';
             selected.forEach(s => { html += `<div style="margin-left:10px;">• ${htmlEscape(s)}</div>`; });
             summary.html(html);
+        }
+
+        // ============================================================
+        // ASSIGNMENTS TAB — DYNAMIC REBUILD
+        // ============================================================
+        function capitalizeFirst(str) {
+            if (!str) return '';
+            return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        function getAvatarColor(empId) {
+            const colors = ['#6366f1','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
+            let h = 0;
+            for (let i = 0; i < String(empId).length; i++) h = (Math.imul(31, h) + String(empId).charCodeAt(i)) | 0;
+            return colors[Math.abs(h) % colors.length];
+        }
+
+        function getRoleColorClass(role) {
+            return { Approver: 'role-badge-approver', Requestor: 'role-badge-requestor', Reviewer: 'role-badge-reviewer' }[role] || 'role-badge-default';
+        }
+
+        function getSystemName(sysId) {
+            for (const s of systemsList) { if (String(s.id) === String(sysId)) return s.full_name || s.name; }
+            return String(sysId);
+        }
+
+        function getDeptName(deptCode) {
+            for (const d of departmentsList) { if (String(d.id) === String(deptCode)) return d.name; }
+            return String(deptCode).toUpperCase();
+        }
+
+        function getAssignedToLabels(userId) {
+            const labels = [], seen = new Set();
+            (approverAssignments[userId] || []).forEach(a => {
+                if (a.system_id) {
+                    const k = 'sys_' + a.system_id;
+                    if (!seen.has(k)) { seen.add(k); labels.push(getSystemName(a.system_id)); }
+                } else if (a.department_id) {
+                    const k = 'dept_' + a.department_id;
+                    if (!seen.has(k)) { seen.add(k); labels.push(getDeptName(a.department_id)); }
+                }
+            });
+            return labels;
+        }
+
+        function getAllUsersFromDOM() {
+            const users = [];
+            $('.user-item').each(function() {
+                users.push({
+                    id:           String($(this).data('user-id')),
+                    reqhub_role:  capitalizeFirst(String($(this).data('role') || '')),
+                    hr_department: String($(this).data('hr-dept') || ''),
+                    user_name:    $(this).find('.d-flex.flex-column strong').first().text().trim(),
+                    employee_id:  $(this).find('.d-flex.flex-column small').first().text().trim()
+                });
+            });
+            return users;
+        }
+
+        function buildAssignUserCard(user, extraInfo) {
+            const initials = (user.user_name || user.employee_id || '?').charAt(0).toUpperCase();
+            const color    = getAvatarColor(user.employee_id);
+            let extra = '';
+            if (user.hr_department) extra += `<div class="assign-user-dept">${htmlEscape(user.hr_department)}</div>`;
+            if (extraInfo)           extra += `<div style="font-size:0.68rem;color:#9ca3af;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${htmlEscape(extraInfo)}</div>`;
+            return `<div class="assign-user-card">
+                <div class="assign-avatar" style="background:${color};">${htmlEscape(initials)}</div>
+                <div class="assign-user-info">
+                    <div class="assign-user-name">${htmlEscape(user.user_name || user.employee_id)}</div>
+                    <div class="assign-user-id">${htmlEscape(user.employee_id)}</div>
+                    ${extra}
+                </div>
+            </div>`;
+        }
+
+        function buildOverviewPanel(users) {
+            const groups = { Requestor: [], Approver: [], Reviewer: [] };
+            users.forEach(u => {
+                if (groups[u.reqhub_role] && (approverAssignments[u.id] || []).length > 0)
+                    groups[u.reqhub_role].push(u);
+            });
+            const total = Object.values(groups).reduce((s, a) => s + a.length, 0);
+
+            let cardRows = '';
+            ['Requestor','Approver','Reviewer'].forEach(role => {
+                if (!groups[role].length) return;
+                cardRows += `<div class="assign-role-group">
+                    <div class="assign-role-group-header">
+                        <span class="assign-role-badge ${getRoleColorClass(role)}">${role}</span>
+                        <span class="text-muted small">${groups[role].length} user${groups[role].length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="assign-user-grid">
+                        ${groups[role].map(u => buildAssignUserCard(u, getAssignedToLabels(u.id).join(', '))).join('')}
+                    </div>
+                </div>`;
+            });
+
+            let listRows = '';
+            ['Requestor','Approver','Reviewer'].forEach(role => {
+                groups[role].forEach(u => {
+                    const labels = getAssignedToLabels(u.id);
+                    const color  = getAvatarColor(u.employee_id);
+                    const init   = (u.user_name || u.employee_id || '?').charAt(0).toUpperCase();
+                    listRows += `<tr
+                        data-name="${htmlEscape((u.user_name||u.employee_id).toLowerCase())}"
+                        data-empno="${htmlEscape(u.employee_id.toLowerCase())}"
+                        data-role="${htmlEscape(role)}"
+                        data-dept="${htmlEscape((u.hr_department||'').toLowerCase())}">
+                        <td><div class="d-flex align-items-center gap-2">
+                            <div class="assign-avatar" style="background:${color};width:26px;height:26px;font-size:0.7rem;flex-shrink:0;">${htmlEscape(init)}</div>
+                            <span>${htmlEscape(u.user_name||u.employee_id)}</span>
+                        </div></td>
+                        <td class="text-muted">${htmlEscape(u.employee_id)}</td>
+                        <td><span class="assign-role-badge ${getRoleColorClass(role)}">${role}</span></td>
+                        <td class="text-muted">${htmlEscape(u.hr_department||'—')}</td>
+                        <td>${labels.length
+                            ? `<div class="d-flex flex-wrap gap-1">${labels.map(l => `<span class="assign-badge">${htmlEscape(l)}</span>`).join('')}</div>`
+                            : '<span class="text-muted">—</span>'}</td>
+                    </tr>`;
+                });
+            });
+
+            return `<div class="assignment-detail-panel" id="assign-overview" style="padding:0;">
+                <div class="assign-detail-header" style="padding:1.25rem 1.5rem 0.75rem;margin-bottom:0;border-bottom:1px solid #dee2e6;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="assign-type-badge" style="background:#f3e8ff;color:#6b21a8;">OVERVIEW</span>
+                            <h5 class="mb-0">All Assignments</h5>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-dark" id="viewCards">Cards</button>
+                            <button class="btn btn-outline-secondary" id="viewList">List</button>
+                        </div>
+                    </div>
+                    <div class="text-muted small">${total} user${total !== 1 ? 's' : ''} with assignments</div>
+                </div>
+                <div id="overviewCardView" style="padding:0 1.5rem 1.25rem;">${cardRows}</div>
+                <div id="overviewListView" style="display:none;">
+                    <div class="overview-list-sticky-bar">
+                        <input type="text" id="overviewListSearch" class="form-control form-control-sm" placeholder="Search by name or ID..." style="max-width:260px;" autocomplete="off">
+                        <select id="overviewListRoleFilter" class="form-select form-select-sm" style="max-width:160px;">
+                            <option value="">All Roles</option>
+                            <option value="Requestor">Requestor</option>
+                            <option value="Approver">Approver</option>
+                            <option value="Reviewer">Reviewer</option>
+                        </select>
+                    </div>
+                    <table class="table table-sm overview-summary-table">
+                        <colgroup><col><col><col><col><col></colgroup>
+                        <thead><tr>
+                            <th class="overview-sort" data-col="name" style="cursor:pointer;">Name <span class="sort-icon">↕</span></th>
+                            <th>Employee ID</th>
+                            <th class="overview-sort" data-col="role" style="cursor:pointer;">Role <span class="sort-icon">↕</span></th>
+                            <th class="overview-sort" data-col="dept" style="cursor:pointer;">HR Department <span class="sort-icon">↕</span></th>
+                            <th>Assigned To</th>
+                        </tr></thead>
+                        <tbody id="overviewListBody">${listRows}</tbody>
+                    </table>
+                    <div id="overviewListEmpty" class="text-muted small text-center py-3" style="display:none;">No users match your search.</div>
+                </div>
+            </div>`;
+        }
+
+        function buildSystemPanel(sys, users) {
+            const sysId    = String(sys.id);
+            const sysLabel = htmlEscape(sys.full_name || sys.name);
+            const groups   = { Requestor: [], Approver: [], Reviewer: [] };
+
+            users.forEach(u => {
+                if (!groups[u.reqhub_role]) return;
+                if ((approverAssignments[u.id] || []).some(a => String(a.system_id) === sysId))
+                    groups[u.reqhub_role].push(u);
+            });
+            const total = Object.values(groups).reduce((s, a) => s + a.length, 0);
+
+            let roleHtml = '';
+            ['Requestor','Approver','Reviewer'].forEach(role => {
+                if (!groups[role].length) return;
+                roleHtml += `<div class="assign-role-group">
+                    <div class="assign-role-group-header">
+                        <span class="assign-role-badge ${getRoleColorClass(role)}">${role}</span>
+                        <span class="text-muted small">${groups[role].length} user${groups[role].length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="assign-user-grid">${groups[role].map(u => buildAssignUserCard(u, null)).join('')}</div>
+                </div>`;
+            });
+            if (!roleHtml) roleHtml = '<div class="text-muted small mt-2">No users assigned to this system.</div>';
+
+            return `<div class="assignment-detail-panel" id="assign-sys-${sysId}" style="display:none;padding:1.25rem 1.5rem;">
+                <div class="assign-detail-header">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="assign-type-badge badge-sys">SYSTEM</span>
+                        <h5 class="mb-0">${sysLabel}</h5>
+                    </div>
+                    <div class="text-muted small">${total} total user${total !== 1 ? 's' : ''} assigned</div>
+                </div>
+                ${roleHtml}
+            </div>`;
+        }
+
+        function buildDeptPanel(deptCode, users) {
+            const deptLabel = htmlEscape(getDeptName(deptCode));
+            const reviewers = users.filter(u =>
+                u.reqhub_role === 'Reviewer' &&
+                (approverAssignments[u.id] || []).some(a => String(a.department_id) === String(deptCode))
+            );
+
+            let body = reviewers.length
+                ? `<div class="assign-role-group">
+                    <div class="assign-role-group-header">
+                        <span class="assign-role-badge role-badge-reviewer">Reviewer</span>
+                        <span class="text-muted small">${reviewers.length} user${reviewers.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="assign-user-grid">${reviewers.map(u => buildAssignUserCard(u, null)).join('')}</div>
+                </div>`
+                : '<div class="text-muted small mt-2">No reviewers assigned to this department.</div>';
+
+            return `<div class="assignment-detail-panel" id="assign-dept-${htmlEscape(deptCode)}" style="display:none;padding:1.25rem 1.5rem;">
+                <div class="assign-detail-header">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="assign-type-badge badge-dept">DEPARTMENT</span>
+                        <h5 class="mb-0">${deptLabel}</h5>
+                    </div>
+                    <div class="text-muted small">${reviewers.length} reviewer${reviewers.length !== 1 ? 's' : ''} assigned</div>
+                </div>
+                ${body}
+            </div>`;
+        }
+
+        function rebuildAssignmentsTab() {
+            const users = getAllUsersFromDOM();
+            const listViewActive = $('#overviewListView').is(':visible');
+
+            // Recompute which systems/depts have any assignment
+            const assignedSysIds   = new Set();
+            const assignedDeptCodes = new Set();
+            users.forEach(u => {
+                (approverAssignments[u.id] || []).forEach(a => {
+                    if (a.system_id)    assignedSysIds.add(String(a.system_id));
+                    if (a.department_id) assignedDeptCodes.add(String(a.department_id));
+                });
+            });
+
+            // Rebuild left nav
+            let navHtml = `<button type="button" class="assignment-nav-item active" data-target-id="assign-overview">
+                <span class="assign-type-badge" style="background:#f3e8ff;color:#6b21a8;">ALL</span> Overview
+            </button>`;
+            systemsList.forEach(sys => {
+                if (!assignedSysIds.has(String(sys.id))) return;
+                navHtml += `<button type="button" class="assignment-nav-item" data-target-id="assign-sys-${sys.id}">
+                    <span class="assign-type-badge badge-sys">SYS</span>${htmlEscape(sys.full_name || sys.name)}
+                </button>`;
+            });
+            [...assignedDeptCodes].forEach(dc => {
+                navHtml += `<button type="button" class="assignment-nav-item" data-target-id="assign-dept-${htmlEscape(dc)}">
+                    <span class="assign-type-badge badge-dept">DEPT</span>${htmlEscape(getDeptName(dc))}
+                </button>`;
+            });
+            $('#assignmentSystemList').html(navHtml);
+
+            // Rebuild right panels
+            let rightHtml = buildOverviewPanel(users);
+            systemsList.forEach(sys => {
+                if (assignedSysIds.has(String(sys.id))) rightHtml += buildSystemPanel(sys, users);
+            });
+            [...assignedDeptCodes].forEach(dc => { rightHtml += buildDeptPanel(dc, users); });
+
+            $('#assignmentDetailPane').html(rightHtml);
+
+            // Restore list/card view state
+            if (listViewActive) {
+                $('#overviewCardView').hide();
+                $('#overviewListView').show();
+                $('#viewCards').removeClass('btn-dark').addClass('btn-outline-secondary');
+                $('#viewList').removeClass('btn-outline-secondary').addClass('btn-dark');
+            }
         }
 
         // ============================================================
@@ -1841,7 +2119,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                     case 'deleteModule': button.closest('.module-item').slideUp(200, function() { $(this).remove(); renderPage('modulesTab'); }); delete moduleAssignments[data.module_id]; break;
                     case 'deleteRole':   button.closest('.role-item').slideUp(200, function()   { $(this).remove(); renderPage('rolesTab'); }); delete roleAssignments[data.role_id]; break;
                     case 'deleteSystem': button.closest('.system-item').slideUp(200, function() { $(this).remove(); renderPage('systemsTab'); }); delete systemRoles[data.system_id]; break;
-                    case 'deleteUser':   button.closest('.user-item').slideUp(200, function()   { $(this).remove(); renderPage('userSettingsTab'); }); break;
+                    case 'deleteUser': button.closest('.user-item').slideUp(200, function() { $(this).remove(); renderPage('userSettingsTab'); delete approverAssignments[data.user_id]; rebuildAssignmentsTab(); }); break;
                 }
             }, 'json');
         });
@@ -2829,6 +3107,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                 </div>`;
                     $('.users-list').append(html);
                     approverAssignments[res.id] = res.assignments || [];
+                    rebuildAssignmentsTab();
                     renderPage('userSettingsTab');
                 }
 
@@ -2866,6 +3145,7 @@ $assignedDeptCodes = array_unique($assignedDeptCodes);
                         item.find('.user-approvals').hide().find('.ps-2').html('<small class="text-muted">No assignments yet</small>');
                     }
                     item.find('.user-role-label').text(res.user_type);
+                    rebuildAssignmentsTab();
                 }
 
                 getModal().hide();
