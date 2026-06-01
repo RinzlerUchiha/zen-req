@@ -20,6 +20,7 @@ class UserManager {
      * Modify as needed for your organization
      */
     private $roleHierarchy = [
+        'No Access' => 0,    // No access to ReqHub
         'Requestor' => 1,    // Can create requests
         'Reviewer' => 2,     // Can review and comment on requests
         'Approver' => 3,     // Can approve/reject requests
@@ -93,7 +94,7 @@ class UserManager {
         if (!$result) {
             // Return default role (user can be auto-provisioned later)
             return [
-                'role' => 'Requestor',      // Default role
+                'role' => 'No Access',      // Default role
                 'is_active' => true,
                 'exists_in_reqhub' => false
             ];
