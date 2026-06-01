@@ -248,7 +248,7 @@ class UserManager {
         // Create with default role
         $sql = "INSERT INTO {$this->userTable} 
                 (employee_id, reqhub_role, is_active) 
-                VALUES (?, 'Requestor', 1)";
+                VALUES (?, 'No Access', 1)";
         
         try {
             $stmt = $this->reqHubDb->prepare($sql);
