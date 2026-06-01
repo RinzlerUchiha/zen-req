@@ -260,6 +260,7 @@ document.addEventListener("DOMContentLoaded", function() {
         const disabledSelects = this.querySelectorAll('select:disabled');
         disabledSelects.forEach(s => s.disabled = false);
 
+        this.querySelectorAll('.access-checkbox:disabled').forEach(cb => cb.disabled = false);
         const formData = new FormData(this);
         const departmentSelect = document.getElementById('departmentSelect');
         if (departmentSelect.disabled && departmentSelect.value) {

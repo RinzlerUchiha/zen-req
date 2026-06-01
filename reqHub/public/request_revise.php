@@ -387,6 +387,7 @@ document.addEventListener("DOMContentLoaded", function() {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
 
+        this.querySelectorAll('.access-checkbox:disabled').forEach(cb => cb.disabled = false);
         const formData = new FormData(this);
 
         const disabledSelects = this.querySelectorAll('select:disabled');
