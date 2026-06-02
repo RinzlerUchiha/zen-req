@@ -206,8 +206,6 @@ try {
 <style>
     .choices__list--dropdown { z-index: 1000 !important; }
     .choices[data-type*="select-one"] .choices__button { z-index: 999 !important; }
-
-    /* Keep disabled department readable */
     .choices.is-disabled .choices__item--selectable,
     .choices.is-disabled .choices__inner {
         color: #212529 !important;
@@ -215,9 +213,7 @@ try {
         background-color: #e9ecef !important;
         cursor: not-allowed;
     }
-    .choices.is-disabled {
-        opacity: 1 !important;
-    }
+    .choices.is-disabled { opacity: 1 !important; }
     .choices__input {
         color: #212529 !important;
         padding: 0 !important;
@@ -237,7 +233,7 @@ try {
         <strong>This request needs revision.</strong> Please review the comments in the request and make the necessary changes below.
     </div>
 
-    <form action="/zen/reqHub/revise_submit" method="POST" id="requestForm">
+    <form action="/zen/reqHub/revise_submit" method="POST" id="requestForm" novalidate>
         <input type="hidden" name="request_id" value="<?= $request_id ?>">
         <input type="hidden" name="chosen_role" id="chosenRoleInput" value="<?= htmlspecialchars($originalRole ?? '') ?>">
 
@@ -248,7 +244,7 @@ try {
             <div class="col-md-9">
 
                 <div class="row mb-3">
-                    <div class="col">
+                    <div class="col" id="col-system">
                         <label class="form-label">System</label>
                         <select name="system_id" id="systemSelect" class="form-select" required>
                             <option value="">Select System</option>
@@ -259,7 +255,7 @@ try {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col">
+                    <div class="col" id="col-request-for">
                         <label class="form-label">Requested For</label>
                         <select name="request_for" id="requestForSelect" class="form-select" required>
                             <option value="">Select User</option>
@@ -271,12 +267,12 @@ try {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col">
+                    <div class="col" id="col-department">
                         <label class="form-label">Department</label>
                         <select name="department_id" id="departmentSelect" class="form-select" required>
                             <option value="">Select Department</option>
                             <?php foreach ($departments as $dept): ?>
-                                <option value="<?= $dept['id'] ?>" <?= $request['department_id'] == $dept['id'] ? 'selected' : '' ?>>
+                                <option value="<?= $dept['id'] ?>" data-code="<?= htmlspecialchars($dept['code']) ?>" <?= $request['department_id'] == $dept['id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($dept['name']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -325,7 +321,7 @@ try {
 
             <div class="mb-3">
                 <label class="form-label">Selecting a role automatically includes all associated modules</label>
-                <select id="roleSelect" class="form-select">
+                <select id="roleSelect" class="form-select" style="font-weight:bold;" onchange="this.style.fontWeight=this.value?'normal':'bold'">
                     <option value="">-- Choose a role --</option>
                 </select>
             </div>
@@ -373,13 +369,67 @@ document.addEventListener("DOMContentLoaded", function() {
         'employee_id' => $u['employee_id'],
     ]; }, $allUsers)) ?>;
 
+    // ── Scroll validation helper ──
+    function scrollToField(colId, message) {
+        const col = document.getElementById(colId);
+        if (!col) return;
+
+        const highlightTarget = col.querySelector('.choices__inner') || col;
+        highlightTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        highlightTarget.style.outline = '2.5px solid #dc3545';
+        highlightTarget.style.borderRadius = '6px';
+        setTimeout(() => {
+            highlightTarget.style.outline = '';
+            highlightTarget.style.borderRadius = '';
+        }, 2500);
+
+        const existingMsg = col.querySelector('.scroll-validation-msg');
+        if (existingMsg) existingMsg.remove();
+        const msg = document.createElement('div');
+        msg.className = 'scroll-validation-msg';
+        msg.style.cssText = 'color:#dc3545; font-size:0.8rem; margin-top:4px;';
+        msg.textContent = message;
+        col.appendChild(msg);
+        setTimeout(() => msg.remove(), 2500);
+    }
+
+    // ── Form submit ──
     const requestForm = document.getElementById('requestForm');
     requestForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
+        // Clear any leftover validation messages
+        document.querySelectorAll('.scroll-validation-msg').forEach(el => el.remove());
+
+        const systemEl     = document.getElementById('systemSelect');
+        const requestForEl = document.getElementById('requestForSelect');
+        const deptEl       = document.getElementById('departmentSelect');
         const selectedAccessTypes = Array.from(document.querySelectorAll('.access-checkbox:checked'));
+
+        if (!systemEl.value) {
+            scrollToField('col-system', 'Please select a system.');
+            return;
+        }
+        if (!requestForEl.value) {
+            scrollToField('col-request-for', 'Please select a user to request for.');
+            return;
+        }
+        if (!deptEl.value) {
+            scrollToField('col-department', 'Please select a department.');
+            return;
+        }
         if (selectedAccessTypes.length === 0) {
-            alert('Please select one access type');
+            const modulesContainer = document.getElementById('modulesContainer');
+            modulesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const existingMsg = modulesContainer.parentElement.querySelector('.scroll-validation-msg');
+            if (existingMsg) existingMsg.remove();
+            const msg = document.createElement('div');
+            msg.className = 'scroll-validation-msg';
+            msg.style.cssText = 'color:#dc3545; font-size:0.8rem; margin-top:4px;';
+            msg.textContent = 'Please select at least one access type.';
+            modulesContainer.parentElement.insertBefore(msg, modulesContainer);
+            setTimeout(() => msg.remove(), 2500);
             return;
         }
 
@@ -427,27 +477,28 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
+    // ── Choices.js init ──
     new Choices('#systemSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const requestForChoices = new Choices('#requestForSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
     const departmentChoices = new Choices('#departmentSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
-    const removeFromChoices = new Choices('#removeFromSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
-    const savedRemoveFrom = <?= json_encode($request['remove_from'] ?? '') ?>;
+    let removeFromChoices   = new Choices('#removeFromSelect', { searchEnabled: true, itemSelectText: 'Press to select', removeItemButton: true });
+    const savedRemoveFrom   = <?= json_encode($request['remove_from'] ?? '') ?>;
     if (savedRemoveFrom) {
         removeFromChoices.setChoiceByValue(savedRemoveFrom.toString());
     }
 
-    const systemSelect = document.getElementById("systemSelect");
-    const roleSelect = document.getElementById("roleSelect");
-    const modulesDisplay = document.getElementById("modulesDisplay");
+    const systemSelect     = document.getElementById("systemSelect");
+    const roleSelect       = document.getElementById("roleSelect");
+    const modulesDisplay   = document.getElementById("modulesDisplay");
     const summaryContainer = document.getElementById("summaryContainer");
-    const searchModules = document.getElementById("searchModules");
+    const searchModules    = document.getElementById("searchModules");
 
     const allAccessTypesList = <?= json_encode($accessTypes) ?>;
     const lockedSystemIds    = new Set(<?= json_encode(array_values(array_map('intval', array_column(array_filter($systems, fn($s) => !empty($s['is_locked'])), 'id')))) ?>);
-    const currentAccessTypeIds = <?= json_encode($currentAccessTypes ?? []) ?>;
-    const roleAccessTypeIds = <?= json_encode(array_values(array_map('intval', $roleAccessTypeIds ?? []))) ?>;
-    const manuallyAddedAccessTypeIds = <?= json_encode(array_values(array_map('intval', $manuallyAddedAccessTypeIds ?? []))) ?>;
-    const originalRole = <?= json_encode($originalRole ?? null) ?>;
+    const currentAccessTypeIds          = <?= json_encode($currentAccessTypes ?? []) ?>;
+    const roleAccessTypeIds             = <?= json_encode(array_values(array_map('intval', $roleAccessTypeIds ?? []))) ?>;
+    const manuallyAddedAccessTypeIds    = <?= json_encode(array_values(array_map('intval', $manuallyAddedAccessTypeIds ?? []))) ?>;
+    const originalRole   = <?= json_encode($originalRole ?? null) ?>;
     const originalSystem = <?= json_encode($request['system_name'] ?? null) ?>;
 
     const currentAccessTypeIdsSet = new Set(currentAccessTypeIds.map(id => parseInt(id)));
@@ -457,20 +508,19 @@ document.addEventListener("DOMContentLoaded", function() {
         if (opt.value) systemNameMap[opt.value] = opt.dataset.name || opt.textContent.trim();
     });
 
-    let currentSearch = "";
-    let autoSelectedItems = new Set();
+    let currentSearch       = "";
+    let autoSelectedItems   = new Set();
     let autoSelectedModules = new Set();
 
     function clearAllCheckboxes() {
-        document.querySelectorAll('.access-checkbox').forEach(cb => {
-            cb.checked = false;
-        });
+        document.querySelectorAll('.access-checkbox').forEach(cb => { cb.checked = false; });
         document.querySelectorAll('.module-checkbox').forEach(cb => {
             cb.checked = false;
             cb.indeterminate = false;
         });
     }
 
+    // ── Rebuild Remove From dropdown ──
     function rebuildRemoveFrom(filteredUsers) {
         const sel = document.getElementById('removeFromSelect');
         const currentVal = sel.value;
@@ -484,10 +534,11 @@ document.addEventListener("DOMContentLoaded", function() {
         sel.value = currentVal || '';
     }
 
+    // ── Render modules ──
     function renderModules(prioritizeAutoSelected = false) {
         modulesDisplay.innerHTML = "";
 
-        const selectedSystemId = systemSelect.value;
+        const selectedSystemId   = systemSelect.value;
         const selectedSystemName = selectedSystemId ? systemNameMap[selectedSystemId] : null;
         let toDisplay = selectedSystemName
             ? allAccessTypesList.filter(type => type.system === selectedSystemName)
@@ -503,23 +554,17 @@ document.addEventListener("DOMContentLoaded", function() {
         const grouped = {};
         toDisplay.forEach(type => {
             if (!grouped[type.module]) grouped[type.module] = {};
-            if (!grouped[type.module][type.actions]) {
-                grouped[type.module][type.actions] = [];
-            }
+            if (!grouped[type.module][type.actions]) grouped[type.module][type.actions] = [];
             grouped[type.module][type.actions].push(type);
         });
 
         let modulesToDisplay = Object.entries(grouped);
 
         if (prioritizeAutoSelected) {
-            const prioritized = [];
-            const others = [];
-            modulesToDisplay.forEach(([moduleName, actionsMap]) => {
-                if (autoSelectedModules.has(moduleName)) {
-                    prioritized.push([moduleName, actionsMap]);
-                } else {
-                    others.push([moduleName, actionsMap]);
-                }
+            const prioritized = [], others = [];
+            modulesToDisplay.forEach(([mn, am]) => {
+                if (autoSelectedModules.has(mn)) prioritized.push([mn, am]);
+                else others.push([mn, am]);
             });
             modulesToDisplay = [...prioritized, ...others];
         }
@@ -532,43 +577,57 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCard.style.cssText = "border:1px solid #555; border-radius:4px; padding:10px; background-color:#fffcfc; display:flex; flex-direction:column;";
 
             const headerDiv = document.createElement("div");
-            headerDiv.style.display = "flex";
-            headerDiv.style.justifyContent = "space-between";
-            headerDiv.style.alignItems = "flex-start";
-            headerDiv.style.marginBottom = "10px";
-            headerDiv.style.paddingBottom = "8px";
-            headerDiv.style.borderBottom = "1px solid #444";
-            headerDiv.style.gap = "8px";
+            headerDiv.style.cssText = "display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #444; gap:8px;";
 
-            const moduleCheckbox = document.createElement("input");
-            moduleCheckbox.type = "checkbox";
+            // ── ALL pill button ──
+            const moduleCheckbox = document.createElement("div");
             moduleCheckbox.className = "module-checkbox";
-            moduleCheckbox.style.width = "16px";
-            moduleCheckbox.style.height = "16px";
-            moduleCheckbox.style.marginTop = "2px";
-            moduleCheckbox.style.cursor = "pointer";
-            moduleCheckbox.style.flexShrink = "0";
+            moduleCheckbox.style.cssText = "flex-shrink:0; cursor:pointer; font-size:0.65rem; font-weight:700; padding:2px 7px; border-radius:20px; border:1.5px solid #aaa; background:#f0f0f0; color:#555; white-space:nowrap; user-select:none; line-height:1.6; transition:background 0.15s, border-color 0.15s;";
+            moduleCheckbox.textContent = "ALL";
+
+            let _checked = false;
+            let _indeterminate = false;
+            Object.defineProperty(moduleCheckbox, 'checked', {
+                get() { return _checked; },
+                set(v) { _checked = v; _indeterminate = false; syncModuleStyle(); }
+            });
+            Object.defineProperty(moduleCheckbox, 'indeterminate', {
+                get() { return _indeterminate; },
+                set(v) { _indeterminate = v; if (v) _checked = false; syncModuleStyle(); }
+            });
+            let _disabled = false;
+            Object.defineProperty(moduleCheckbox, 'disabled', {
+                get() { return _disabled; },
+                set(v) {
+                    _disabled = v;
+                    moduleCheckbox.style.opacity = v ? '0.45' : '1';
+                    moduleCheckbox.style.cursor  = v ? 'not-allowed' : 'pointer';
+                }
+            });
+
+            function syncModuleStyle() {
+                if (_checked) {
+                    moduleCheckbox.style.background  = '#0d6efd';
+                    moduleCheckbox.style.borderColor = '#0a58ca';
+                    moduleCheckbox.style.color       = '#fff';
+                } else if (_indeterminate) {
+                    moduleCheckbox.style.background  = '#6ea8fe';
+                    moduleCheckbox.style.borderColor = '#3d8bfd';
+                    moduleCheckbox.style.color       = '#fff';
+                } else {
+                    moduleCheckbox.style.background  = '#f0f0f0';
+                    moduleCheckbox.style.borderColor = '#aaa';
+                    moduleCheckbox.style.color       = '#555';
+                }
+            }
 
             const moduleTitle = document.createElement("label");
-            moduleTitle.style.fontWeight = "bold";
-            moduleTitle.style.fontSize = "0.9rem";
-            moduleTitle.style.color = "#000000";
-            moduleTitle.style.wordBreak = "break-word";
-            moduleTitle.style.flex = "1";
-            moduleTitle.style.cursor = "pointer";
-            moduleTitle.style.marginBottom = "0";
+            moduleTitle.style.cssText = "font-weight:bold; font-size:0.9rem; color:#000; word-break:break-word; flex:1; cursor:pointer; margin-bottom:0;";
             moduleTitle.textContent = moduleName;
-            moduleTitle.addEventListener("click", function() { moduleCheckbox.click(); });
+            moduleTitle.addEventListener("click", function() { moduleCheckbox.dispatchEvent(new Event('click')); });
 
             const badge = document.createElement("span");
-            badge.style.backgroundColor = "#555";
-            badge.style.color = "#fff";
-            badge.style.padding = "3px 6px";
-            badge.style.borderRadius = "3px";
-            badge.style.fontSize = "0.7rem";
-            badge.style.fontWeight = "bold";
-            badge.style.whiteSpace = "nowrap";
-            badge.style.flexShrink = "0";
+            badge.style.cssText = "background-color:#555; color:#fff; padding:3px 6px; border-radius:3px; font-size:0.7rem; font-weight:bold; white-space:nowrap; flex-shrink:0;";
             badge.textContent = actions.length + " action" + (actions.length !== 1 ? "s" : "");
 
             headerDiv.appendChild(moduleCheckbox);
@@ -577,7 +636,7 @@ document.addEventListener("DOMContentLoaded", function() {
             moduleCard.appendChild(headerDiv);
 
             const actionsGrid = document.createElement("div");
-            actionsGrid.style.cssText = "display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; align-content:flex-start; flex:1;";
+            actionsGrid.style.cssText = "display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; align-content:flex-start; align-items:stretch;";
 
             const actionCheckboxes = [];
 
@@ -587,8 +646,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     types.find(t => currentAccessTypeIdsSet.has(t.id)) ||
                     types[0];
 
+                // ── Toggle pill button ──
                 const actionDiv = document.createElement("div");
-                actionDiv.style.cssText = "display:flex; align-items:center; gap:4px; background:#f0f0f0; border-radius:20px; padding:3px 10px; cursor:pointer;";
+                actionDiv.style.cssText = "display:flex; align-items:center; justify-content:center; background:#f0f0f0; border:1.5px solid #ddd; border-radius:20px; padding:4px 12px; cursor:pointer; transition:background 0.15s, border-color 0.15s; user-select:none; height:100%; min-height:36px; box-sizing:border-box; text-align:center;";
 
                 const checkbox = document.createElement("input");
                 checkbox.type = "checkbox";
@@ -597,16 +657,32 @@ document.addEventListener("DOMContentLoaded", function() {
                 checkbox.value = matchedType.id;
                 checkbox.id = `access_${matchedType.id}`;
                 checkbox.dataset.system = matchedType.system;
-                checkbox.dataset.role = matchedType.role;
+                checkbox.dataset.role   = matchedType.role;
                 checkbox.dataset.module = matchedType.module;
-                checkbox.dataset.name = matchedType.actions;
-                checkbox.style.width = "16px";
-                checkbox.style.height = "16px";
-                checkbox.style.marginTop = "1px";
-                checkbox.style.flexShrink = "0";
-                checkbox.style.cursor = "pointer";
+                checkbox.dataset.name   = matchedType.actions;
+                checkbox.style.cssText  = "position:absolute; opacity:0; width:0; height:0; pointer-events:none;";
 
                 const systemIsLocked = lockedSystemIds.has(parseInt(selectedSystemId));
+
+                const label = document.createElement("label");
+                label.htmlFor = `access_${matchedType.id}`;
+                label.style.cssText = "margin-bottom:0; cursor:pointer; font-size:0.78rem; user-select:none; white-space:normal; line-height:1.3; word-break:break-word; pointer-events:none; text-align:center;";
+                label.textContent = matchedType.actions;
+
+                function syncStyle() {
+                    if (checkbox.checked) {
+                        actionDiv.style.background  = '#0d6efd';
+                        actionDiv.style.borderColor = '#0a58ca';
+                        label.style.color      = '#fff';
+                        label.style.fontWeight = '500';
+                    } else {
+                        actionDiv.style.background  = '#f0f0f0';
+                        actionDiv.style.borderColor = '#ddd';
+                        label.style.color      = '#333';
+                        label.style.fontWeight = 'normal';
+                    }
+                }
+                checkbox._syncStyle = syncStyle;
 
                 if (autoSelectedItems.has(matchedType.id.toString()) || currentAccessTypeIdsSet.has(matchedType.id)) {
                     checkbox.checked = true;
@@ -614,40 +690,36 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 if (systemIsLocked) {
                     checkbox.disabled = true;
-                    checkbox.style.cursor = 'not-allowed';
-                    actionDiv.style.opacity = '0.75';
+                    actionDiv.style.opacity = '0.6';
                     actionDiv.style.cursor  = 'not-allowed';
+                    label.style.cursor = 'not-allowed';
                 }
 
+                syncStyle();
                 actionCheckboxes.push(checkbox);
 
                 checkbox.addEventListener("change", function() {
+                    syncStyle();
                     if (!this.checked) {
                         autoSelectedItems.delete(this.value);
                     } else {
-                        const role = roleSelect.value;
+                        const role       = roleSelect.value;
                         const systemName = systemNameMap[systemSelect.value];
-                        const type = allAccessTypesList.find(t => t.id.toString() === this.value);
-                        if (type && type.role === role && type.system === systemName) {
-                            autoSelectedItems.add(this.value);
-                        }
+                        const type       = allAccessTypesList.find(t => t.id.toString() === this.value);
+                        if (type && type.role === role && type.system === systemName) autoSelectedItems.add(this.value);
                     }
-
                     const allChecked = actionCheckboxes.every(cb => cb.checked);
                     const anyChecked = actionCheckboxes.some(cb => cb.checked);
-                    moduleCheckbox.checked = allChecked;
+                    moduleCheckbox.checked      = allChecked;
                     moduleCheckbox.indeterminate = anyChecked && !allChecked;
-
                     updateSummary();
                 });
 
-                const label = document.createElement("label");
-                label.htmlFor = `access_${matchedType.id}`;
-                label.style.cssText = "margin-bottom:0; cursor:pointer; font-size:0.78rem; user-select:none; white-space:normal; color:#333; line-height:1.3; word-break:break-word;";
-                label.textContent = matchedType.actions;
-
-                actionDiv.addEventListener("click", function(e) {
-                    if (e.target !== checkbox) checkbox.click();
+                actionDiv.addEventListener("click", function() {
+                    if (!checkbox.disabled) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
                 });
 
                 actionDiv.appendChild(checkbox);
@@ -655,33 +727,35 @@ document.addEventListener("DOMContentLoaded", function() {
                 actionsGrid.appendChild(actionDiv);
             });
 
+            // ── Module ALL pill handler ──
             const systemIsLockedForModule = lockedSystemIds.has(parseInt(selectedSystemId));
+            if (systemIsLockedForModule) {
+                moduleCheckbox.disabled = true;
+            }
 
-                if (systemIsLockedForModule) {
-                    moduleCheckbox.disabled = true;
-                    moduleCheckbox.style.cursor = 'not-allowed';
-                }
+            moduleCheckbox.addEventListener("click", function() {
+                if (_disabled) return;
+                const anyChecked = actionCheckboxes.some(cb => cb.checked);
+                const newState   = !anyChecked || _indeterminate ? true : false;
 
-                moduleCheckbox.addEventListener("change", function() {
-                    const role = roleSelect.value;
-                    const systemName = systemNameMap[systemSelect.value];
-                    actionCheckboxes.forEach(cb => {
-                    cb.checked = this.checked;
-                    if (!this.checked) {
-                        autoSelectedItems.delete(cb.value);
-                    } else {
+                const role       = roleSelect.value;
+                const systemName = systemNameMap[systemSelect.value];
+                actionCheckboxes.forEach(cb => {
+                    cb.checked = newState;
+                    if (cb._syncStyle) cb._syncStyle();
+                    if (!newState) autoSelectedItems.delete(cb.value);
+                    else {
                         const type = allAccessTypesList.find(t => t.id.toString() === cb.value);
-                        if (type && type.role === role && type.system === systemName) {
-                            autoSelectedItems.add(cb.value);
-                        }
+                        if (type && type.role === role && type.system === systemName) autoSelectedItems.add(cb.value);
                     }
                 });
+                moduleCheckbox.checked = newState;
                 updateSummary();
             });
 
             const allChecked = actionCheckboxes.every(cb => cb.checked);
             const anyChecked = actionCheckboxes.some(cb => cb.checked);
-            moduleCheckbox.checked = allChecked;
+            moduleCheckbox.checked      = allChecked;
             moduleCheckbox.indeterminate = anyChecked && !allChecked;
 
             moduleCard.appendChild(actionsGrid);
@@ -693,11 +767,6 @@ document.addEventListener("DOMContentLoaded", function() {
         currentSearch = this.value;
         renderModules(true);
     });
-
-    const requestForSelect = document.getElementById('requestForSelect');
-    const departmentSelect = document.getElementById('departmentSelect');
-    const storeContainer = document.getElementById('storeContainer');
-    const storeInput = document.getElementById('storeInput');
 
     function initFromDatabase() {
         autoSelectedItems.clear();
@@ -745,13 +814,15 @@ document.addEventListener("DOMContentLoaded", function() {
         updateSummary();
     }
 
-    if (requestForSelect.value) {
+    if (document.getElementById('requestForSelect').value) {
+        const requestForSelect = document.getElementById('requestForSelect');
         const employeeId = requestForSelect.options[requestForSelect.selectedIndex]?.getAttribute('data-employee-id');
         if (employeeId) {
             fetch('/zen/reqHub/getempdept?emp_no=' + encodeURIComponent(employeeId))
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     if (!data) return;
+                    const departmentSelect = document.getElementById('departmentSelect');
                     if (data.department) {
                         for (let option of departmentSelect.options) {
                             if (option.textContent.trim() === data.department || option.value === data.department) {
@@ -763,12 +834,13 @@ document.addEventListener("DOMContentLoaded", function() {
                             }
                         }
                     }
-                    storeContainer.style.display = data.requires_store ? 'block' : 'none';
+                    document.getElementById('storeContainer').style.display = data.requires_store ? 'block' : 'none';
                 })
                 .catch(() => {});
         }
     }
 
+    // ── System change ──
     systemSelect.addEventListener("change", function() {
         const systemId = this.value;
 
@@ -800,8 +872,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 renderModules(false);
                 updateSummary();
             })
-            .catch(error => {
-                console.error("Error:", error);
+            .catch(() => {
                 roleSelect.innerHTML = '<option value="">Error loading roles</option>';
                 renderModules(false);
                 updateSummary();
@@ -821,7 +892,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     roleSelect.addEventListener("change", function() {
         const role = this.value;
-
         document.getElementById('chosenRoleInput').value = role;
 
         const lockNotice = document.getElementById('systemLockNotice');
@@ -835,8 +905,7 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        const systemName = systemNameMap[systemSelect.value];
-        selectAllModulesForRole(role, systemName);
+        selectAllModulesForRole(role, systemNameMap[systemSelect.value]);
 
         if (lockedSystemIds.has(parseInt(systemSelect.value))) {
             const notice = document.createElement('div');
@@ -851,7 +920,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function selectAllModulesForRole(role, systemName) {
         autoSelectedItems.clear();
         autoSelectedModules.clear();
-
         currentAccessTypeIdsSet.clear();
         clearAllCheckboxes();
 
@@ -861,72 +929,52 @@ document.addEventListener("DOMContentLoaded", function() {
                 autoSelectedModules.add(type.module);
             }
         });
-
         renderModules(true);
         updateSummary();
     }
 
     function updateSummary() {
         const selected = document.querySelectorAll(".access-checkbox:checked");
-
         if (selected.length === 0) {
-            summaryContainer.innerHTML = '<div class="text-muted small" style="grid-column: 1 / -1;">No access selected</div>';
+            summaryContainer.innerHTML = '<div class="text-muted small" style="grid-column:1/-1;">No access selected</div>';
             return;
         }
 
         const grouped = {};
-
         selected.forEach(cb => {
             const module = cb.dataset.module;
             const action = cb.dataset.name;
             const itemId = cb.value;
-
-            if (!grouped[module]) {
-                grouped[module] = { default: [], added: [] };
-            }
-
-            const isStillAuto = autoSelectedItems.has(itemId);
-
-            if (isStillAuto) {
-                grouped[module].default.push(action);
-            } else {
-                grouped[module].added.push(action);
-            }
+            if (!grouped[module]) grouped[module] = { default: [], added: [] };
+            if (autoSelectedItems.has(itemId)) grouped[module].default.push(action);
+            else grouped[module].added.push(action);
         });
 
         summaryContainer.innerHTML = "";
         Object.entries(grouped).forEach(([moduleName, items]) => {
-            const isAutoSelectedModule = autoSelectedModules.has(moduleName);
-            const moduleTitleColor = isAutoSelectedModule ? "#333" : "#0d6efd";
+            const isAutoModule     = autoSelectedModules.has(moduleName);
+            const moduleTitleColor = isAutoModule ? "#333" : "#0d6efd";
 
             const card = document.createElement("div");
             card.className = "border rounded p-3";
-            card.style.backgroundColor = "#f5f5f5";
-            card.style.borderColor = "#ddd";
+            card.style.cssText = "background-color:#f5f5f5; border-color:#ddd;";
 
             const title = document.createElement("strong");
-            title.style.fontSize = "0.95rem";
-            title.style.color = moduleTitleColor;
+            title.style.cssText = "font-size:0.95rem; color:" + moduleTitleColor + ";";
             title.textContent = moduleName;
 
             const actionsList = document.createElement("div");
-            actionsList.style.marginTop = "8px";
-            actionsList.style.fontSize = "0.85rem";
+            actionsList.style.cssText = "margin-top:8px; font-size:0.85rem;";
 
             items.default.forEach(action => {
                 const item = document.createElement("div");
-                item.style.color = "#666";
-                item.style.fontWeight = "normal";
-                item.style.marginBottom = "4px";
+                item.style.cssText = "color:#666; margin-bottom:4px;";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);
             });
-
             items.added.forEach(action => {
                 const item = document.createElement("div");
-                item.style.color = "#0d6efd";
-                item.style.fontWeight = "normal";
-                item.style.marginBottom = "4px";
+                item.style.cssText = "color:#0d6efd; margin-bottom:4px;";
                 item.textContent = "• " + action;
                 actionsList.appendChild(item);
             });
@@ -936,6 +984,11 @@ document.addEventListener("DOMContentLoaded", function() {
             summaryContainer.appendChild(card);
         });
     }
+
+    // ── Department & Remove From logic ──
+    const requestForSelect = document.getElementById('requestForSelect');
+    const departmentSelect = document.getElementById('departmentSelect');
+    const storeContainer   = document.getElementById('storeContainer');
 
     requestForSelect.addEventListener('change', async function() {
         const employeeId = this.options[this.selectedIndex]?.getAttribute('data-employee-id');
