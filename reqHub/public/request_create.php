@@ -350,7 +350,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const searchModules     = document.getElementById("searchModules");
 
     const allAccessTypesList = <?= json_encode($accessTypes) ?>;
-    const lockedSystemIds    = new Set(<?= json_encode(array_values(array_map('intval', array_column(array_filter($systems, fn($s) => !empty($s['is_locked'])), 'id')))) ?>);
+    const lockedSystemIds    = new Set(<?= json_encode(array_values(array_map('intval', array_column(array_filter($systems, function($s) { return !empty($s['is_locked']); }), 'id')))) ?>);
 
     let systemNameMap = {};
     let systemAcronymMap = {};
