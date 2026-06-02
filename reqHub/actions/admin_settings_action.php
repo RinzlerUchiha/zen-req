@@ -43,7 +43,7 @@ if ($action === 'get_role_perms') {
     $id   = intval($_GET['id'] ?? 0);
     $stmt = $pdo->prepare("SELECT module_id, action_id FROM role_permissions WHERE role_id = ?");
     $stmt->execute([$id]);
-    $keys = array_map(fn($r) => $r['module_id'] . '_' . $r['action_id'], $stmt->fetchAll());
+    $keys = array_map(function($r) { return $r['module_id'] . '_' . $r['action_id']; }, $stmt->fetchAll());
     respond(true, '', ['perm_keys' => $keys]);
 }
 
