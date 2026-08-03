@@ -1,16 +1,16 @@
 <?php
 /**
- * ReqHub Route Handler
+ * Manpower Route Handler
  * 
- * File: /zen/reqHub/routes/route.php
+ * File: /zen/manpower/routes/route.php
  * 
  * Purpose: Maps URL routes to pages and handles authentication
  */
 
-// SET $reqhub_root FIRST - before anything else!
-// This goes up 2 levels: routes → reqHub
-$reqhub_root = dirname(dirname(__FILE__));
-error_log("reqhub_root set to: " . $reqhub_root);
+// SET $manpower_root FIRST - before anything else!
+// This goes up 2 levels: routes → manpower
+$manpower_root = dirname(dirname(__FILE__));
+error_log("manpower_root set to: " . $manpower_root);
 
 error_log("=== ROUTE DEBUG START ===");
 error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
@@ -63,7 +63,7 @@ if (!in_array($uri, $publicRoutes)) {
     error_log("Auth required - loading auth.php");
     // Load auth middleware BEFORE including any page
     // This will redirect to login if user is not authenticated
-    require_once $reqhub_root . '/includes/auth.php';
+    require_once $manpower_root . '/includes/auth.php';
     
     // If we get here, user is authenticated
     error_log("Auth passed for user: " . ($currentUser['name'] ?? 'unknown'));
@@ -82,7 +82,7 @@ if (array_key_exists($uri, $routes)) {
     error_log("Route FOUND: '" . $uri . "' => '" . $routes[$uri] . "'");
     
     // Route found
-    $script = $reqhub_root . $routes[$uri];
+    $script = $manpower_root . $routes[$uri];
     error_log("Script path: " . $script);
     
     // Verify file exists
@@ -126,11 +126,11 @@ if (array_key_exists($uri, $routes)) {
         <p>Available routes:</p>
         <ul>
             <?php foreach ($routes as $route => $file): ?>
-            <li><code>/zen/reqHub<?= $route ?: '/' ?></code></li>
+            <li><code>/zen/manpower<?= $route ?: '/' ?></code></li>
             <?php endforeach; ?>
         </ul>
         <hr>
-        <p><a href="/zen/reqHub">← Back to Dashboard</a></p>
+        <p><a href="/zen/manpower">← Back to Dashboard</a></p>
     </body>
     </html>
     <?php
