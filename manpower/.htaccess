@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# Exclude /actions/ folder - let PHP files work directly
+RewriteCond %{REQUEST_URI} !^/actions/
+
+RewriteRule ^index\\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule . index.php [L]

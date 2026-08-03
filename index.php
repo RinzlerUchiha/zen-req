@@ -17,7 +17,7 @@ $com_root = $portal_root . "/compliance";
 $pa_root = $portal_root . "/pa";
 $pa_root = $portal_root . "/pasji";
 $pcf_root = $portal_root . "/pcf";
-
+$manpower_root = $portal_root . "/manpower";
 $reqhub_root = $portal_root . "/reqHub";
 $fl_root = $portal_root . "/flight";
 
