@@ -1,10 +1,9 @@
 <?php
-require_once($sr_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 class Portal
 {
-    private static function getDatabaseConnection($db)
-    {
+    private static function getDatabaseConnection($db) {
         try {
             return Database::getConnection($db);
         } catch (Exception $e) {
@@ -12,8 +11,7 @@ class Portal
         }
     }
 
-    public static function GetMemo($Year, $empno, $company, $department, $position, $area, $outlet)
-    {
+    public static function GetMemo($Year, $empno, $company, $department, $position, $area, $outlet) {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -73,8 +71,7 @@ class Portal
     }
 
 
-    public static function GetDirectives($Year, $empno, $company, $department, $area, $outlet)
-    {
+    public static function GetDirectives($Year,$empno,$company,$department,$area,$outlet) {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -92,15 +89,14 @@ class Portal
                 AND memo_type = 'policies'
                 ORDER BY memo_date DESC LIMIT 5
                 ");
-            $stmt->execute([$Year, $empno, $company, $department, $area, $outlet]);
+            $stmt->execute([$Year,$empno,$company,$department,$area,$outlet]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
         return [];
     }
 
-    public static function GetPromotions($Year, $empno, $company, $department, $area, $outlet)
-    {
+    public static function GetPromotions($Year,$empno,$company,$department,$area,$outlet) {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -118,7 +114,7 @@ class Portal
                 AND memo_type = 'marketing'
                 ORDER BY memo_date DESC LIMIT 5
                 ");
-            $stmt->execute([$Year, $empno, $company, $department, $area, $outlet]);
+            $stmt->execute([$Year,$empno,$company,$department,$area,$outlet]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
@@ -148,8 +144,7 @@ class Portal
     //     return [];
     // }
 
-    public static function GetLeave($date)
-    {
+    public static function GetLeave($date) {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -165,14 +160,13 @@ class Portal
                     AND a.`la_end` >= ?
                 GROUP BY a.`la_empno`,a.`la_start`
                 ORDER BY a.`la_start` ASC");
-            $stmt->execute([$date]);
+            $stmt->execute([$date /* , $date */]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
         return [];
     }
-    public static function GetOngoingLeave($date)
-    {
+    public static function GetOngoingLeave($date) {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -188,14 +182,13 @@ class Portal
                     AND a.`la_end` >= ?
                 GROUP BY a.`la_empno`,a.`la_end`
                 ORDER BY a.`la_start` ASC");
-            $stmt->execute([$date, $date]);
+            $stmt->execute([$date,$date]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
         return [];
     }
-    public static function GetResigning($yearMonth)
-    {
+    public static function GetResigning($yearMonth) {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -226,8 +219,7 @@ class Portal
         return [];
     }
 
-    public static function GetGovAnn($Year)
-    {
+    public static function GetGovAnn($Year) {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -244,8 +236,7 @@ class Portal
         return [];
     }
 
-    public static function GetDepartments()
-    {
+    public static function GetDepartments() {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -257,8 +248,7 @@ class Portal
         return [];
     }
 
-    public static function GetCompany()
-    {
+    public static function GetCompany() {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -270,8 +260,7 @@ class Portal
         return [];
     }
 
-    public static function GetArea()
-    {
+    public static function GetArea() {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -283,8 +272,7 @@ class Portal
         return [];
     }
 
-    public static function GetOutlet()
-    {
+    public static function GetOutlet() {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -296,8 +284,7 @@ class Portal
         return [];
     }
 
-    public static function GetEmployee()
-    {
+    public static function GetEmployee() {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -319,8 +306,7 @@ class Portal
         return [];
     }
 
-    public static function GetBirthday($birthM, $birthD)
-    {
+    public static function GetBirthday($birthM,$birthD) {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -338,13 +324,12 @@ class Portal
                         AND DAY(pi_dbirth) = ?
                     GROUP BY bi_empno
                     ");
-            $stmt->execute([$birthM, $birthD]);
+            $stmt->execute([$birthM,$birthD]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     }
-    public static function GetAnniversary($birthM, $birthD)
-    {
+    public static function GetAnniversary($birthM,$birthD) {
         $conn = self::getDatabaseConnection('hr');
 
         if ($conn) {
@@ -375,36 +360,33 @@ class Portal
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     }
-    public static function GetMood($date, $empno)
-    {
+    public static function GetMood($date,$empno) {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
             $stmt = $conn->prepare("SELECT * FROM tbl_mood
             WHERE DATE(m_date) = ?
             AND (m_disp_type = 'Public' OR m_empno = ?);");
-            $stmt->execute([$date, $empno]);
+            $stmt->execute([$date,$empno]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     }
 
-    public static function GetMyMood($date, $user_id)
-    {
+    public static function GetMyMood($date,$user_id) {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
             $stmt = $conn->prepare("SELECT * FROM tbl_mood 
                 WHERE DATE(m_date) = ?
                 AND m_empno = ?");
-            $stmt->execute([$date, $user_id]);
+            $stmt->execute([$date,$user_id]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     }
 
-    public static function GetEvents($date)
-    {
+    public static function GetEvents($date) {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -419,10 +401,9 @@ class Portal
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
-    }
+    } 
 
-    public static function GetProfilePic($empno)
-    {
+    public static function GetProfilePic($empno) {
         $conn = self::getDatabaseConnection('port');
 
         if ($conn) {
@@ -434,8 +415,7 @@ class Portal
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     }
-    public static function GetCustNotif($empno)
-    {
+    public static function GetCustNotif($empno) {
         $conn = self::getDatabaseConnection('pcf');
 
         if ($conn) {
@@ -447,8 +427,7 @@ class Portal
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }
     }
-    public static function GetApprNotif($empno)
-    {
+    public static function GetApprNotif($empno) {
         $conn = self::getDatabaseConnection('pcf');
 
         if ($conn) {
@@ -462,3 +441,4 @@ class Portal
         }
     }
 }
+?>

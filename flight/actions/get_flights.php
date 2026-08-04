@@ -1,5 +1,5 @@
 <?php
-require_once($fl_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 class FLIGHT
 {
@@ -85,7 +85,7 @@ class FLIGHT
         return [];
     }
     public static function GetFlightBooking() {
-        $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -107,14 +107,14 @@ class FLIGHT
             
                 $cust_empno = $passenger['f_empno'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno = ?");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno = ?");
                     $stmt->execute([$cust_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $cust_empno) {
-                            $passenger['cust_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $cust_empno) {
+                            $passenger['cust_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -126,8 +126,9 @@ class FLIGHT
         return $result;
     }
 
-    public static function GetFlightReq() {
-        $hr = self::getDatabaseConnection('hr');
+    public static function GetFlightReq($empno) {
+        // $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -136,6 +137,8 @@ class FLIGHT
             $stmt = $fb->prepare("SELECT * FROM tbl_flights
             JOIN tbl_access ON f_dept = acc_dept
             LEFT JOIN tbl_rebooking ON r_flightno = f_no
+            WHERE f_status IN ('pending','confirmed','approved','rebooked','rebooking','served','approved rebook','refund','cancelled')
+            AND acc_empno = ? OR f_empno = ?
             GROUP BY f_no, f_status
             ORDER BY 
                (CASE
@@ -145,7 +148,7 @@ class FLIGHT
                ELSE 4
                END),
             MIN(f_date) ASC");
-            $stmt->execute();
+            $stmt->execute([$empno,$empno]);
             $passengers = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     
             foreach ($passengers as &$passenger) {
@@ -153,14 +156,14 @@ class FLIGHT
             
                 $cust_empno = $passenger['f_empno'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno = ?");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno = ?");
                     $stmt->execute([$cust_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $cust_empno) {
-                            $passenger['cust_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $cust_empno) {
+                            $passenger['cust_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -217,7 +220,8 @@ class FLIGHT
     // }
 
     public static function GetFlightDetail($Flightid) {
-        $hr = self::getDatabaseConnection('hr');
+        // $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -240,20 +244,20 @@ class FLIGHT
                 $reviewer_empno = $passenger['ap_confirmedby'];
                 $approver_empno = $passenger['ap_approvedby'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno IN (?, ?, ?)");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno IN (?, ?, ?)");
                     $stmt->execute([$passenger_empno,$reviewer_empno,$approver_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $passenger_empno) {
-                            $passenger['passender_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $passenger_empno) {
+                            $passenger['passender_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $reviewer_empno) {
-                            $passenger['reviewer_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $reviewer_empno) {
+                            $passenger['reviewer_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $approver_empno) {
-                            $passenger['approver_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $approver_empno) {
+                            $passenger['approver_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -265,7 +269,8 @@ class FLIGHT
         return $result;
     }
     public static function GetFlightRebooking($Flightid) {
-        $hr = self::getDatabaseConnection('hr');
+        // $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -289,20 +294,20 @@ class FLIGHT
                 $reviewer_empno = $passenger['r_reviwed_by'];
                 $approver_empno = $passenger['r_approved_by'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno IN (?, ?, ?)");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno IN (?, ?, ?)");
                     $stmt->execute([$passenger_empno,$reviewer_empno,$approver_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $passenger_empno) {
-                            $passenger['passender_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $passenger_empno) {
+                            $passenger['passender_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $reviewer_empno) {
-                            $passenger['reviewer_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $reviewer_empno) {
+                            $passenger['reviewer_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $approver_empno) {
-                            $passenger['approver_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $approver_empno) {
+                            $passenger['approver_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -314,7 +319,7 @@ class FLIGHT
         return $result;
     }
     public static function GetFlightApproval($Flightid) {
-        $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -336,20 +341,20 @@ class FLIGHT
                 $reviewer_empno = $passenger['ap_confirmedby'];
                 $approver_empno = $passenger['ap_approvedby'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno IN (?, ?, ?)");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno IN (?, ?, ?)");
                     $stmt->execute([$passenger_empno,$reviewer_empno,$approver_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $passenger_empno) {
-                            $passenger['passender_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $passenger_empno) {
+                            $passenger['passender_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $reviewer_empno) {
-                            $passenger['reviewer_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $reviewer_empno) {
+                            $passenger['reviewer_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $approver_empno) {
-                            $passenger['approver_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $approver_empno) {
+                            $passenger['approver_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -362,7 +367,7 @@ class FLIGHT
     }
 
     public static function GetRebookingApproved($fid) {
-        $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -384,20 +389,20 @@ class FLIGHT
                 $reviewer_empno = $passenger['r_reviwed_by'];
                 $approver_empno = $passenger['r_approved_by'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno IN (?, ?, ?)");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno IN (?, ?, ?)");
                     $stmt->execute([$passenger_empno,$reviewer_empno,$approver_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $passenger_empno) {
-                            $passenger['passender_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $passenger_empno) {
+                            $passenger['passender_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $reviewer_empno) {
-                            $passenger['reviewer_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $reviewer_empno) {
+                            $passenger['reviewer_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $approver_empno) {
-                            $passenger['approver_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $approver_empno) {
+                            $passenger['approver_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -410,7 +415,7 @@ class FLIGHT
     }
 
     public static function GetRebookingApproval($Flightid) {
-        $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -432,20 +437,20 @@ class FLIGHT
                 $reviewer_empno = $passenger['r_reviwed_by'];
                 $approver_empno = $passenger['r_approved_by'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno IN (?, ?, ?)");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno IN (?, ?, ?)");
                     $stmt->execute([$passenger_empno,$reviewer_empno,$approver_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $passenger_empno) {
-                            $passenger['passender_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $passenger_empno) {
+                            $passenger['passender_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $reviewer_empno) {
-                            $passenger['reviewer_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $reviewer_empno) {
+                            $passenger['reviewer_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
-                        if ($emp['bi_empno'] == $approver_empno) {
-                            $passenger['approver_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $approver_empno) {
+                            $passenger['approver_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -458,7 +463,7 @@ class FLIGHT
     }
 
     public static function GetFlightComment($Flightid) {
-        $hr = self::getDatabaseConnection('hr');
+        $port = self::getDatabaseConnection('port');
         $fb = self::getDatabaseConnection('fb');
     
         $result = [];
@@ -474,14 +479,14 @@ class FLIGHT
             
                 $sender_empno = $sender['com_by'];
             
-                if ($hr) {
-                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno = ?");
+                if ($port) {
+                    $stmt = $port->prepare("SELECT pers_empno, pers_firstname, pers_lastname FROM tbl201_persinfo WHERE pers_empno = ?");
                     $stmt->execute([$sender_empno]);
                     $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             
                     foreach ($employees as $emp) {
-                        if ($emp['bi_empno'] == $sender_empno) {
-                            $sender['sender_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        if ($emp['pers_empno'] == $sender_empno) {
+                            $sender['sender_name'] = $emp['pers_firstname'] . ' ' . $emp['pers_lastname'];
                         }
                     }
                 }
@@ -508,8 +513,8 @@ class FLIGHT
         $conn = self::getDatabaseConnection('fb');
 
         if ($conn) {
-            $stmt = $conn->prepare("SELECT COUNT(*) as addons FROM tbl_addons
-                WHERE add_fid = ? GROUP BY add_f_no");
+            $stmt = $conn->prepare("SELECT add_type as addons FROM tbl_addons
+                WHERE add_fid = ? AND add_status IN ('pending','approved') GROUP BY add_f_no");
             $stmt->execute([$Flightid]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -540,9 +545,11 @@ class FLIGHT
         if ($conn) {
             $stmt = $conn->prepare("SELECT *
                 FROM tbl_flights
-                WHERE f_empno = ? GROUP BY f_no, f_status
+                INNER JOIN tbl_access ON acc_dept = f_dept
+                WHERE f_empno = ? OR acc_empno = ? 
+                AND acc_status = '1' GROUP BY f_no, f_status
                 ;");
-            $stmt->execute([$empno]);
+            $stmt->execute([$empno,$empno]);
 
             return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         }

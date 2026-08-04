@@ -19,7 +19,7 @@ $pic = Profile::GetProfile($empno);
                                 <?php if (!empty($pic)) { foreach ($pic as $p) { ?>
                                 <img src="/zen/assets/profile_picture/<?=$p['prof_image']?>" alt="Profile" class="profile-img">
                                 <?php } }else{ ?>
-                                <img src="https://e-classtngcacademy.s3.ap-southeast-1.amazonaws.com/e-class/Thumbnail/img/<?= $empno ?>.JPG" alt="Profile" class="profile-img">
+                                <img src="/zen/files/images/employees/<?= $empno ?>.JPG" alt="Profile" class="profile-img">
                                 <?php } ?>
                                 <div class="camera-icon">
                                     <label for="file-input"><i class="fa fa-camera"></i></label>

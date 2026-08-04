@@ -1,5 +1,5 @@
 <?php
-require_once($lv_root . "/db/db_functions.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
 $trans = new Transactions;
 $con1 = $trans->connect();
 $load = 'travel';

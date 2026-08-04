@@ -16,13 +16,14 @@ $userId = $user['id'] ?? $user['user_id'] ?? null;
 $role   = $user['role'] ?? $user['reqhub_role'] ?? null;
 $empNo  = $user['emp_no'] ?? null;
 
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 // Get the actual users.id from employee_id
 $actualUserId = null;
 $isAdminDev = false;
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     $stmt = $pdo->prepare("SELECT id, is_admin_dev FROM users WHERE employee_id = ?");
     $stmt->execute([$empNo]);
     $userRow = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -9,7 +9,8 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 header('Content-Type: application/json');
 
@@ -25,7 +26,7 @@ if (!$system_id) {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     
     // Get the system name
     $stmt = $pdo->prepare("SELECT name FROM systems WHERE id = ?");

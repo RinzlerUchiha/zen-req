@@ -152,12 +152,12 @@
         							</a>
     							</li>
 								<?php
-								require_once($pa_root."/db/db.php");
+								require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 								
 								try {
 								    // $scms_db = Database::getConnection('scms');
 								    // $pi_db = Database::getConnection('pi');
-								    $hr_db = PADatabase::getConnection('hr');
+								    $hr_db = Database::getConnection('hr');
 								} catch (\PDOException $e) {
 								    throw new \PDOException($e->getMessage(), (int)$e->getCode());
 								}

@@ -2,10 +2,10 @@
   //Connect to my database
   class DB
   {
-      private static $dbName = 'db_hr' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
       private static $cont  = null;
       
       public function __construct() {
@@ -36,7 +36,7 @@
 
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "admin", "Administr@t0r", "db_hr");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "db_hr");
           return $cont;
       }
   }
@@ -44,10 +44,10 @@
   //Connect to HR Database
   class HRDatabase
   {
-      private static $dbName = 'tngc_hrd2' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 
@@ -79,7 +79,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "admin", "Administr@t0r", "tngc_hrd2");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", (getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
           return $cont;
       }
   }
@@ -88,9 +88,9 @@
   class MainDatabase
   {
       private static $dbName = 'db_main' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
       private static $cont  = null;
       
       public function __construct() {
@@ -121,7 +121,7 @@
 
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "admin", "Administr@t0r", "db_main");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "db_main");
           return $cont;
       }
   }
@@ -130,9 +130,9 @@
   class HR1Database
   {
       private static $dbName = 'tngc_hrd' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 
@@ -164,16 +164,16 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "admin", "", "tngc_hrd");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "", "tngc_hrd");
           return $cont;
       }
   }
    class DTRDatabase
   {
       private static $dbName = 'db_dtr' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 
@@ -205,7 +205,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "admin", "Administr@t0r", "db_dtr");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "db_dtr");
           return $cont;
       }
   }
@@ -213,9 +213,9 @@
   class APPDatabase
   {
       private static $dbName = 'db_applicants' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 
@@ -247,7 +247,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "admin", "Administr@t0r", "db_applicants");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "db_applicants");
           return $cont;
       }
   }

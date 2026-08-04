@@ -18,7 +18,8 @@ $routes = [
 	'/flight_modifier' => '/actions/flight_modifier.php',
 	'/rebooking_modifier' => '/actions/rebooking_modifier.php',
 	'/get_baggage' => '/actions/get_baggage.php',
-	'/flight_process' => '/actions/flight_process.php'
+	'/flight_process' => '/actions/flight_process.php',
+	'/get_baggage_options' => '/actions/get_baggage_options.php'
 	
 ];
 

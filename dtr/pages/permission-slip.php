@@ -1,5 +1,5 @@
 <?php
-require_once($sr_root . '/db/db_functions.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
   $trans = new Transactions;
   $con1 = $trans->connect();
 	if (isset($_SESSION['user_id'])) {

@@ -1,8 +1,8 @@
 <?php
 require_once($fl_root."/actions/get_flights.php");
-require_once($fl_root . "/db/database.php");
-require_once($fl_root . "/db/core.php");
-require_once($fl_root . "/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $date = date("Y-m-d");
 $Year = date("Y");
 $Month = date("m");
@@ -154,8 +154,10 @@ try {
   //SERVED FLIGHT DETAILS
   $served = $pdo->prepare("
       SELECT * FROM tbl_flights 
+      LEFT JOIN tbl_addons 
+          ON add_fid = f_id
       WHERE f_no = ? 
-        AND f_status IN ('served','rebooked','rebooking','confirmed rebook','approved rebook','served rebook','returned rebook','cancelled rebook')
+        AND f_status IN ('served','rebooked','rebooking')
       ORDER BY f_date ASC
   ");
   $served->execute([$f_no]);
@@ -228,6 +230,9 @@ try {
               'departure' => $f['f_departure'],
               'arrival' => $f['f_arrival'],
               'attachment' => $f['f_attachment'],
+              'add_bag' => $f['f_add_bag'],
+              'add_ons' => $f['add_type'],
+              'add_status' => $f['add_status'],
               // permissions
               'canAddBaggage' => $perms['canAddBaggage'],
               'canRebook'     => $perms['canRebook'],
@@ -246,13 +251,24 @@ try {
 
 
     // REBOOKED FLIGHTS
+    // $rebookstmt = $pdo->prepare("
+    //     SELECT f.*, r.*
+    //     FROM tbl_flights f
+    //     INNER JOIN tbl_rebooking r
+    //       ON FIND_IN_SET(f.f_id, r.r_fID)
+    //     WHERE f.f_no = ?
+    //       AND r.r_status IN ('rebooked','confirmed rebook','approved rebook','served rebook','returned rebook','cancelled rebook')
+    //     ORDER BY f.f_date ASC
+    // ");
     $rebookstmt = $pdo->prepare("
-        SELECT f.*, r.*
+        SELECT f.*, r.*, a.*
         FROM tbl_flights f
-        INNER JOIN tbl_rebooking r
-          ON FIND_IN_SET(f.f_id, r.r_fID)
+        LEFT JOIN tbl_rebooking r
+          ON f.f_id = r.r_fID
+        LEFT JOIN tbl_addons a
+          ON a.add_fid = f.f_id
         WHERE f.f_no = ?
-          AND r.r_status IN ('rebooked','confirmed rebook','approved rebook','served rebook','returned rebook','cancelled rebook')
+          AND r.r_status IN ('rebooked')
         ORDER BY f.f_date ASC
     ");
     $rebookstmt->execute([$f_no]);
@@ -328,6 +344,9 @@ try {
                 'departure' => $rf['f_departure'],
                 'arrival' => $rf['f_arrival'],
                 'attachment' => $rf['r_attachment'],
+                'add_bag' => $rf['f_add_bag'],
+                'add_ons' => $rf['add_type'],
+                'add_status' => $rf['add_status'],
                  // permissions
                 'canAddBaggage' => $perms['canAddBaggage'],
                 'canRebook'     => $perms['canRebook'],
@@ -345,7 +364,11 @@ try {
 
     $rebookingstmt = $pdo->prepare("
         SELECT *
-        FROM tbl_flights LEFT JOIN tbl_rebooking ON r_fID = f_id AND r_flightno = f_no
+        FROM tbl_flights 
+        LEFT JOIN tbl_rebooking ON r_fID = f_id 
+        AND r_flightno = f_no
+        LEFT JOIN tbl_addons 
+          ON add_fid = f_id
         WHERE f_no = ?
           AND f_status IN ('rebooking','confirmed rebook','approved rebook','returned rebook','cancelled rebook')
         ORDER BY f_date ASC
@@ -413,6 +436,9 @@ try {
                 'departure' => $rebooking['f_departure'],
                 'arrival' => $rebooking['f_arrival'],
                 'attachment' => $rebooking['f_attachment'],
+                'add_bag' => $rebooking['f_add_bag'],
+                'add_ons' => $rebooking['add_type'],
+                'add_status' => $rebooking['add_status'],
                  // permissions
                 'canAddBaggage' => $perms['canAddBaggage'],
                 'canRebook'     => $perms['canRebook'],
@@ -467,13 +493,13 @@ if (!empty($requestflights)) {
 
     if (
         in_array($currentStatus, ['pending', 'confirmed', 'returned']) &&
-        get_assign('view_flight', 'edit', $empno)
+        get_assign_fbr('view_flight', 'edit', $empno)
     ) {
         $canEdit = true;
     }
     if (
         in_array($currentStatus, ['pending', 'confirmed', 'returned']) &&
-        get_assign('view_flight', 'cancel', $empno)
+        get_assign_fbr('view_flight', 'cancel', $empno)
     ) {
         $CancelFlight = true;
     }
@@ -485,13 +511,43 @@ if (!empty($requestflights)) {
   #destination {
     display: none;
   }
+  #flightChat {
+    transition: all 0.3s ease;
+  }
+  /*#toggleChat{
+    float: right;
+  }*/
+  .toggle-chat-floating {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      border-radius: 50px;
+      padding: 10px 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+  #toggleChat {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  }
+
 </style>
 
 <div class="page-wrapper">
   <!-- Page header start -->
   <div class="page-header">
     <div class="page-header-title">
-      <h4>Flight Booking</h4>
+      <h4>Flight Rebooking</h4>
       <!-- <span>Lorem ipsum dolor sit amet, consectetur adipisicing elit</span> -->
     </div>
     <div class="page-header-breadcrumb">
@@ -520,8 +576,9 @@ if (!empty($requestflights)) {
           </div> -->
           <div class="card-block" style="padding-top: 0px !important; padding-left: 20px !important; padding-right: 20px !important;">
             <!-- Row start -->
+            <button id="toggleChat" class="btn btn-mini btn-inverse toggle-chat-floating"><i class="icofont icofont-speech-comments" style="font-size: 30px;"></i></button>
             <div class="row">
-              <div class="col-lg-12 col-xl-9">  
+              <div class="col-lg-12 col-xl-9" id="flightMain">  
                 <!-- Left Card - Flight Details -->
                 <div class="flight-card">
                   <div style="display:flex;justify-content:space-between;">
@@ -643,11 +700,17 @@ if (!empty($requestflights)) {
                                   <th style="color:white !important;">Birthday</th>
                                   <th style="color:white !important;">Contact</th>
                                   <th style="color:white !important;">Baggage</th>
+                                  <th style="color:white !important;">Add-ons</th>
                               </tr>
                           </thead>
                           <tbody>
 
-                          <?php foreach ($spassengersByRoute[$route] ?? [] as $p): ?>
+                          <?php foreach ($spassengersByRoute[$route] ?? [] as $p):
+                                if (!empty($p['add_ons'])) {
+                                  $add = $p['add_ons'].' - '.$p['add_status'];
+                                }else{
+                                  $add = 'No added';
+                                } ?>
                               <tr>
                                   <td><?= htmlspecialchars($p['fname']) ?></td>
                                   <td><?= htmlspecialchars($p['mname']) ?></td>
@@ -656,6 +719,7 @@ if (!empty($requestflights)) {
                                   <td><?= date('M j, Y', strtotime($p['birthday'])) ?></td>
                                   <td><?= htmlspecialchars($p['contact']) ?></td>
                                   <td><?= implode(' / ', $p['baggage']) ?></td>
+                                  <td><?=$add?></td>
                                   <!-- <td>
                                       <?php if ($p['eticket']): ?>
                                         <button class="btn btn-mini btn-info view-eticket" 
@@ -760,10 +824,16 @@ if (!empty($requestflights)) {
                               <th>Birthday</th>
                               <th>Contact</th>
                               <th>Baggage</th>
+                              <th>Add-ons</th>
                           </tr>
                       </thead>
                       <tbody>
-                      <?php foreach ($rpassengers as $pid => $p): ?>
+                      <?php foreach ($rpassengers as $pid => $p): 
+                          if (!empty($p['add_ons'])) {
+                            $add = $p['add_ons'].' - '.$p['add_status'];
+                          }else{
+                            $add = 'No added';
+                          } ?>
                       <tr>
                         <td><?= htmlspecialchars($p['fname']) ?></td>
                         <td><?= htmlspecialchars($p['mname']) ?></td>
@@ -772,6 +842,7 @@ if (!empty($requestflights)) {
                         <td><?= date('M j, Y', strtotime($p['birthday'])) ?></td>
                         <td><?= htmlspecialchars($p['contact']) ?></td>
                         <td><?= implode(' / ', $p['baggage']) ?></td>
+                        <td><?=$add?></td>
                         <?php
                         $buttons = showPassengerButtons($p, $hasRequest, $hasServed, $hasRebooked);
                         ?>
@@ -873,11 +944,17 @@ if (!empty($requestflights)) {
                                   <th style="color:white !important;">Birthday</th>
                                   <th style="color:white !important;">Contact</th>
                                   <th style="color:white !important;">Baggage</th>
+                                  <th style="color:white !important;">Add-ons</th>
                               </tr>
                           </thead>
                           <tbody>
 
-                          <?php foreach ($rebookingpassengers[$route] ?? [] as $p): ?>
+                          <?php foreach ($rebookingpassengers[$route] ?? [] as $p):
+                               if (!empty($p['add_ons'])) {
+                                $add = $p['add_ons'].' - '.$p['add_status'];
+                              }else{
+                                  $add = 'No added';
+                                } ?>
                               <tr>
                                   <td><?= htmlspecialchars($p['fname']) ?></td>
                                   <td><?= htmlspecialchars($p['mname']) ?></td>
@@ -886,6 +963,7 @@ if (!empty($requestflights)) {
                                   <td><?= date('M j, Y', strtotime($p['birthday'])) ?></td>
                                   <td><?= htmlspecialchars($p['contact']) ?></td>
                                   <td><?= implode(' / ', $p['baggage']) ?></td>
+                                  <td><?= $add ?></td>
                               </tr>
                           <?php endforeach; ?>
 
@@ -914,13 +992,13 @@ if (!empty($requestflights)) {
                     if ($f['reviewer_name']) $reviewer = $f['reviewer_name'];
                     if ($f['approver_name']) $approver = $f['approver_name'];
 
-                    if (get_assign('view_flight','review',$empno) && $f['f_status'] === 'rebooking') {
+                    if (get_assign_fbr('view_flight','review',$empno) && $f['f_status'] === 'rebooking') {
                       $canConfirm = true;
                     }
-                    if (get_assign('view_flight','approve',$empno) && $f['f_status'] === 'confirmed') {
+                    if (get_assign_fbr('view_flight','approve',$empno) && $f['f_status'] === 'confirmed') {
                       $canApprove = true;
                     }
-                    if (get_assign('view_flight','deny',$empno) && $f['f_status'] === 'rebooking') {
+                    if (get_assign_fbr('view_flight','deny',$empno) && $f['f_status'] === 'rebooking') {
                       $canDeny = true;
                     }
                   }
@@ -931,13 +1009,13 @@ if (!empty($requestflights)) {
                       $dept = $f['f_dept'];
                       $approver = FLIGHT::GetAccess($empno, $dept); 
 
-                      if (get_assign('view_flight','review',$empno) && $f['f_status'] === 'rebooking') {
+                      if (get_assign_fbr('view_flight','review',$empno) && $f['f_status'] === 'rebooking') {
                       $canConfirm = true;
                       }
-                      if (get_assign('view_flight','approve',$empno) && $f['f_status'] === 'confirmed rebook') {
+                      if (get_assign_fbr('view_flight','approve',$empno) && $f['f_status'] === 'confirmed rebook') {
                         $canApprove = true;
                       }
-                      if (get_assign('view_flight','deny',$empno) && $f['f_status'] === 'rebooking') {
+                      if (get_assign_fbr('view_flight','deny',$empno) && $f['f_status'] === 'rebooking') {
                         $canDeny = true;
                       }
                       if ($f['f_status'] === 'rebooking') {
@@ -1015,7 +1093,7 @@ if (!empty($requestflights)) {
                   
               <?php } ?>
               </div>
-              <div class="col-lg-12 col-xl-3">  
+              <div class="col-lg-12 col-xl-3" id="flightChat">  
                 <!-- Right Card - Chat Section -->
                 <div class="flight-card2">
                   <div class="flight-chat-section">
@@ -1127,5 +1205,39 @@ $(document).on("click", "#declineRebooking", function () {
         alert("An error occurred while approving. Please try again or contact support.");
       }
     });
+});
+
+$(function () {
+  let chatVisible = true;
+
+  function updateToggleIcon() {
+    if (chatVisible) {
+      // Chat is visible → show "hide" icon
+      $('#toggleChat').html('<i class="icofont icofont-close-line" style="font-size: 30px;"></i>');
+    } else {
+      // Chat is hidden → show "show chat" icon
+      $('#toggleChat').html('<i class="icofont icofont-speech-comments" style="font-size: 30px;"></i>');
+    }
+  }
+
+  // set initial icon
+  updateToggleIcon();
+
+  $('#toggleChat').on('click', function () {
+    if (chatVisible) {
+      $('#flightChat').hide();
+      $('#flightMain')
+        .removeClass('col-xl-9')
+        .addClass('col-xl-12');
+    } else {
+      $('#flightChat').show();
+      $('#flightMain')
+        .removeClass('col-xl-12')
+        .addClass('col-xl-9');
+    }
+
+    chatVisible = !chatVisible;
+    updateToggleIcon();
+  });
 });
   </script>

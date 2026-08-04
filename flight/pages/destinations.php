@@ -37,32 +37,32 @@
 
   <!-- International -->
   <option data-code="HKG" value="HKG - Hong Kong">
-  <!-- <option data-code="MEL" value="MEL - Melbourne (Australia)">
-  <option data-code="SYD" value="SYD - Sydney (Australia)">
-  <option data-code="BWN" value="BWN - Brunei">
-  <option data-code="CAN" value="CAN - Guangzhou (China)">
-  <option data-code="PVG" value="PVG - Shanghai (China)">
-  <option data-code="XMN" value="XMN - Xiamen (China)">
-  <option data-code="MFM" value="MFM - Macau">
-  <option data-code="CGK" value="CGK - Jakarta (Indonesia)">
-  <option data-code="DPS" value="DPS - Bali (Indonesia)">
-  <option data-code="FUK" value="FUK - Fukuoka (Japan)">
-  <option data-code="NGO" value="NGO - Nagoya (Japan)">
-  <option data-code="KIX" value="KIX - Osaka (Japan)">
-  <option data-code="CTS" value="CTS - Sapporo (Japan)">
-  <option data-code="NRT" value="NRT - Tokyo Narita (Japan)">
-  <option data-code="KUL" value="KUL - Kuala Lumpur (Malaysia)">
-  <option data-code="SIN" value="SIN - Singapore">
-  <option data-code="ICN" value="ICN - Seoul (South Korea)">
-  <option data-code="KHH" value="KHH - Kaohsiung (Taiwan)">
-  <option data-code="TPE" value="TPE - Taipei (Taiwan)">
+  <!-- <option data-code="MEL" value="MEL - Melbourne (Australia)"> -->
+  <!-- <option data-code="SYD" value="SYD - Sydney (Australia)"> -->
+  <!-- <option data-code="BWN" value="BWN - Brunei"> -->
+  <!-- <option data-code="CAN" value="CAN - Guangzhou (China)"> -->
+  <!-- <option data-code="PVG" value="PVG - Shanghai (China)"> -->
+  <!-- <option data-code="XMN" value="XMN - Xiamen (China)"> -->
+  <!-- <option data-code="MFM" value="MFM - Macau"> -->
+  <!-- <option data-code="CGK" value="CGK - Jakarta (Indonesia)"> -->
+  <!-- <option data-code="DPS" value="DPS - Bali (Indonesia)"> -->
+  <!-- <option data-code="FUK" value="FUK - Fukuoka (Japan)"> -->
+  <!-- <option data-code="NGO" value="NGO - Nagoya (Japan)"> -->
+  <!-- <option data-code="KIX" value="KIX - Osaka (Japan)"> -->
+  <!-- <option data-code="CTS" value="CTS - Sapporo (Japan)"> -->
+  <!-- <option data-code="NRT" value="NRT - Tokyo Narita (Japan)"> -->
+  <!-- <option data-code="KUL" value="KUL - Kuala Lumpur (Malaysia)"> -->
+  <!-- <option data-code="SIN" value="SIN - Singapore"> -->
+  <!-- <option data-code="ICN" value="ICN - Seoul (South Korea)"> -->
+  <!-- <option data-code="KHH" value="KHH - Kaohsiung (Taiwan)"> -->
+  <!-- <option data-code="TPE" value="TPE - Taipei (Taiwan)"> -->
   <option data-code="BKK" value="BKK - Bangkok Suvarnabhumi (Thailand)">
-  <option data-code="DMK" value="DMK - Bangkok Don Mueang (Thailand)">
-  <option data-code="CNX" value="CNX - Chiang Mai (Thailand)">
-  <option data-code="DXB" value="DXB - Dubai (UAE)">
-  <option data-code="DAD" value="DAD - Da Nang (Vietnam)">
-  <option data-code="HAN" value="HAN - Hanoi (Vietnam)">
-  <option data-code="SGN" value="SGN - Ho Chi Minh (Vietnam)"> -->
+  <!-- <option data-code="DMK" value="DMK - Bangkok Don Mueang (Thailand)"> -->
+  <!-- <option data-code="CNX" value="CNX - Chiang Mai (Thailand)"> -->
+  <!-- <option data-code="DXB" value="DXB - Dubai (UAE)"> -->
+  <!-- <option data-code="DAD" value="DAD - Da Nang (Vietnam)"> -->
+  <!-- <option data-code="HAN" value="HAN - Hanoi (Vietnam)"> -->
+  <!-- <option data-code="SGN" value="SGN - Ho Chi Minh (Vietnam)"> -->
 </datalist>
 
 <datalist id="to">

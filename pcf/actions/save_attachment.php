@@ -1,18 +1,21 @@
 <?php
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 header('Content-Type: application/json');
 
 // DB connection
-$servername = "localhost";
+$servername = (getenv('ZEN_DB_HOST') ?: "");
 $username = "root";
 $password = "";
 $dbname = "pcf_db";
 
-$conn = new mysqli($servername, $username, $password, $dbname);
-if ($conn->connect_error) {
-    http_response_code(500);
-    echo json_encode(["status" => "error", "message" => "DB connection failed"]);
-    exit;
-}
+// $conn = new mysqli($servername, $username, $password, $dbname);
+// if ($conn->connect_error) {
+//     http_response_code(500);
+//     echo json_encode(["status" => "error", "message" => "DB connection failed"]);
+//     exit;
+// }
+
+$conn = Database::getConnection('pcf');
 
 // Validate input
 if (empty($_POST['disbur_no'])) {
@@ -20,10 +23,11 @@ if (empty($_POST['disbur_no'])) {
     echo json_encode(["status" => "error", "message" => "Disbursement number is required"]);
     exit;
 }
-$disburNo = $conn->real_escape_string($_POST['disbur_no']);
+// $disburNo = $conn->real_escape_string($_POST['disbur_no']);
+$disburNo = $_POST['disbur_no'];
 
 // Upload directory
-$uploadDir = 'Z:/pcf/attachments/';
+$uploadDir = $FILES_DIR_PCF . '/attachments/';
 if (!is_dir($uploadDir)) {
     if (!mkdir($uploadDir, 0777, true)) {
         http_response_code(500);
@@ -65,7 +69,6 @@ function handleUpload($fileKey, $uploadDir, $allowedTypes, $maxFileSize, &$fileN
             $uniqueName = uniqid() . '_' . preg_replace('/[^a-zA-Z0-9\._-]/', '_', $originalName);
             $filePath = $uploadDir . $uniqueName;
             if (move_uploaded_file($tmpName, $filePath)) {
-                chmod($filePath, 0644);
                 $fileNames[] = $uniqueName;
             } else {
                 $errors[] = "$originalName: Failed to move file.";
@@ -84,25 +87,16 @@ if (!empty($fileNames)) {
 
     // Check if disbur_no exists
     $stmt = $conn->prepare("SELECT file FROM tbl_attachment WHERE disbur_no = ?");
-    $stmt->bind_param("s", $disburNo);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt->execute([$disburNo]);
 
-    if ($row = $result->fetch_assoc()) {
+    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $updatedFiles = $row['file'] ? $row['file'] . ',' . $fileNamesStr : $fileNamesStr;
         $update = $conn->prepare("UPDATE tbl_attachment SET file = ? WHERE disbur_no = ?");
-        $update->bind_param("ss", $updatedFiles, $disburNo);
-        $update->execute();
-        $update->close();
+        $update->execute([$updatedFiles, $disburNo]);
     } else {
         $insert = $conn->prepare("INSERT INTO tbl_attachment (disbur_no, file) VALUES (?, ?)");
-        $insert->bind_param("ss", $disburNo, $fileNamesStr);
-        $insert->execute();
-        $insert->close();
+        $insert->execute([$disburNo, $fileNamesStr]);
     }
-
-    $stmt->close();
-    $conn->close();
 
     echo json_encode([
         "status" => "success",
@@ -117,4 +111,3 @@ if (!empty($fileNames)) {
         "errors" => $errors
     ]);
 }
-?>

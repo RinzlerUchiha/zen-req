@@ -1,8 +1,8 @@
 <?php
 require_once($fl_root."/actions/get_flights.php");
-require_once($fl_root . "/db/database.php");
-require_once($fl_root . "/db/core.php");
-require_once($fl_root . "/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $date = date("Y-m-d");
 $Year = date("Y");
 $Month = date("m");
@@ -83,7 +83,7 @@ try {
   $request = $pdo->prepare("
       SELECT * FROM tbl_flights 
       WHERE f_no = ? 
-        AND f_status NOT IN ('deleted')
+        AND f_status IN ('pending','confirmed','approved','rebooked','rebooking','served','approved rebook','refund','cancelled')
       ORDER BY f_date ASC
   ");
   $request->execute([$f_no]);
@@ -154,10 +154,10 @@ try {
   //SERVED FLIGHT DETAILS
   $served = $pdo->prepare("
       SELECT * FROM tbl_flights 
-        LEFT JOIN tbl_addons a
+        LEFT JOIN tbl_addons
           ON add_fid = f_id
       WHERE f_no = ? 
-        AND f_status IN ('served','rebooked','rebooking','confirmed rebook','approved rebook','served rebook','returned rebook','cancelled rebook')
+        AND f_status IN ('served','rebooked','rebooking','approved rebook','served rebook','returned rebook','cancelled rebook','cancelled')
       ORDER BY f_date ASC
   ");
   $served->execute([$f_no]);
@@ -189,6 +189,7 @@ try {
               'department' => $f['f_contact'],
               'add_bag' => $f['f_add_bag'],
               'add_ons' => $f['add_type'],
+              'add_status' => $f['add_status'],
               'fid' => $f['f_id'],
               'fno' => $f['f_no'],
               'ref' => $f['f_ref_no']
@@ -203,7 +204,7 @@ try {
 
           $perms = passengerPermissions($f['f_status']);
 
-          if ($f['f_status'] === 'rebooked') {
+          if (in_array($f['f_status'], ['rebooked','rebooking'])) {
               $perms = [
                   'canAddBaggage' => false,
                   'canRebook'     => false,
@@ -234,6 +235,10 @@ try {
               'attachment' => $f['f_attachment'],
               'add_bag' => $f['f_add_bag'],
               'add_ons' => $f['add_type'],
+              'add_estimatedprice' => $f['add_estimatedprice'],
+              'add_status' => $f['add_status'],
+              'status'  => $f['f_status'],
+              'bag'  => $f['f_baggage'],
               // permissions
               'canAddBaggage' => $perms['canAddBaggage'],
               'canRebook'     => $perms['canRebook'],
@@ -260,7 +265,7 @@ try {
         LEFT JOIN tbl_addons a
           ON a.add_fid = f.f_id
         WHERE f.f_no = ?
-          AND r.r_status IN ('rebooked')
+          AND r.r_status = 'rebooked'
         ORDER BY f.f_date ASC
     ");
     $rebookstmt->execute([$f_no]);
@@ -292,6 +297,7 @@ try {
                 'ref' => $f['f_ref_no'],
                 'add_bag' => $rf['f_add_bag'],
                 'add_ons' => $rf['add_type'],
+                'add_status' => $rf['add_status'],
                 // Rebooking info (if exists)
                 'r_reference'  => $rf['r_reference'],
                 'r_flight_num' => $rf['r_flight_num'],
@@ -305,6 +311,7 @@ try {
                 'r_airline'    => $rf['r_airline'],
                 'r_actual_price'=> $rf['r_actual_price'],
                 'r_service_fee'=> $rf['r_service_fee'],
+                'bag'             => $rf['f_baggage'],
                 'r_original_route'=> $rf['r_original_route']
             ];
         }
@@ -314,35 +321,41 @@ try {
         if (!isset($rpassengers[$pkey])) {
             $perms = passengerPermissions($f['f_status']);
             $rpassengers[$pkey] = [
-                'fname'    => $rf['f_fname'],
-                'mname'    => $rf['f_mname'],
-                'lname'    => $rf['f_lname'],
-                'sex'      => $rf['f_sex'],
-                'birthday' => $rf['f_bday'],
-                'contact'  => $rf['f_contact'],
-                'baggage'  => [],
-                'airline'      => $rf['f_airline'],
-                'date'         => $rf['r_date'],
-                'time'         => $rf['r_time'],
-                'price'        => $rf['r_actual_price'],
-                'rebook_fee'   => $rf['r_service_fee'],
-                'r_origin'     => $rf['r_origin'],
-                'r_destination'=> $rf['r_destination'],
-                'r_original_route'=> $rf['r_original_route'],
-                'fid' => $rf['f_id'],
-                'fno' => $rf['f_no'],
-                'ref' => $rf['f_ref_no'],
-                'departure' => $rf['f_departure'],
-                'arrival' => $rf['f_arrival'],
-                'attachment' => $rf['r_attachment'],
-                'add_bag' => $rf['f_add_bag'],
-                'add_ons' => $rf['add_type'],
-                 // permissions
-                'canAddBaggage' => $perms['canAddBaggage'],
-                'canRebook'     => $perms['canRebook'],
-                'canRefund'     => $perms['canRefund'],
-                'canCancel'     => $perms['canCancel'],
-                'eticket'       => true,
+              'fname'           => $rf['f_fname'],
+              'mname'           => $rf['f_mname'],
+              'lname'           => $rf['f_lname'],
+              'sex'             => $rf['f_sex'],
+              'birthday'        => $rf['f_bday'],
+              'contact'         => $rf['f_contact'],
+              'status'          => $rf['f_status'],
+              'baggage'         => [],
+              'airline'         => $rf['f_airline'],
+              'date'            => $rf['r_date'],
+              'time'            => $rf['r_time'],
+              'price'           => $rf['r_actual_price'],
+              'rebook_fee'      => $rf['r_service_fee'],
+              'f_departure'       => $rf['f_departure'],
+              'f_arrival'         => $rf['f_arrival'],
+              'r_origin'        => $rf['r_origin'],
+              'r_destination'   => $rf['r_destination'],
+              'r_original_route'=> $rf['r_original_route'],
+              'fid'             => $rf['f_id'],
+              'fno'             => $rf['f_no'],
+              'ref'             => $rf['f_ref_no'],
+              'departure'       => $rf['r_origin'],
+              'arrival'         => $rf['r_destination'],
+              'attachment'      => $rf['r_attachment'],
+              'add_bag'         => $rf['f_add_bag'],
+              'add_ons'         => $rf['add_type'],
+              'add_estimatedprice' => $rf['add_estimatedprice'],
+              'add_status'      => $rf['add_status'],
+              'bag'             => $rf['f_baggage'],
+              // permissions
+              'canAddBaggage'   => $perms['canAddBaggage'],
+              'canRebook'       => $perms['canRebook'],
+              'canRefund'       => $perms['canRefund'],
+              'canCancel'       => $perms['canCancel'],
+              'eticket'         => true,
             ];
         }
 
@@ -350,29 +363,12 @@ try {
             $rf['r_original_route'].' ('.$rf['f_baggage'].')';
     }
 
-    // REBOOKING
-    // $rebookingstmt = $pdo->prepare("
-    //     SELECT f.*, r.*
-    //     FROM tbl_flights f
-    //     INNER JOIN tbl_rebooking r
-    //       ON f.f_id = r.r_fID
-    //     WHERE f.f_no = ?
-    //       AND r.r_status IN ('rebooking','confirmed rebook','approved rebook','returned rebook','cancelled rebook')
-    //     ORDER BY f.f_date ASC
-    // ");
-    // $rebookingstmt = $pdo->prepare("
-    //     SELECT *
-    //     FROM tbl_flights 
-    //     WHERE f_no = ?
-    //       AND f_status IN ('rebooking','confirmed rebook','approved rebook','returned rebook','cancelled rebook')
-    //     ORDER BY f_date ASC
-    // ");
-    // $rebookingstmt->execute([$f_no]);
-    // $rebookings = $rebookingstmt->fetchAll(PDO::FETCH_ASSOC);
     $rebookingstmt = $pdo->prepare("
         SELECT *
         FROM tbl_flights
         LEFT JOIN tbl_refund ON ref_fid = f_id 
+        LEFT JOIN tbl_addons 
+          ON add_fid = f_id
         WHERE f_no = ?
           AND f_status = 'refund'
         ORDER BY f_date ASC
@@ -404,7 +400,7 @@ try {
                 'fid'          => $rebooking['f_id'],
                 'refundamount' => $rebooking['ref_amount_refunded'],
                 'refundreason' => $rebooking['ref_reason'],
-                'refundattachment'        => $rebooking['ref_attachment'],
+                'refundattachment'  => $rebooking['ref_attachment'],
                 'fno' => $rebooking['f_no'],
                 'ref' => $f['f_ref_no'],
             ];
@@ -439,6 +435,9 @@ try {
                 'departure' => $rebooking['f_departure'],
                 'arrival' => $rebooking['f_arrival'],
                 'attachment' => $rebooking['f_attachment'],
+                'add_bag' => $rebooking['f_add_bag'],
+                'add_ons' => $rebooking['add_type'],
+                'add_status' => $rebooking['add_status'],
                  // permissions
                 'canAddBaggage' => $perms['canAddBaggage'],
                 'canRebook'     => $perms['canRebook'],
@@ -458,14 +457,14 @@ try {
     $hasRebooking = false;
 
     foreach ($requestflights as $f) {
-        if (in_array($f['f_status'], ['pending','approved','confirmed','returned','served','rebooked','rebooking','refund'])) {
+        if (in_array($f['f_status'], ['pending','approved','confirmed','returned','served','rebooked','rebooking','cancelled'])) {
             $hasRequest = true;
             break;
         }
     }
 
     foreach ($servedflights as $f) {
-        if (in_array($f['f_status'], ['served','rebooked','rebooking','refund'])) {
+        if (in_array($f['f_status'], ['served','rebooked','rebooking','cancelled'])) {
             $hasServed = true;
             break;
         }
@@ -476,7 +475,7 @@ try {
     }
 
     foreach ($rebookings as $f) {
-        if ($f['f_status'] = 'refund') {
+        if ($f['f_status'] === 'refund') {
             $hasRebooking = true;
             break;
         }
@@ -493,13 +492,13 @@ if (!empty($requestflights)) {
 
     if (
         in_array($currentStatus, ['pending', 'confirmed', 'returned']) &&
-        get_assign('view_flight', 'edit', $empno)
+        get_assign_fbr('view_flight', 'edit', $empno)
     ) {
         $canEdit = true;
     }
     if (
         in_array($currentStatus, ['pending', 'confirmed', 'returned']) &&
-        get_assign('view_flight', 'cancel', $empno)
+        get_assign_fbr('view_flight', 'cancel', $empno)
     ) {
         $CancelFlight = true;
     }
@@ -511,6 +510,37 @@ if (!empty($requestflights)) {
   #destination {
     display: none;
   }
+  #flightChat {
+    transition: all 0.3s ease;
+  }
+  /*#toggleChat{
+    float: right;
+  }*/
+
+  .toggle-chat-floating {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      border-radius: 50px;
+      padding: 10px 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+  #toggleChat {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  }
+
 </style>
 
 <div class="page-wrapper">
@@ -546,8 +576,16 @@ if (!empty($requestflights)) {
           </div> -->
           <div class="card-block" style="padding-top: 0px !important; padding-left: 20px !important; padding-right: 20px !important;">
             <!-- Row start -->
+            <!-- <div class="row">
+              <div class="col text-end">
+                <button id="toggleChat" class="btn btn-mini btn-outline-primary">
+                  Hide Chat
+                </button>
+              </div>
+            </div> -->
+            <button id="toggleChat" class="btn btn-mini btn-inverse toggle-chat-floating"><i class="icofont icofont-speech-comments" style="font-size: 30px;"></i></button>
             <div class="row">
-              <div class="col-lg-12 col-xl-9">  
+              <div class="col-lg-12 col-xl-9" id="flightMain">  
                 <!-- Left Card - Flight Details -->
                 <div class="flight-card">
                   <div style="display:flex;justify-content:space-between;">
@@ -561,9 +599,9 @@ if (!empty($requestflights)) {
                             </a>
                         <?php endif; ?>
                         <?php if ($CancelFlight): ?>
-                        <td>
+                        <!-- <td>
                             <button class="btn btn-mini btn-danger" data-toggle="modal" data-target="#cancelFlight<?= htmlspecialchars($Flightid) ?>">Cancel</button>
-                        </td>
+                        </td> -->
                         <?php endif; ?>
                       </div>
                   </div>
@@ -610,11 +648,14 @@ if (!empty($requestflights)) {
                         <?php
                         $buttons = showPassengerButtons($p, $hasRequest, $hasServed, $hasRebooked);
                         ?>
-                        <?php if ($buttons['candelete']): ?>
-                        <!-- <td>
-                            <button class="btn btn-mini btn-danger" data-toggle="modal" data-target="#cancelModal<?= htmlspecialchars($p['fid']) ?>">Cancel</button>
-                        </td> -->
-                        <?php endif; ?>
+                        <td>
+                            <?php if ($p['canCancel'] && get_assign_fbr('view_flight','cancel',$empno)): ?>
+                                <button class="btn btn-mini btn-danger" data-toggle="modal" data-target="#cancelModal" 
+                                  data-fid="<?= $p['fid'] ?>"
+                                  data-ref=""
+                                  data-fno="<?= $p['fno'] ?>">Cancel</button>
+                            <?php endif; ?>
+                        </td>
 
                       </tr>
                       <?php endforeach; ?>
@@ -671,11 +712,17 @@ if (!empty($requestflights)) {
                           <tbody>
 
                           <?php foreach ($spassengersByRoute[$route] ?? [] as $p):
-                              if (!empty($p['add_ons'])) {
-                                $add = $p['add_ons'];
+                              if (!empty($p['add_ons']) && $p['status'] === 'served') {
+                                // $add = $p['add_ons'].' - '.$p['add_status'];
+                                $add = $p['add_ons'].' - '.$p['add_estimatedprice'].' ('.$p['add_status'].')';
                               }else{
-                                $add = $p['add_bag'];
-                              } ?>
+                                $add = 'No added';
+                              }
+
+                              $bagKg     = (int) preg_replace('/\D/', '', $p['bag']);     
+                              $addonKg   = (int) preg_replace('/\D/', '', $p['add_ons']); 
+                              $totalKg  = $bagKg + $addonKg;
+                              ?>
                               <tr>
                                   <td><?= htmlspecialchars($p['fname']) ?></td>
                                   <td><?= htmlspecialchars($p['mname']) ?></td>
@@ -691,19 +738,21 @@ if (!empty($requestflights)) {
                                             data-toggle="modal"
                                             data-target="#ticketModal"
                                             data-fid="<?= $p['fid'] ?>"
-                                            data-file="<?= "https://prosperityph.teamtngc.com/prosperityph/flightbooking/actions/uploads/". $p['attachment']; ?>">E-Ticket</button>
+                                            data-file="<?= "https://e-classtngcacademy.s3.ap-southeast-1.amazonaws.com/flightbooking/". $p['attachment']; ?>">E-Ticket</button>
                                       <?php endif; ?>
                                       <?php if ($p['canAddBaggage']): ?>
                                         <button class="btn btn-mini btn-info"
                                             data-toggle="modal"
                                             data-target="#addonsModal"
-                                            data-route="<?= $p['departure'].' - '.$p['arrival'] ?>"
+                                            data-airline="<?=$p['airline']?>"
+                                            data-bag="<?=$totalKg.'kg'?>"
+                                            data-routes="<?= $p['departure'].'-'.$p['arrival'] ?>"
                                             data-guest="<?= $p['fname'].' - '.$p['lname'] ?>"
                                             data-fid="<?= $p['fid'] ?>"
                                             data-fno="<?= $p['fno'] ?>">Add Baggage</button>
                                       <?php endif; ?>
 
-                                      <?php if ($p['canRebook']): ?>
+                                      <?php if ($p['canRebook'] && get_assign_fbr('view_flight','rebook',$empno)): ?>
                                         <button class="btn btn-mini btn-warning"
                                             data-toggle="modal"
                                             data-target="#rebookModal"
@@ -712,6 +761,8 @@ if (!empty($requestflights)) {
                                             data-ref="<?= $p['ref'] ?>"
                                             data-airline="<?= $p['airline'] ?>"
                                             data-route="<?= $p['departure'].' - '.$p['arrival'] ?>"
+                                            data-depart="<?= $p['departure'] ?>"
+                                            data-arrive="<?= $p['arrival'] ?>"
                                             data-date="<?= $p['date'] ?>"
                                             data-time="<?= $p['time'] ?>"
                                             data-price="<?= number_format($p['price'],2) ?>">
@@ -719,7 +770,7 @@ if (!empty($requestflights)) {
                                         </button>
                                       <?php endif; ?>
 
-                                      <?php if ($p['canRefund']): ?>
+                                      <?php if ($p['canRefund'] && get_assign_fbr('view_flight','refund',$empno)): ?>
                                           <button class="btn btn-mini btn-inverse"
                                             data-toggle="modal"
                                             data-target="#refundModal"
@@ -734,7 +785,7 @@ if (!empty($requestflights)) {
                                             data-price="<?= number_format($p['price'],2) ?>">Refund</button>
                                       <?php endif; ?>
 
-                                      <?php if ($p['canCancel']): ?>
+                                      <?php if ($p['canCancel'] && get_assign_fbr('view_flight','cancel',$empno)): ?>
                                           <button class="btn btn-mini btn-danger" data-toggle="modal" data-target="#cancelModal" 
                                             data-fid="<?= $p['fid'] ?>"
                                             data-ref="<?= $p['ref'] ?>"
@@ -797,11 +848,15 @@ if (!empty($requestflights)) {
                       </thead>
                       <tbody>
                       <?php foreach ($rpassengers as $pid => $p):
-                        if (!empty($p['add_ons'])) {
-                          $add = $p['add_ons'];
+                        if (!empty($p['add_ons']) && $p['status'] === 'rebooked') {
+                          $add = $p['add_ons'].' - '.$p['add_estimatedprice'].' ('.$p['add_status'].')';
                         }else{
-                          $add = $p['add_bag'];
-                        } ?>
+                          $add = 'No added';
+                        }
+                        $bagKg     = (int) preg_replace('/\D/', '', $p['bag']);     
+                        $addonKg   = (int) preg_replace('/\D/', '', $p['add_ons']); 
+                        $totalKg  = $bagKg + $addonKg;
+                        ?>
                       <tr>
                         <td><?= htmlspecialchars($p['fname']) ?></td>
                         <td><?= htmlspecialchars($p['mname']) ?></td>
@@ -820,23 +875,21 @@ if (!empty($requestflights)) {
                                   data-toggle="modal"
                                   data-target="#ticketModal"
                                   data-fid="<?= $p['fid'] ?>"
-                                  data-file="<?= 'https://prosperityph.teamtngc.com/prosperityph/flightbooking/actions/uploads/'.$p['attachment'] ?> ?>">E-Ticket</button>
+                                  data-file="<?= 'https://e-classtngcacademy.s3.ap-southeast-1.amazonaws.com/flightbooking/'.$p['attachment'] ?> ?>">E-Ticket</button>
                             <?php endif; ?>
                           <?php if ($buttons['canAddBaggage']): ?>
                               <button class="btn btn-mini btn-info"
                                   data-toggle="modal"
                                   data-target="#addonsModal"
-                                  data-route="
-                                  <?= ($p['airline'] === 'Philippine Airlines')
-                                    ? $p['r_origin'] . ' - ' . $p['r_destination']
-                                    : $p['r_original_route']
-                                  ?>"
+                                  data-airline="<?=$p['airline']?>"
+                                  data-bag="<?=$totalKg.'kg'?>"
+                                  data-routes="<?= $p['f_departure'].'-'.$p['f_arrival']?>"
                                   data-guest="<?= $p['fname'].' - '.$p['lname'] ?>"
                                   data-fid="<?= $p['fid'] ?>"
                                   data-fno="<?= $p['fno'] ?>">Add Baggage</button>
                           <?php endif; ?>
 
-                          <?php if ($buttons['canRebook']): ?>
+                          <?php if ($buttons['canRebook'] && get_assign_fbr('view_flight','rebook',$empno)): ?>
                               <button class="btn btn-mini btn-warning"
                                   data-toggle="modal"
                                   data-target="#rebookModal"
@@ -845,6 +898,8 @@ if (!empty($requestflights)) {
                                   data-ref="<?= $p['ref'] ?>"
                                   data-airline="<?= $p['airline'] ?>"
                                   data-route="<?= $p['departure'].' - '.$p['arrival'] ?>"
+                                  data-depart="<?= $p['departure'] ?>"
+                                  data-arrive="<?= $p['arrival'] ?>"
                                   data-date="<?= $p['date'] ?>"
                                   data-time="<?= $p['time'] ?>"
                                   data-price="<?= number_format($p['price'],2) ?>">
@@ -852,7 +907,7 @@ if (!empty($requestflights)) {
                               </button>
                           <?php endif; ?>
 
-                          <?php if ($buttons['canRefund']): ?>
+                          <?php if ($buttons['canRefund'] && get_assign_fbr('view_flight','refun',$empno)): ?>
                               <button class="btn btn-mini btn-inverse"
                                   data-toggle="modal"
                                   data-target="#refundModal"
@@ -867,7 +922,7 @@ if (!empty($requestflights)) {
                                   data-price="<?= number_format($p['price'],2) ?>">Refund</button>
                           <?php endif; ?>
 
-                          <?php if ($buttons['canCancel']): ?>
+                          <?php if ($buttons['canCancel'] && get_assign_fbr('view_flight','cancel',$empno)): ?>
                               <button class="btn btn-mini btn-danger" data-toggle="modal" data-target="#cancelModal" 
                               data-fid="<?= $p['fid'] ?>"
                               data-ref="<?= $p['ref'] ?>"
@@ -915,7 +970,7 @@ if (!empty($requestflights)) {
                                   </th>
                                   <th style="text-align:left;background:#f4f4f4;border: 1px solid #fff;">
                                       Attachment: <button class="btn btn-mini btn-info view-attachment" data-toggle="modal" data-target="#refFileModal"
-                                      data-file="<?= 'https://prosperityph.teamtngc.com/prosperityph/flightbooking/actions/uploads/'.$info['refundattachment'] ?>">Refund File</button>
+                                      data-file="<?= 'https://e-classtngcacademy.s3.ap-southeast-1.amazonaws.com/flightbooking/'.$info['refundattachment'] ?>">Refund File</button>
                                   </th>
                               </tr>
                               <tr>
@@ -926,7 +981,6 @@ if (!empty($requestflights)) {
                                   <th style="color:white !important;">Birthday</th>
                                   <th style="color:white !important;">Contact</th>
                                   <th style="color:white !important;">Baggage</th>
-                                  <th style="color:white !important;">Actions</th>
                               </tr>
                           </thead>
                           <tbody>
@@ -940,13 +994,6 @@ if (!empty($requestflights)) {
                                   <td><?= date('M j, Y', strtotime($p['birthday'])) ?></td>
                                   <td><?= htmlspecialchars($p['contact']) ?></td>
                                   <td><?= implode(' / ', $p['baggage']) ?></td>
-                                  <td>
-                                      <?php if ($p['canCancel']): ?>
-                                          <button class="btn btn-mini btn-danger" data-toggle="modal" data-target="#cancelModal" 
-                                            data-fid="<?= $p['fid'] ?>"
-                                            data-ref="<?= $p['ref'] ?>">Cancel</button>
-                                      <?php endif; ?>
-                                  </td>
                               </tr>
                           <?php endforeach; ?>
 
@@ -966,19 +1013,21 @@ if (!empty($requestflights)) {
                     $dept = $f['f_dept'];
                     $condate = $f['ap_confirmeddt'] ?? '';
                     $signature = $f['ap_approvesign'] ?? '';
+                    $requestor = $f['ap_requestsign'] ?? '';
+                    $reviewersign = $f['ap_confirmsign'] ?? '';
                     $confirmedDate = $condate ? date('F j, Y', strtotime($condate)) : 'N/A';
                     $apdate = $f['ap_approveddt'] ?? '';
                     $approvedDate = $apdate ? date('F j, Y', strtotime($apdate)) : 'N/A';
                     if ($f['reviewer_name']) $reviewer = $f['reviewer_name'];
                     if ($f['approver_name']) $approver = $f['approver_name'];
 
-                    if (get_assign('view_flight','review',$empno) && $f['f_status'] === 'pending') {
+                    if (get_assign_fbr('view_flight','review',$empno) && $f['f_status'] === 'pending') {
                       $canConfirm = true;
                     }
-                    if (get_assign('view_flight','approve',$empno) && $f['f_status'] === 'confirmed') {
+                    if (get_assign_fbr('view_flight','approve',$empno) && $f['f_status'] === 'confirmed') {
                       $canApprove = true;
                     }
-                    if (get_assign('view_flight','deny',$empno) && $f['f_status'] === 'pending') {
+                    if (get_assign_fbr('view_flight','deny',$empno) && $f['f_status'] === 'pending') {
                       $canDeny = true;
                     }
                       
@@ -995,14 +1044,14 @@ if (!empty($requestflights)) {
                               $requesterName = $fb['passender_name'] ?? 'Unknown';
                           ?>
                               <div class="dept-head">
-                                  <div style="width:200px;height:35px;"></div>
+                                  <div style="width:200px;height:35px;"><?=$requestor?></div>
                                   <p class="flght-approve"><?= htmlspecialchars($requesterName) ?> - <?= $requestedDate ?></p>
                                   <p>Requested by</p>
                               </div>
                           <?php } ?>
 
                           <div class="dept-head">
-                              <div style="width:200px;height:35px;"></div>
+                              <div style="width:200px;height:35px;"><?=$reviewersign?></div>
                               <p class="flght-approve"><?= htmlspecialchars($f['reviewer_name'] ?? 'Awating Review') ?> - <?=$confirmedDate?></p>
                               <p>Reviewed by</p>
                           </div>
@@ -1036,7 +1085,9 @@ if (!empty($requestflights)) {
                       <div style="display:flex;gap:20px;float:left;height: 30px;">
                        <?php
                           if (!empty($flightbooking)) {
-                              $fb = $flightbooking[0]; // only need one since requester is same
+                              $fb = $flightbooking[0]; 
+                              $requestor = $f['ap_requestsign'] ?? '';
+                              $reviewersign = $f['ap_confirmsign'] ?? '';
                               $requestdate = $fb['f_reqdate'] ?? '';
                               $requestedDate = $requestdate ? date('F j, Y', strtotime($requestdate)) : 'N/A';
                               $requesterName = $fb['passender_name'] ?? 'Unknown';
@@ -1044,24 +1095,24 @@ if (!empty($requestflights)) {
                               $canConfirm = false;
                               $canApprove  = false;
                               $canDeny  = false;
-                              if (get_assign('view_flight','review',$empno) && $f['f_status'] === 'pending') {
+                              if (get_assign_fbr('view_flight','review',$empno) && $f['f_status'] === 'pending') {
                                 $canConfirm = true;
                               }
-                              if (get_assign('view_flight','approve',$empno) && $f['f_status'] === 'confirmed') {
+                              if (get_assign_fbr('view_flight','approve',$empno) && $f['f_status'] === 'confirmed') {
                                 $canApprove = true;
                               }
-                              if (get_assign('view_flight','deny',$empno) && $f['f_status'] === 'pending') {
+                              if (get_assign_fbr('view_flight','deny',$empno) && $f['f_status'] === 'pending') {
                                 $canDeny = true;
                               }
                           ?>
                               <div class="dept-head">
-                                  <div style="width:200px;height:35px;"></div>
+                                  <div style="width:200px;height:35px;"><?=$requestor?></div>
                                   <p class="flght-approve"><?= htmlspecialchars($requesterName) ?> - <?= $requestedDate ?></p>
                                   <p>Requested by</p>
                               </div>
                           <?php } ?>
                           <div class="dept-head">
-                              <div style="width:200px;height:35px;"></div>
+                              <div style="width:200px;height:35px;"><?=$reviewersign?></div>
                               <p class="flght-approve"><?= htmlspecialchars($f['reviewer_name'] ?? 'Waiting for review') ?></p>
                               <p>Reviewed by</p>
                           </div>
@@ -1070,6 +1121,7 @@ if (!empty($requestflights)) {
                           <?php endif; ?>
                           <?php if ($canConfirm): ?>
                               <button class="btn btn-primary btn-mini" id="confirmFlight">Approve</button>
+                            
                           <?php endif; ?>
                           <?php if ($canApprove): ?>
                               <!-- <button class="btn btn-primary btn-mini" id="approveFlight">Approve</button> -->
@@ -1078,8 +1130,9 @@ if (!empty($requestflights)) {
                   </div>
               <?php } ?>
               </div>
-              <div class="col-lg-12 col-xl-3">  
+              <div class="col-lg-12 col-xl-3" id="flightChat">  
                 <!-- Right Card - Chat Section -->
+
                 <div class="flight-card2">
                   <div class="flight-chat-section">
                     <?php if (!empty($comments)) {
@@ -1175,27 +1228,27 @@ if (!empty($requestflights)) {
       <div class="modal-body">
         <div id="origin-destination" style="display: flex; margin-bottom:10px;">
           <label class="col-md-3" style="text-align:left;align-content: center;">Origin:</label>
-          <input type="text" class="form-control departure"  id="rb_new_origin" list="from" name="newOrigin" value="">
+          <input type="text" class="form-control departure"  id="rb_new_origin" list="from" name="newOrigin" value="" readonly>
           <label class="col-md-2" style="text-align:center;align-content: center;">Destination:</label>
-          <input type="text" class="form-control arrival" id="rb_new_destination" list="to" name="newDestination" value="">
+          <input type="text" class="form-control arrival" id="rb_new_destination" list="to" name="newDestination" value="" readonly>
         </div>
       </div>
       
       <script>
-      $('#rebookModal').on('shown.bs.modal', function () {
-          const airline = document.getElementById('rb_airline').value;
+      // $('#rebookModal').on('shown.bs.modal', function () {
+      //     const airline = document.getElementById('rb_airline').value;
 
-          const origin = document.getElementById('origin-destination');
-          // const destination = document.getElementById('destination');
+      //     const origin = document.getElementById('origin-destination');
+      //     // const destination = document.getElementById('destination');
 
-          if (airline === 'Philippine Airlines') {
-              origin.style.display = 'flex';
-              // destination.style.display = 'block';
-          } else {
-              origin.style.display = 'none';
-              // destination.style.display = 'none';
-          }
-      });
+      //     if (airline === 'Philippine Airlines') {
+      //         origin.style.display = 'flex';
+      //         // destination.style.display = 'block';
+      //     } else {
+      //         origin.style.display = 'none';
+      //         // destination.style.display = 'none';
+      //     }
+      // });
       </script>
       <div class="modal-body">
         <div style="display: flex; margin-bottom:10px;">
@@ -1407,6 +1460,7 @@ if (!empty($requestflights)) {
           <input type="hidden" name="addons_flightid" id="addons_fid">
           <input type="hidden" name="flightNo" id="addons_fno">
           <input type="hidden" name="action" value="addons_flight" id="addons_action">
+          <input type="hidden" name="airline" value="" id="bag_airline">
           <div class="modal-body">
             <div style="display: flex; margin-bottom:10px; margin-top:10px;">
               <label class="col-md-3" style="text-align:left;align-content: center;">Route:</label>
@@ -1417,14 +1471,26 @@ if (!empty($requestflights)) {
           </div>
           <div class="modal-body">
             <div style="display: flex; margin-bottom:10px; margin-top:10px;">
-              <label class="col-md-3" style="text-align:left;align-content: center;">Baggage kg<span style="color:red;">*</span>:</label>
-              <input type="text" class="form-control" value="" name="bag_kg" required>
+              <label class="col-md-3" style="text-align:left;align-content: center;">Existing Baggage::</label>
+              <input type="text" class="form-control" value="" id="bag_og" name="bag_ogkg" readonly>
+              <label class="col-md-3" style="text-align:left;align-content: center;">Max Baggage::</label>
+              <input type="text" class="form-control" value="" id="bag_max" readonly>
             </div>
           </div>
           <div class="modal-body">
             <div style="display: flex; margin-bottom:10px; margin-top:10px;">
+              <label class="col-md-3" style="text-align:left;align-content: center;">Additional Baggage<span style="color:red;">*</span>:</label>
+              <select class="form-control" name="bag_kg" id="bag_kg" required>
+                  <option value="">Select baggage</option>
+              </select>
               <label class="col-md-3" style="text-align:left;align-content: center;">Estimated Price:</label>
               <input type="text" class="form-control" value="" name="bag_price">
+            </div>
+          </div>
+          <div class="modal-body">
+            <div style="display: flex; margin-bottom:10px; margin-top:10px;">
+              <!-- <label class="col-md-3" style="text-align:left;align-content: center;">Additional Baggage<span style="color:red;">*</span>:</label>
+              <input type="text" class="form-control" value="" id="bag_remaining" readonly> -->
             </div>
           </div>     
           <div class="modal-footer">
@@ -1472,6 +1538,24 @@ foreach ($bookings as $b) {
   </div>
 </div>
 <?php } ?>
+<div class="modal fade" id="ReviewSignModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Draw Signature</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body text-center">
+        <canvas id="ReviewCanvas" width="600" height="200" style="border:1px solid #ccc; touch-action:none;"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger btn-mini" id="cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-default btn-mini" id="clear-btn">Clear</button>
+        <button type="button" class="btn btn-primary btn-mini" id="reviewSignature">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 $('#rebookModal').on('show.bs.modal', function (e) {
     let btn = $(e.relatedTarget);
@@ -1484,6 +1568,9 @@ $('#rebookModal').on('show.bs.modal', function (e) {
     $('#rb_date').val(btn.data('date'));
     $('#rb_time').val(btn.data('time'));
     $('#rb_price').val(btn.data('price'));
+    $('#rb_new_origin').val(btn.data('depart'));
+    $('#rb_new_destination').val(btn.data('arrive'));
+
 });
 $('#refundModal').on('show.bs.modal', function (e) {
     let btn = $(e.relatedTarget);
@@ -1506,9 +1593,37 @@ $('#cancelModal').on('show.bs.modal', function (e) {
 $('#addonsModal').on('show.bs.modal', function (e) {
     $('#addons_fid').val($(e.relatedTarget).data('fid'));
     $('#addons_fno').val($(e.relatedTarget).data('fno'));
-    $('#bag_route').val($(e.relatedTarget).data('route'));
+    $('#bag_route').val($(e.relatedTarget).data('routes'));
     $('#bag_passenger').val($(e.relatedTarget).data('guest'));
+    $('#bag_og').val($(e.relatedTarget).data('bag'));
+    $('#bag_airline').val($(e.relatedTarget).data('airline'));
 
+    const btn = $(e.relatedTarget);
+    const airline = btn.data('airline');
+    const existing = parseInt(btn.data('bag')) || 0;
+
+    $('#bag_og').val(existing);
+    $('#bag_airline').val(airline);
+
+    $.getJSON('get_baggage_options', {
+        airline: airline,
+        existing: existing
+    }, function (res) {
+
+        const $select = $('#bag_kg');
+        $select.empty().append('<option value="">Select baggage</option>');
+
+        res.options.forEach(function (kg) {
+            $select.append(
+                `<option value="${kg}">${kg} kg</option>`
+            );
+        });
+
+        // Optional display
+        $('#bag_max').val(res.max + ' kg');
+        // $('#bag_remaining').val(res.remaining + ' kg');
+
+    });
 });
 
 
@@ -1612,17 +1727,69 @@ $('#cancelForm').on('submit', function (e) {
         dataType: 'json',
         success(res) {
             alert(res.message);
+            // location.reload();
+            window.location.href = "dashboard";
+
         }
     });
 });
+ let reviewPad;
+
+  function initSignaturePad() {
+    const reviewcanvas = document.getElementById("ReviewCanvas");
+
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    reviewcanvas.width = reviewcanvas.offsetWidth * ratio;
+    reviewcanvas.height = reviewcanvas.offsetHeight * ratio;
+    reviewcanvas.getContext("2d").scale(ratio, ratio);
+
+    reviewPad = new SignaturePad(reviewcanvas, {
+      backgroundColor: "rgb(255,255,255)",
+      penColor: "black"
+    });
+  }
+
+  $('#ReviewSignModal').on('shown.bs.modal', function () {
+    initSignaturePad();
+  });
+
+  $("#clear-btn").on("click", function () {
+    if (reviewPad) reviewPad.clear();
+  });
+
+  $("#cancel-btn").on("click", function () {
+    $("#ReviewSignModal").modal("hide");
+  });
+
+
+
+// Show modal on Approve click
 $(document).on("click", "#confirmFlight", function () {
-    const flightID = $("#flight-ID").val(); 
-    const employeenum = $("#employeenum").val(); 
+  $("#ReviewSignModal").modal("show");
+});
+
+// Clear the signature
+$(document).on("click", "#clearSignature", function () {
+  reviewPad.clear();
+});
+
+// Submit with signature
+$(document).on("click", "#reviewSignature", function () {
+  const flightID = $("#flight-ID").val(); 
+  const employeenum = $("#employeenum").val(); 
 
     if (!flightID) {
       alert("Flight ID not found.");
       return;
     }
+
+    if (reviewPad.isEmpty()) {
+      alert("Please draw your signature.");
+      return;
+    }
+
+    // Get SVG as a raw XML string
+    const signatureSVG = reviewPad.toSVG();
 
     $.ajax({
       url: "flight_modifier",
@@ -1630,7 +1797,8 @@ $(document).on("click", "#confirmFlight", function () {
       data: {
         action: "approvebooking",
         flightID: flightID,
-        employeenum: employeenum
+        employeenum: employeenum,
+        signature_dh: signatureSVG
       },
       success: function(response) {
         alert("Flight booking confirmed!");
@@ -1643,6 +1811,35 @@ $(document).on("click", "#confirmFlight", function () {
       }
     });
 });
+
+// $(document).on("click", "#confirmFlight", function () {
+//     const flightID = $("#flight-ID").val(); 
+//     const employeenum = $("#employeenum").val(); 
+
+//     if (!flightID) {
+//       alert("Flight ID not found.");
+//       return;
+//     }
+
+//     $.ajax({
+//       url: "flight_modifier",
+//       type: "POST",
+//       data: {
+//         action: "approvebooking",
+//         flightID: flightID,
+//         employeenum: employeenum
+//       },
+//       success: function(response) {
+//         alert("Flight booking confirmed!");
+//         // FLIGHTmodal.style.display = "none";
+//         location.reload();
+//       },
+//       error: function(xhr, status, error) {
+//         console.error("AJAX Error:", error);
+//         alert("An error occurred while approving. Please try again or contact support.");
+//       }
+//     });
+// });
 $(document).on("click", "#denyFlight", function () {
     const flightID = $("#flight-ID").val(); 
     const employeenum = $("#employeenum").val(); 
@@ -1755,4 +1952,39 @@ $(document).on("submit", "#addonsForm", function (e) {
     });
 });
 
+$(function () {
+  let chatVisible = true;
+
+  function updateToggleIcon() {
+    if (chatVisible) {
+      // Chat is visible → show "hide" icon
+      $('#toggleChat').html('<i class="icofont icofont-close-line" style="font-size: 30px;"></i>');
+    } else {
+      // Chat is hidden → show "show chat" icon
+      $('#toggleChat').html('<i class="icofont icofont-speech-comments" style="font-size: 30px;"></i>');
+    }
+  }
+
+  // set initial icon
+  updateToggleIcon();
+
+  $('#toggleChat').on('click', function () {
+    if (chatVisible) {
+      $('#flightChat').hide();
+      $('#flightMain')
+        .removeClass('col-xl-9')
+        .addClass('col-xl-12');
+    } else {
+      $('#flightChat').show();
+      $('#flightMain')
+        .removeClass('col-xl-12')
+        .addClass('col-xl-9');
+    }
+
+    chatVisible = !chatVisible;
+    updateToggleIcon();
+  });
+});
+
 </script>
+

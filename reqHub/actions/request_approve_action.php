@@ -1,6 +1,7 @@
 <?php
 require_once ($reqhub_root . '/includes/auth.php');
-require_once ($reqhub_root . '/database/db.php');
+// require_once ($reqhub_root . '/database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 require_once ($reqhub_root . '/includes/notifications.php');
 require_once ($reqhub_root . '/includes/sms.php');
 
@@ -21,7 +22,7 @@ if (!$request_id) {
     die("Invalid Request");
 }
 
-$pdo         = ReqHubDatabase::getConnection('reqhub');
+$pdo         = Database::getConnection('reqhub');
 $currentUser = getCurrentUser();
 
 $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");

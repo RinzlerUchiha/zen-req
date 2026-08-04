@@ -1,5 +1,5 @@
 <?php
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 // $db = new Dbcon;
 // $con1 = $db->connect();
 $trans = new Transactions;
@@ -33,4 +33,4 @@ foreach ($con1->query("SELECT * FROM tbl201_offset_details WHERE osd_osid=".$os_
 <?php
 }
 
-$con1 = $db->disconnect();
+$con1 = $trans->disconnect();

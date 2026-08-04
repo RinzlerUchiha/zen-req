@@ -20,7 +20,8 @@ try {
 }
 
 try {
-    require_once ($reqhub_root . '/database/db.php');
+    // require_once ($reqhub_root . '/database/db.php');
+    require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
     error_log("chat_fetch.php: db.php included");
 } catch (Exception $e) {
     error_log("ERROR including db.php: " . $e->getMessage());
@@ -44,7 +45,7 @@ if (!$request_id) {
 
 try {
     error_log("chat_fetch.php: Getting database connection");
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     error_log("chat_fetch.php: Got PDO connection");
     
     error_log("chat_fetch.php: Preparing query for request_id: $request_id");

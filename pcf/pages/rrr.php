@@ -19,6 +19,7 @@
 				$pcfapprover = PCF::GetPCFApprover($user_id);
 				// $repl_list = PCF::GetRRR($user_id,$myoutlet);
 				$repl_list = PCF::GetRRR($user_id);
+				
 			?>
             <div class="col-md-9" id="right-sided">
                 <div class="card">

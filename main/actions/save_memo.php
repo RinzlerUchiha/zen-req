@@ -1,5 +1,5 @@
 <?php
-require_once($main_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'User not authenticated']);
@@ -32,7 +32,9 @@ try {
         }
 
         // Upload directory
-        $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Portal/assets/memo/';
+        // $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/Portal/assets/memo/';
+        // $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '\\\\EC2AMAZ-H5988IK\\e-classtngcacademy\\zenhub\\memo\\';
+        $uploadDir = $FILES_DIR . '/memo/';
         $uploadedFiles = [];
 
         // Ensure upload directory exists
@@ -50,14 +52,16 @@ try {
                     continue; // Skip invalid uploads
                 }
 
-                $filename = basename($_FILES['memofile']['name'][$key]);
+                $filename = time().'_'.basename($_FILES['memofile']['name'][$key]);
                 $fileType = mime_content_type($tmpName);
                 $cleanedFilename = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $filename);
                 $filePath = $uploadDir . $cleanedFilename;
 
                 if (in_array($fileType, $allowedTypes)) {
                     if (move_uploaded_file($tmpName, $filePath)) {
-                        $uploadedFiles[] = '/Portal/assets/memo/' . $cleanedFilename;
+                        $uploadedFiles[] = $filePath;
+                        // $uploadedFiles[] = '/Portal/assets/memo/' . $cleanedFilename;
+                        // $uploadedFiles[] = '\\\\EC2AMAZ-H5988IK\\e-classtngcacademy\\zenhub\\memo\\' . $cleanedFilename;
                     } else {
                         echo json_encode(['error' => 'Failed to upload file: ' . $filename]);
                         exit;

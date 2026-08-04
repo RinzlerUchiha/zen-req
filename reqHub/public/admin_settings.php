@@ -1,6 +1,7 @@
 <?php
 require_once(__DIR__ . '/../includes/auth.php');
-require_once(__DIR__ . '/../database/db.php');
+// require_once(__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -14,8 +15,8 @@ if ($currentUser['reqhub_role'] !== 'Admin') {
     die('Access denied: Admin only');
 }
 
-$pdo   = ReqHubDatabase::getConnection('reqhub');
-$hrPdo = ReqHubDatabase::getConnection('hr');
+$pdo   = Database::getConnection('reqhub');
+$hrPdo = Database::getConnection('hr');
 
 // Roles that support system assignment
 $rolesWithSystemAssignment = ['Approver', 'Requestor'];

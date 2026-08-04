@@ -33,7 +33,7 @@ if(isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false) include_on
 // Check if the requested URI exists in the routes array
 if (array_key_exists($uri, $routes)) {
 	// Get the corresponding script file
-	$script = $sr_root.$routes[$uri];
+	$script = $atd_root.$routes[$uri];
 	// print_r($script);
 	
 	// Extract any GET parameters from the URL

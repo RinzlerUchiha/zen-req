@@ -847,7 +847,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 
 		$("#form_sched").submit(function(e){
 			e.preventDefault();
-			$.post("/demo/dtrservicesdemo/actions/schedule.php", 
+			$.post("/dtrservices/actions/schedule.php", 
 			{
 				action: "setsched",
 				workdays: $("#sched_days_list [type=checkbox]:visible:checked").map(function(){return $(this).val();}).get(),
@@ -917,7 +917,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 
 		$("#form_esched").submit(function(e){
 			e.preventDefault();
-			$.post("/demo/dtrservicesdemo/actions/schedule.php", 
+			$.post("/dtrservices/actions/schedule.php", 
 			{
 				action: "setsched",
 				id: $("#eschedid").val(),
@@ -1008,7 +1008,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 			}
 
 			// loader1();
-			$.post("/demo/dtrservicesdemo/actions/schedule.php",
+			$.post("/dtrservices/actions/schedule.php",
 			{
 				action: 'setbreak',
 				id: $("#brid").val(),
@@ -1070,16 +1070,16 @@ if (!empty($_SESSION['fltr_ym'])) {
 		});
 
 
-		$.post("/demo/dtrservicesdemo/manpower/mp_data/load/", { load: "notify" }, function(data){
+		$.post("/dtrservices/manpower/mp_data/load/", { load: "notify" }, function(data){
 			let obj = JSON.parse(data);
 			for(y in obj['pending']){
 				cnt = parseInt(obj['pending'][y]) + parseInt(obj['approved'][y] ? obj['approved'][y] : 0) + parseInt(obj['req'][y] ? obj['req'][y] : 0);
-				$("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").html("");
+				$("a[href='/dtrservices/manpower/"+y+"'] p span").html("");
 				if(cnt > 0){
-					if($("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").length > 0){
-						$("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
+					if($("a[href='/dtrservices/manpower/"+y+"'] p span").length > 0){
+						$("a[href='/dtrservices/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
 					}else{
-						$("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
+						$("a[href='/dtrservices/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
 					}
 				}
 			}
@@ -1088,7 +1088,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 
 	function getsched(type, yval = '100%', fun1 = '') {
 		$("#div_" + type).html('Loading...');
-		$.post("/demo/dtrservicesdemo/manpower/sched_data/load/",
+		$.post("/dtrservices/manpower/sched_data/load/",
 		{
 			get: type,
 			ym: $("#fltr_y").val() + "-" + $("#fltr_m").val()
@@ -1241,7 +1241,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 	function getbr() {
 
 		$("#div_break").html("Loading...");
-		$.post("/demo/dtrservicesdemo/manpower/sched_data/load/",{},function(data){
+		$.post("/dtrservices/manpower/sched_data/load/",{},function(data){
 			$("#div_break").html(data);
 
 			var tbl = $('#tbl_br').DataTable({
@@ -1257,7 +1257,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 
 	function setrd(e1) {
 		if(confirm("Mark as Rest Day?")){
-			$.post("/demo/dtrservicesdemo/actions/schedule.php", { action: 'setrd', emp: $(e1).data('emp'), dt: $(e1).data('dt') }, function(res){
+			$.post("/dtrservices/actions/schedule.php", { action: 'setrd', emp: $(e1).data('emp'), dt: $(e1).data('dt') }, function(res){
 				if(res == 1){
 					$(e1).closest("td").find(".no-rd").addClass('d-none');
 					$(e1).closest("td").find(".has-rd").removeClass('d-none');
@@ -1272,7 +1272,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 
 	function delrd(e1) {
 		if(confirm("Remove Rest Day?")){
-			$.post("/demo/dtrservicesdemo/actions/schedule.php", { action: 'delrd', emp: $(e1).data('emp'), dt: $(e1).data('dt') }, function(res){
+			$.post("/dtrservices/actions/schedule.php", { action: 'delrd', emp: $(e1).data('emp'), dt: $(e1).data('dt') }, function(res){
 				if(res == 1){
 					$(e1).closest("td").find(".has-rd").addClass('d-none');
 					$(e1).closest("td").find(".no-rd").removeClass('d-none');
@@ -1287,7 +1287,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 
 	function unlock(id1, type1) {
 		if(confirm("Unlock this record?")){
-			$.post("/demo/dtrservicesdemo/actions/schedule.php", { action: 'unlock', id: id1 }, function(res){
+			$.post("/dtrservices/actions/schedule.php", { action: 'unlock', id: id1 }, function(res){
 				if(res == 1){
 					alert("Record is unlocked");
 					getsched(type1, '300px');
@@ -1305,7 +1305,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 				data.push(this.value.split(","));
 			});
 
-			$.post("/demo/dtrservicesdemo/actions/schedule.php", { action: 'unlock', data: JSON.stringify(data) }, function(res){
+			$.post("/dtrservices/actions/schedule.php", { action: 'unlock', data: JSON.stringify(data) }, function(res){
 				if(res == 1){
 					alert("Record is unlocked");
 					getsched('shift', '300px');
@@ -1318,7 +1318,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 
 	function removesched(id1, type1) {
 		if(confirm("Remove schedule?")){
-			$.post("/demo/dtrservicesdemo/actions/schedule.php", { action: 'delsched', id: id1 }, function(res){
+			$.post("/dtrservices/actions/schedule.php", { action: 'delsched', id: id1 }, function(res){
 				if(res == 1){
 					alert("Schedule removed");
 					getsched(type1, '300px');

@@ -64,7 +64,8 @@ fetch('govern')
                             const match = ad.image.match(imagePattern);
                             if (match) ad.image = match[1];
                         }
-                        ad.image = ad.image.replace('../announcement', 'https://teamtngc.com/hris2/pages/announcement');
+                        // ad.image = ad.image.replace('../announcement', 'https://teamtngc.com/hris2/pages/announcement');
+                        ad.image = ad.image.replace('../announcement', '/zen/files/announcements');
                         adItem.innerHTML = `
                             <img src="${ad.image}" alt="${ad.title}" class="ad-image" onclick="openImageOverlay('${ad.image}')">
                             <a href="" class="ad-title">${ad.title}</a>

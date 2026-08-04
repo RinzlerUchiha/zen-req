@@ -6,8 +6,8 @@
      </div>
      <div class="basic-info">
       <?php
-         require_once($sr_root . "/db/db.php");
-         require_once($sr_root . "/pages/db/core.php");
+         require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+         require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
          
          if (!isset($_SESSION['user_id'])) {
              echo json_encode(['error' => 'User not authenticated']);

@@ -121,16 +121,16 @@ if (!empty($_SESSION['fltr_ym'])) {
 		});
 		getmp();
 
-		$.post("/demo/dtrservicesdemo/manpower/mp_data/load/", { load: "notify" }, function(data){
+		$.post("/dtrservices/manpower/mp_data/load/", { load: "notify" }, function(data){
 			let obj = JSON.parse(data);
 			for(y in obj['pending']){
 				cnt = parseInt(obj['pending'][y]) + parseInt(obj['approved'][y] ? obj['approved'][y] : 0) + parseInt(obj['req'][y] ? obj['req'][y] : 0);
-				$("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").html("");
+				$("a[href='/dtrservices/manpower/"+y+"'] p span").html("");
 				if(cnt > 0){
-					if($("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").length > 0){
-						$("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
+					if($("a[href='/dtrservices/manpower/"+y+"'] p span").length > 0){
+						$("a[href='/dtrservices/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
 					}else{
-						$("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
+						$("a[href='/dtrservices/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
 					}
 				}
 			}
@@ -140,7 +140,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 	function getmp() {
 		if(loadmpcal && loadmpcal.readyState != 4){loadmpcal.abort();}
 		$("#mpdiv #div_cal").html('Loading...');
-		loadmpcal = $.post("/demo/dtrservicesdemo/manpower/mp/load/",
+		loadmpcal = $.post("/dtrservices/manpower/mp/load/",
 		{
 			ym: $("#fltr_y").val() + "-" + $("#fltr_m").val()
 		},
@@ -152,7 +152,7 @@ if (!empty($_SESSION['fltr_ym'])) {
 <div class="card card-lightblue card-outline">
 	<div class="card-body">
 		<div class="ratio ratio-1x1">
-			<iframe frameborder="0" src="/demo/dtrservicesdemo/views/manpower/sales_directory.php?i=<?=$_SESSION['DEMOHR_UID']?>&e=<?=$user_empno?>" style="height: 70vh; width: 100%;"></iframe>
+			<iframe frameborder="0" src="/dtrservices/views/manpower/sales_directory.php?i=<?=$_SESSION[SESSION_KEY]?>&e=<?=$user_empno?>" style="height: 70vh; width: 100%;"></iframe>
 		</div>
 	</div>
 </div>

@@ -2583,21 +2583,21 @@ function ecfMsg($id)
 				LOWER(d.pi_sex) AS checker_sex,
 				IF(d.pi_mobileno != '' AND d.pi_mobileno IS NOT NULL, d.pi_mobileno, d.pi_cmobileno) AS checker_mobileno
 
-			FROM demo_db_ecf2.tbl_request a
-			JOIN demo_db_ecf2.tbl_req_category b ON b.catstat_ecfid= a.ecf_id AND b.catstat_stat = 'pending'
-			LEFT JOIN demo_tngc_hrd2.tbl201_basicinfo c ON c.bi_empno = b.catstat_emp AND c.datastat = 'current'
-			LEFT JOIN demo_tngc_hrd2.tbl201_persinfo d ON d.pi_empno = c.bi_empno AND d.datastat = 'current'
-			LEFT JOIN demo_db_ecf2.tbl_category e ON e.cat_id = b.catstat_cat
+			FROM db_ecf2.tbl_request a
+			JOIN db_ecf2.tbl_req_category b ON b.catstat_ecfid= a.ecf_id AND b.catstat_stat = 'pending'
+			LEFT JOIN tngc_hrd2.tbl201_basicinfo c ON c.bi_empno = b.catstat_emp AND c.datastat = 'current'
+			LEFT JOIN tngc_hrd2.tbl201_persinfo d ON d.pi_empno = c.bi_empno AND d.datastat = 'current'
+			LEFT JOIN db_ecf2.tbl_category e ON e.cat_id = b.catstat_cat
 			/*JOIN (SELECT MAX(e.cat_priority) AS cat_priority
-				FROM demo_db_ecf2.tbl_request a
-				JOIN demo_db_ecf2.tbl_req_category b ON b.catstat_ecfid= a.ecf_id AND b.catstat_stat IN ('cleared', 'uncleared')
-				JOIN demo_db_ecf2.tbl_category e ON e.cat_id = b.catstat_cat
+				FROM db_ecf2.tbl_request a
+				JOIN db_ecf2.tbl_req_category b ON b.catstat_ecfid= a.ecf_id AND b.catstat_stat IN ('cleared', 'uncleared')
+				JOIN db_ecf2.tbl_category e ON e.cat_id = b.catstat_cat
 				WHERE a.ecf_id = '$id'
 			) f ON f.cat_priority != e.cat_priority*/
 			JOIN (SELECT MIN(e.cat_priority) AS cat_priority
-				FROM demo_db_ecf2.tbl_request a
-				JOIN demo_db_ecf2.tbl_req_category b ON b.catstat_ecfid= a.ecf_id AND b.catstat_stat = 'pending'
-				JOIN demo_db_ecf2.tbl_category e ON e.cat_id = b.catstat_cat
+				FROM db_ecf2.tbl_request a
+				JOIN db_ecf2.tbl_req_category b ON b.catstat_ecfid= a.ecf_id AND b.catstat_stat = 'pending'
+				JOIN db_ecf2.tbl_category e ON e.cat_id = b.catstat_cat
 				WHERE (b.catstat_sign='' OR b.catstat_sign IS NULL) AND a.ecf_id = '$id'
 			) g ON g.cat_priority = e.cat_priority
 

@@ -30,9 +30,9 @@
                 </div> -->
                 <div class="card-body">
 					<?php
-					require_once($com_root."/db/database.php"); 
-					require_once($com_root."/db/core.php"); 
-					require_once($com_root."/db/mysqlhelper.php");
+					require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+					require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+					require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 
 					$hr_pdo = HRDatabase::connect();
 					$crftoken = $_SESSION['csrf_token1'] = getToken2(50);
@@ -64,9 +64,9 @@
 					  echo $txt1;
 					}else if(isset($_POST['rnrarticle'])){
 
-					  require_once($com_root."/db/database.php"); 
-					  require_once($com_root."/db/core.php"); 
-					  require_once($com_root."/db/mysqlhelper.php");
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 					  $hr_pdo = HRDatabase::connect();
 					  $crftoken = $_SESSION['csrf_token1'] = getToken2(50);
 
@@ -83,9 +83,9 @@
 					  echo $txt1;
 					}else if(isset($_POST['rnrcontent'])){
 
-					  require_once($com_root."/db/database.php"); 
-					  require_once($com_root."/db/core.php"); 
-					  require_once($com_root."/db/mysqlhelper.php");
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 					  $hr_pdo = HRDatabase::connect();
 					  $crftoken = $_SESSION['csrf_token1'] = getToken2(50);
 
@@ -99,9 +99,9 @@
 
 					  echo $txt1;
 					}else{
-					  require_once($com_root."/db/database.php"); 
-					  require_once($com_root."/db/core.php"); 
-					  require_once($com_root."/db/mysqlhelper.php"); 
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+					  require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php"); 
 					    // $pdo = Database::connect();
 					  $hr_pdo = HRDatabase::connect();
 					  $crftoken = $_SESSION['csrf_token1'] = getToken2(50);

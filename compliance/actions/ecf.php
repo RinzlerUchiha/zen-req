@@ -1,7 +1,7 @@
 <?php
-require "../db/core.php";
-require "../db/mysqlhelper.php";
-require '../db/database.php';
+require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/database.php');
+require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/core.php');
+require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/mysqlhelper.php'); 
 
 include_once($_SERVER['DOCUMENT_ROOT'] . "/sms/sms.php");
 

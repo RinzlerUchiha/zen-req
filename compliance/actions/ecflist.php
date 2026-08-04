@@ -1,7 +1,7 @@
 <?php
-require_once($com_root."/db/database.php"); 
-require_once($com_root."/db/core.php"); 
-require_once($com_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 
 date_default_timezone_set('Asia/Manila');
 $hr_pdo = HRDatabase::connect();
@@ -36,9 +36,9 @@ if(isset($_POST["getecf"])){
           cat_priority,
           catstat_stat
 
-      FROM demo_db_ecf2.tbl_request 
-      LEFT JOIN demo_db_ecf2.tbl_req_category a ON catstat_ecfid=ecf_id 
-      LEFT JOIN demo_db_ecf2.tbl_category b ON cat_id=catstat_cat 
+      FROM db_ecf2.tbl_request 
+      LEFT JOIN db_ecf2.tbl_req_category a ON catstat_ecfid=ecf_id 
+      LEFT JOIN db_ecf2.tbl_category b ON cat_id=catstat_cat 
       WHERE ecf_status='$stat' AND (catstat_emp='$user_empno' OR FIND_IN_SET('$user_empno', cat_checker) > 0) AND (NOT(catstat_sign='' OR catstat_sign IS NULL) OR catstat_stat!='pending') 
       GROUP BY ecf_id 
       ORDER BY ecf_lastday ASC, catstat_dtchecked DESC";
@@ -63,9 +63,9 @@ if(isset($_POST["getecf"])){
           cat_priority,
           catstat_stat
 
-      FROM demo_db_ecf2.tbl_request 
-      LEFT JOIN demo_db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
-      LEFT JOIN demo_db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
+      FROM db_ecf2.tbl_request 
+      LEFT JOIN db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
+      LEFT JOIN db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
       WHERE ecf_status='$stat' AND ( ecf_reqby='$user_empno' OR a.catstat_emp='$user_empno' OR FIND_IN_SET('$user_empno', b.cat_checker) > 0 ) AND a.catstat_stat='cleared' 
       GROUP BY ecf_id 
       ORDER BY ecf_lastday ASC";
@@ -91,9 +91,9 @@ if(isset($_POST["getecf"])){
           cat_priority,
           catstat_stat
 
-      FROM demo_db_ecf2.tbl_request 
-      LEFT JOIN demo_db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
-      LEFT JOIN demo_db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
+      FROM db_ecf2.tbl_request 
+      LEFT JOIN db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
+      LEFT JOIN db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
       WHERE ecf_status='$stat' AND a.catstat_stat='cleared' 
       GROUP BY ecf_id 
       ORDER BY ecf_lastday ASC";
@@ -118,9 +118,9 @@ if(isset($_POST["getecf"])){
           ecf_dtcleared,
           b.cat_priority,
           a.catstat_stat
-      FROM demo_db_ecf2.tbl_request 
-      LEFT JOIN demo_db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
-      LEFT JOIN demo_db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
+      FROM db_ecf2.tbl_request 
+      LEFT JOIN db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
+      LEFT JOIN db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
       WHERE ecf_status='$stat' AND ( ecf_reqby='$user_empno' OR ( (a.catstat_emp='$user_empno' OR FIND_IN_SET('$user_empno', b.cat_checker) > 0) AND (a.catstat_sign='' OR a.catstat_sign IS NULL) AND a.catstat_stat='pending' ) ) 
       GROUP BY ecf_id 
       ORDER BY ecf_lastday ASC";
@@ -145,9 +145,9 @@ if(isset($_POST["getecf"])){
           ecf_dtcleared,
           b.cat_priority,
           a.catstat_stat
-      FROM demo_db_ecf2.tbl_request 
-      LEFT JOIN demo_db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
-      LEFT JOIN demo_db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
+      FROM db_ecf2.tbl_request 
+      LEFT JOIN db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
+      LEFT JOIN db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
       WHERE ecf_status='$stat' 
       GROUP BY ecf_id 
       ORDER BY ecf_lastday ASC";
@@ -174,8 +174,8 @@ if(isset($_POST["getecf"])){
   }
 
   $q2 = $hr_pdo->prepare("SELECT c.catstat_ecfid, d.cat_priority
-            FROM demo_db_ecf2.tbl_req_category c 
-              LEFT JOIN demo_db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
+            FROM db_ecf2.tbl_req_category c 
+              LEFT JOIN db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
               WHERE FIND_IN_SET(c.catstat_ecfid, ?) > 0");
   // $q2->execute([ implode(",", array_column($r1, "ecf_id")) ]);
 
@@ -187,8 +187,8 @@ if(isset($_POST["getecf"])){
   $req_cat_res = $q2->fetchall(PDO::FETCH_ASSOC);
 
   $q2 = $hr_pdo->prepare("SELECT c.catstat_ecfid, d.cat_priority
-            FROM demo_db_ecf2.tbl_req_category c 
-              LEFT JOIN demo_db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
+            FROM db_ecf2.tbl_req_category c 
+              LEFT JOIN db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
               WHERE FIND_IN_SET(c.catstat_ecfid, ?) > 0 AND (NOT(c.catstat_sign='' OR c.catstat_sign IS NULL) OR c.catstat_stat = 'uncleared')");
   $q2->execute([ implode(",", array_column($r1, "ecf_id")) ]);
   $req_cat_clr_res = $q2->fetchall(PDO::FETCH_ASSOC);
@@ -199,11 +199,11 @@ if(isset($_POST["getecf"])){
     $cnthipri=0;
     $cnthipriclr=0;
 
-    // foreach ($hr_pdo->query("SELECT COUNT(catstat_ecfid) as cnt1 FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$r["ecf_id"]."' AND cat_priority<'".$r["cat_priority"]."'") as $rcnt1) {
+    // foreach ($hr_pdo->query("SELECT COUNT(catstat_ecfid) as cnt1 FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$r["ecf_id"]."' AND cat_priority<'".$r["cat_priority"]."'") as $rcnt1) {
     //  $cnthipri=$rcnt1["cnt1"];
     // }
 
-    // foreach ($hr_pdo->query("SELECT COUNT(catstat_ecfid) as cnt1 FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$r["ecf_id"]."' AND cat_priority<'".$r["cat_priority"]."' AND NOT(catstat_sign='' OR catstat_sign IS NULL)") as $rcnt2) {
+    // foreach ($hr_pdo->query("SELECT COUNT(catstat_ecfid) as cnt1 FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$r["ecf_id"]."' AND cat_priority<'".$r["cat_priority"]."' AND NOT(catstat_sign='' OR catstat_sign IS NULL)") as $rcnt2) {
     //  $cnthipriclr=$rcnt2["cnt1"];
     // }
     if($_POST["getecf"]=="pending"){

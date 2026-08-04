@@ -1,5 +1,5 @@
 <?php
-require_once($sr_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id'])) {
@@ -25,8 +25,15 @@ try {
             $imageData = str_replace(' ', '+', $imageData);
             $decodedImage = base64_decode($imageData);
 
-            $fileName = 'assets/announcement/post_' . uniqid() . '.png';
-            file_put_contents($fileName, $decodedImage);
+            // $fileName = 'assets/announcement/post_' . uniqid() . '.png';
+            // $fileName = '\\\\EC2AMAZ-H5988IK\\e-classtngcacademy\\zenhub\\announcements\\post_' . uniqid() . '.png';
+
+            $fileName = 'post_' . uniqid() . '.png';
+            $tmpPath = '/tmp/announcement/' . $fileName;
+            if(file_put_contents($tmpPath, $decodedImage)){
+                copy($tmpPath, $FILES_DIR . '/announcements/' . $fileName);
+                unlink($tmpPath);
+            }
 
             $port_db->beginTransaction(); // Start transaction
 

@@ -14,6 +14,211 @@ $pcfacc = PCF::GetPCFAccs($user_id);
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.6/dist/signature_pad.umd.min.js"></script>
+    <style>
+      * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f4f7fc;
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .page-wrapper {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .page-body {
+            padding: 0.75rem;
+        }
+
+        .my-div {
+            background: #fff;
+            /*border-radius: 20px;*/
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            width: 280px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            /*margin-right: 10px;*/
+        }
+
+        @media (max-width: 768px) {
+            .row[style*="display: flex"] {
+                flex-direction: column !important;
+            }
+            .my-div {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            #center-sided {
+                width: 100% !important;
+            }
+        }
+
+        #center-sided {
+            flex: 1;
+            min-width: 0; 
+            /*max-width: 59% !important;*/
+            width: calc(100% - 300px);
+        }
+
+        .card {
+            border: none;
+           /*border-radius: 28px;*/
+            background: #ffffff;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .card-block {
+            /*padding: 1.2rem;*/
+            overflow-y: auto;
+            height: auto;
+            max-height: 85vh;
+        }
+
+        .first {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: #f9fafc;
+            /*padding: 12px 16px;*/
+            border-radius: 40px;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 1.2rem;
+           /*border-radius: 20px;*/
+        }
+
+        .table {
+            min-width: 900px;
+            width: 100%;
+            font-size: 0.85rem;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 640px) {
+            .table {
+                font-size: 0.75rem;
+                min-width: 780px;
+            }
+            .btn-mini {
+                padding: 0.2rem 0.5rem;
+                font-size: 0.7rem;
+            }
+        }
+
+        .table-container > div[style*="border: 1px solid #ccc"] {
+            float: none !important;
+            margin: 20px 0 0 0 !important;
+            width: 100% !important;
+            overflow-x: auto;
+        }
+
+        .table-container > div table {
+            min-width: 400px;
+        }
+
+        .fourth {
+            margin-top: 25px;
+            border-top: 1px solid #e9ecef;
+            padding-top: 20px;
+        }
+        /*.sign-card {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            background: #fef9e6;
+            padding: 15px 20px;
+            border-radius: 48px;
+        }*/
+        .app-detail, .app-sign {
+            flex: 1 1 auto;
+        }
+        @media (max-width: 560px) {
+            .sign-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .sign-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .sign-modal .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 32px;
+            max-width: 90%;
+            width: 460px;
+            text-align: center;
+        }
+        canvas {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            background: #fff;
+            width: 100%;
+            height: auto;
+        }
+        
+        .form-control-sm-custom {
+            width: auto;
+            min-width: 140px;
+        }
+        .coh-cards {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .widget-card {
+            background: #f2f6fd;
+            border-radius: 24px;
+            padding: 8px 15px;
+            margin: 8px 0;
+        }
+        #error, #errormess {
+            display: none;
+        }
+        .undo-btn, .cancel-btn {
+            margin: 0 2px;
+        }
+        .attachment-card img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin: 4px;
+            cursor: pointer;
+        }
+        .right-side {
+            display: none;
+        }
+        .clickable-row {
+            cursor: pointer;
+        }
+    </style>
 <div class="page-wrapper">
     <div class="page-body">
         <div class="row" style="display: flex;">
@@ -157,6 +362,9 @@ $pcfacc = PCF::GetPCFAccs($user_id);
                                 $row = '';
                                 if ($d['dis_status'] == 'cancelled') {
                                   $row .= '<tr class="clickable-row" data-id="' . $d['dis_no'] . '" data-stat="' . $d['dis_status'] . '">';
+                                  if (!empty($attachment)) {
+                                  $row .= '<td style="width: 20px;padding: 5px;align-content: center;"><i class="fa fa-file-photo-o" style="font-size:14px;margin-left:5px;"></i></td>';
+                                  }
                                   $row .= '<td id="a"><input type="checkbox" name="" checked></td>';
                                   $row .= '<td id="a" class="entry-id" style="display:none;" data-field="dis_no">' . $d['dis_no'] . '</td>';
                                   $row .= '<td id="a"><input type="date" class="date-input" data-field="dis_date" id="datePCF" value="' . $d['dis_date'] . '" disabled required></td>';
@@ -171,12 +379,15 @@ $pcfacc = PCF::GetPCFAccs($user_id);
                                   $row .= '<td id="total" class="num" data-field="dis_total">' . number_format($d['dis_total'], 2) . '</td>';
                                   $row .= '<td><a href="#" class="btn btn-outline-success btn-mini undo-btn" data-id="' . $d['dis_no'] . '">';
                                   $row .= '<i class="fa fa-undo"></i></a>';
-                                  if (!empty($attachment)) {
-                                    $row .= '<i class="icon-paper-clip" style="font-size:14px;margin-left:5px;"></i>';
-                                  }
+                                  // if (!empty($attachment)) {
+                                  //   $row .= '<i class="icon-paper-clip" style="font-size:14px;margin-left:5px;"></i>';
+                                  // }
                                   $row .= '</td></tr>';
                                 } else {
                                   $row .= '<tr class="clickable-row" data-id="' . $d['dis_no'] . '" data-stat="' . $d['dis_status'] . '">';
+                                  if (!empty($attachment)) {
+                                  $row .= '<td style="width: 20px;padding: 5px;align-content: center;"><i class="fa fa-file-photo-o" style="font-size:14px;margin-left:5px;"></i></td>';
+                                  }
                                   $row .= '<td id="a"><input type="checkbox" name="" checked></td>';
                                   $row .= '<td id="a" class="entry-id" style="display:none;" data-field="dis_no">' . $d['dis_no'] . '</td>';
                                   $row .= '<td id="a"><input type="date" class="date-input" data-field="dis_date" id="datePCF" value="' . $d['dis_date'] . '"></td>';
@@ -190,9 +401,7 @@ $pcfacc = PCF::GetPCFAccs($user_id);
                                   $row .= '<td id="n" contenteditable data-field="dis_misc">' . number_format($d['dis_misc'], 2) . '</td>';
                                   $row .= '<td id="total" class="num" data-field="dis_total">' . number_format($d['dis_total'], 2) . '</td>';
                                   $row .= '<td><a href="#" class="btn btn-outline-danger btn-mini" data-toggle="modal" data-target="#cancel' . $d['dis_no'] . '" data-id="' . $d['dis_no'] . '"><i class="ion-close"></i></a></td>';
-                                  if (!empty($attachment)) {
-                                  $row .= '<td style="width: 20px;padding: 5px;align-content: center;"><i class="fa fa-file-photo-o" style="font-size:14px;margin-left:5px;"></i></td>';
-                                  }
+                                  
                                   $row .= '</tr>';
                                   $row .= '<div class="modal fade" id="cancel' . $d['dis_no'] . '" tabindex="-1" role="dialog">
                                               <div class="modal-dialog modal-sm" role="document">
@@ -216,7 +425,7 @@ $pcfacc = PCF::GetPCFAccs($user_id);
                                                       </div>
                                                       <div class="modal-footer">
                                                           <button type="button" class="btn btn-danger waves-effect btn-mini " data-dismiss="modal">cancel</button>
-                                                          <button type="button" class="btn btn-primary waves-effect btn-mini  cancel-btn" data-dismiss="modal">save</button>
+                                                          <button type="button" class="btn btn-primary waves-effect btn-mini cancel-btn" data-dismiss="modal">save</button>
                                                       </div>
                                                   </div>
                                               </div>
@@ -233,6 +442,7 @@ $pcfacc = PCF::GetPCFAccs($user_id);
                             <table class="table table-striped table-bordered" id="mytables">
                                 <thead>
                                     <tr>
+                                        <th></th>
                                         <th id="a"><input type="checkbox" id="checkAll"checked></th>
                                         <th id="a">Date</th>
                                         <th id="a">PCV#</th>
@@ -510,11 +720,11 @@ $pcfacc = PCF::GetPCFAccs($user_id);
                               <input type="hidden" name="disburNum" value="<?= $at['disbur_no'] ?>">
                             <div style="display: flex; margin-bottom: 5px; width: 95%;">
                                 <p style="width: 70px; margin-right: 5px;">PCV | OR</p>
-                                <input type="file" name="attachment[]" class="form-control" multiple accept="image/*">
+                                <input type="file" name="attachment[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.jfif">
                             </div>
                             <div id="proofApproval" style="display: none; width: 95%;">
                                 <p style="width: 70px; margin-right: 5px;">Approval</p>
-                                <input type="file" name="screenshot[]" class="form-control" multiple accept="image/*" required="">
+                                <input type="file" name="screenshot[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.jfif" required="">
                             </div>
                             <div style="text-align: right; width: 95%;">
                                 <button class="btn btn-primary btn-mini" id="saveFile">Save</button>
@@ -561,11 +771,11 @@ $pcfacc = PCF::GetPCFAccs($user_id);
                             <input type="hidden" name="disbur_no" value="<?= $disbNo ?>">
                             <div style="display: flex; margin-bottom: 5px; width: 95%;">
                                 <p style="width: 70px; margin-right: 5px;">PCV | OR</p>
-                                <input type="file" name="attachment[]" class="form-control" multiple accept="image/*">
+                                <input type="file" name="attachment[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.jfif">
                             </div>
                             <div id="proofApproval" style="display: none; width: 95%;">
                                 <p style="width: 70px; margin-right: 5px;">Approval</p>
-                                <input type="file" name="screenshot[]" class="form-control" multiple accept="image/*" required="">
+                                <input type="file" name="screenshot[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.jfif" required="">
                             </div>
                             <div style="text-align: right; width: 95%;">
                                 <button class="btn btn-primary btn-mini" id="saveFile">Save</button>
@@ -650,6 +860,49 @@ $(document).on('click', '.sendMessage', function() {
         }
     });
 });
+// $(document).on("click", ".cancel-btn", function (e) {
+//     e.preventDefault();
+
+//     let $modal = $(this).closest('.modal'); 
+//     let disNo = $modal.attr("id").replace("cancel", ""); 
+//     let reason = $modal.find("select[name='reason']").val();
+
+//     // Optional: Check if a reason was selected
+//     if (reason === "Select Reason") {
+//         alert("Please select a reason.");
+//         return;
+//     }
+
+//     let $row = $('a[data-target="#' + $modal.attr('id') + '"]').closest('tr');
+
+//     $.ajax({
+//         url: "cancel_row", 
+//         type: "POST",
+//         data: {
+//             dis_no: disNo,
+//             status: "cancelled",
+//             reason: reason
+//         },
+//         success: function (response) {
+//             if (response == "success") {
+//                 $row.attr("data-stat", "cancelled");
+//                 $row.find("td[data-field='dis_payee']").html('<span style="color: red;">Cancelled</span>');
+//                 $row.find(".cancel-btn").remove();
+//                 $row.find("td").removeAttr("contenteditable");
+//                 $row.find("input[type='checkbox']").prop("checked", false).prop("disabled", true);
+//                 $row.find("input[type='date']").prop("disabled", true);
+//                 updateFooterTotals();
+//                 location.reload();
+//             } else {
+//                 alert("Failed to update status.");
+//                 location.reload();
+//             }
+//         },
+//         error: function () {
+//             alert("Error in AJAX request.");
+//         }
+//     });
+// });
 $(document).on("click", ".cancel-btn", function (e) {
     e.preventDefault();
 
@@ -657,14 +910,20 @@ $(document).on("click", ".cancel-btn", function (e) {
     let disNo = $modal.attr("id").replace("cancel", ""); 
     let reason = $modal.find("select[name='reason']").val();
 
-    // Optional: Check if a reason was selected
     if (reason === "Select Reason") {
         alert("Please select a reason.");
         return;
     }
 
-    // Find the table row (assuming it still exists in DOM)
     let $row = $('a[data-target="#' + $modal.attr('id') + '"]').closest('tr');
+    
+    let pcvValue = $row.find("td[data-field='dis_pcv']").text().trim();
+    let dateValue = $row.find("td[data-field='dis_date']").text().trim();
+    
+    if (pcvValue !== "" && dateValue !== "") {
+        alert("Cannot cancel this entry because it already has PCV and Date values.");
+        return;
+    }
 
     $.ajax({
         url: "cancel_row", 
@@ -672,7 +931,8 @@ $(document).on("click", ".cancel-btn", function (e) {
         data: {
             dis_no: disNo,
             status: "cancelled",
-            reason: reason
+            reason: reason,
+            check_pcv_date: "true"
         },
         success: function (response) {
             if (response == "success") {
@@ -684,6 +944,8 @@ $(document).on("click", ".cancel-btn", function (e) {
                 $row.find("input[type='date']").prop("disabled", true);
                 updateFooterTotals();
                 location.reload();
+            } else if (response == "pcv_date_not_empty") {
+                alert("Cannot cancel: PCV and Date fields are already filled.");
             } else {
                 alert("Failed to update status.");
                 location.reload();

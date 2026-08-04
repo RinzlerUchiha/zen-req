@@ -59,10 +59,10 @@ p {
 }
 
 
-.media-left {
-  /*padding-right: 20px; */
+/*.media-left {
+  padding-right: 20px; 
   margin-right: 40px;
-}
+}*/
 
 .blockquote {
   border-left: .25rem solid #eceeef;
@@ -193,14 +193,14 @@ Card-Layout css start
   margin-right: 10px;
 }
 
-/* Fixed position sidebar with vertical scroll enabled */
 #left-side {
   position: fixed;
   top: 0;
   left: 0;
-  height: 100vh; /* Full viewport height */
+  height: 100vh; 
+  height: auto; 
   width: 100%;
-  overflow-y: hidden; /* Enable vertical scrolling */
+  overflow-y: hidden;
   background-color: transparent;
 }
 
@@ -11008,33 +11008,63 @@ table.footable-paging-center > tfoot > tr.footable-paging > td {
 
 .users-main {
   height: 100%;
-  width: 300px;
+  width: 350px;
   position: fixed;
   border-radius: 0px; }
 
-.userlist-box {
+/*.userlist-box {
   cursor: pointer;
-  border-bottom: 1px solid #efefef; }
-  .userlist-box .media-left {
-    padding-right: 0px; }
+  border-bottom: 1px solid #efefef; 
+}*/
+
+.userlist-box .media-left {
+    padding-right: 0px; 
+}
 
 .users-main .media {
   display: flex;
-  align-items: center;
-  padding-top: 0;
-  padding-bottom: 10px;
+  flex-wrap: wrap;              /* allow items to wrap */
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px 15px;
   margin-bottom: 10px;
-  padding-left: 10px;
-  padding-right: 20px;
-  position: relative;
-  width: 50px;
-  font-size:11px!important }
-.users-main .media a{
-  font-size:11px!important }
+  width: 100%;                 /* full width */
+  gap: 10px;                   /* spacing between items */
+}
+
+.users-main .media a {
+  width: 23%;                  /* 4 items per row (with spacing) */
+  text-align: center;
+  text-decoration: none;
+  font-size: 11px !important;
+}
+
+.media-left {
+  margin: 0;                   /* remove large spacing */
+}
+
+.userlist-box {
+  border-bottom: 1px solid #efefef;
+  padding-bottom: 10px;
+}
+
+.userlist-box img {
+  display: block;
+  margin: 0 auto 5px;
+  transition: transform 0.2s ease;
+}
+
+/* Hover effect */
+.userlist-box a:hover img {
+  transform: scale(1.1);
+}
+
+
 .user-box .media-object {
   height: 45px;
   width: 45px;
-  display: inline-block; }
+  display: inline-block; 
+}
 
 .chat-menu-content,
 .chat-menu-reply {

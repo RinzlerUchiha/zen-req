@@ -16,9 +16,9 @@
 		// include('../db/mysqlhelper.php'); 
 
 		require_once($pa_root."/actions/get_person.php");
-		require_once($pa_root."/db/database.php");
-		require_once($pa_root."/db/core.php");
-		require_once($pa_root."/db/mysqlhelper.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 		// $pdo = Database::connect();
 		$hr_pdo = HRDatabase::connect();
 
@@ -513,9 +513,9 @@ echo json_encode($arrset);
 exit;
 
 		require_once($pa_root."/actions/get_person.php");
-		require_once($pa_root."/db/database.php");
-		require_once($pa_root."/db/core.php");
-		require_once($pa_root."/db/mysqlhelper.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 		// $pdo = Database::connect();
 		$hr_pdo = HRDatabase::connect();
 		
@@ -954,9 +954,9 @@ exit;
 	}else if(isset($_POST['pa_sji']) && $_POST['pa_sji'] != ''){
 
 		require_once($pa_root."/actions/get_person.php");
-		require_once($pa_root."/db/database.php");
-		require_once($pa_root."/db/core.php");
-		require_once($pa_root."/db/mysqlhelper.php"); 
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php"); 
 		// $pdo = Database::connect();
 		$hr_pdo = HRDatabase::connect();
 

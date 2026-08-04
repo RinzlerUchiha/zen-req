@@ -7,10 +7,11 @@ if (empty($_SESSION['reqhub_user'])) {
     exit;
 }
 
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
 } catch (Exception $e) {
     die("Database connection error: " . htmlspecialchars($e->getMessage()));
 }

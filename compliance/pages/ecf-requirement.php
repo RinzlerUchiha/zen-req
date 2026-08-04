@@ -1,8 +1,8 @@
 <?php
 if(isset($_POST["getreq"])){
-	require_once "../db/core.php";
-	require_once "../db/mysqlhelper.php";
-	require_once '../db/database.php';
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/database.php');
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/core.php');
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/mysqlhelper.php'); 
 	date_default_timezone_set('Asia/Manila');
 	$hr_pdo = HRDatabase::connect();
 
@@ -10,7 +10,7 @@ if(isset($_POST["getreq"])){
 
 	$arrset=[];
 
-	foreach ($hr_pdo->query("SELECT * FROM demo_db_ecf2.tbl_req_category WHERE req_cat='$req'") as $val) {
+	foreach ($hr_pdo->query("SELECT * FROM db_ecf2.tbl_req_category WHERE req_cat='$req'") as $val) {
 		$arrset[]=[ 
 					$val["req_id"],
 					$val["req_name"],

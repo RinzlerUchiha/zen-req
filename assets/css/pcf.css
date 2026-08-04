@@ -345,8 +345,8 @@ input{
 }
 .right-side {
     /*display: none;*/
-    /*width: 40%;  Adjust width as needed */
-    margin-left: 10px; /* Add some spacing */
+    /*width: 40%;*/
+/*    margin-left: 10px;*/
 }
 .message-input button {
   padding: 10px 20px;
@@ -426,6 +426,10 @@ input{
   .image-container:has(img:nth-child(n+5)) {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
+
+  .right-side{
+    width: 20%;
+  }
 }
 
 /* Responsive */
@@ -435,6 +439,9 @@ input{
     flex: 1 1 100%;
     max-width: 100%;
     height: auto;
+  }
+  .right-side{
+    width: 20% !important;
   }
 }
 
@@ -446,6 +453,10 @@ input{
 
   .message-input button {
     width: 100%;
+  }
+
+  .right-side{
+    width: 18% !important;
   }
 }
 @media (max-width: 768px) {
@@ -468,6 +479,9 @@ input{
   }
   .card-block{
     height: auto !important;
+  }
+  .right-side{
+    width: 20% !important;
   }
 }
 

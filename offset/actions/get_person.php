@@ -11,8 +11,8 @@
         throw new \PDOException($e->getMessage(), (int)$e->getCode());
     }
     
-    if (isset($_SESSION['user_id'])) {
-        $user_id = $_SESSION['user_id'];
+    if (isset($_SESSION[SESSION_KEY])) {
+        $user_id = $_SESSION[SESSION_KEY];
         
         error_log("User ID: $user_id");
 

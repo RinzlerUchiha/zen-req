@@ -1,5 +1,5 @@
 <?php
-require_once($fl_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'User not authenticated']);
@@ -118,7 +118,9 @@ try {
 
                 if (isset($_FILES['refund_file']) && $_FILES['refund_file']['error'] === UPLOAD_ERR_OK) {
 
-                    $uploadDir = __DIR__ . 'https://prosperityph.teamtngc.com/prosperityph/flightbooking/actions/uploads/';
+                    // $uploadDir = __DIR__ . 'https://prosperityph.teamtngc.com/prosperityph/flightbooking/actions/uploads/';
+                    // $uploadDir = '\\\\EC2AMAZ-H5988IK\\e-classtngcacademy\\flightbooking\\';
+                    $uploadDir = $FLIGHTBOOKING_FILES_DIR . '/';
                     if (!is_dir($uploadDir)) {
                         mkdir($uploadDir, 0775, true);
                     }
@@ -200,7 +202,9 @@ try {
 
                 if (isset($_FILES['sup_file']) && $_FILES['sup_file']['error'] === UPLOAD_ERR_OK) {
 
-                    $uploadDir = __DIR__ . 'https://prosperityph.teamtngc.com/prosperityph/flightbooking/actions/uploads/';
+                    // $uploadDir = __DIR__ . 'https://prosperityph.teamtngc.com/prosperityph/flightbooking/actions/uploads/';
+                    // $uploadDir = '\\\\EC2AMAZ-H5988IK\\e-classtngcacademy\\flightbooking\\';
+                    $uploadDir = $FLIGHTBOOKING_FILES_DIR . '/';
                     if (!is_dir($uploadDir)) {
                         mkdir($uploadDir, 0775, true);
                     }
@@ -230,18 +234,18 @@ try {
                 $update->execute([$flightID]);
 
                 // === INSERT REFUND RECORD ===
-                $insert = $flight_db->prepare("
-                    INSERT INTO tbl_refund
-                    (ref_fid, ref_fno, ref_reason, ref_attachment, ref_refundby, ref_timestamp)
-                    VALUES (?, ?, ?, ?, ?, NOW())
-                ");
-                $insert->execute([
-                    $flightID,
-                    $flightNo,
-                    $reason,
-                    $attachment,
-                    $employee
-                ]);
+                // $insert = $flight_db->prepare("
+                //     INSERT INTO tbl_refund
+                //     (ref_fid, ref_fno, ref_reason, ref_attachment, ref_refundby, ref_timestamp)
+                //     VALUES (?, ?, ?, ?, ?, NOW())
+                // ");
+                // $insert->execute([
+                //     $flightID,
+                //     $flightNo,
+                //     $reason,
+                //     $attachment,
+                //     $employee
+                // ]);
 
                 $flight_db->commit();
 
@@ -267,7 +271,7 @@ try {
                 $flightNo = $_POST['flightNo'] ?? '';
                 $kg       = $_POST['bag_kg'] ?? '';
                 $nprice   = $_POST['bag_price'] ?? '0';
-                $purchaser = '09501432700';
+                $purchaser = '9176332722';
 
                 if (empty($flightID) || empty($kg)) {
                     throw new Exception("Invalid request.");
@@ -309,7 +313,7 @@ try {
                             if ($user && !empty($user['pi_mobileno'])) {
                                 $contact = $user['pi_mobileno'];
 
-                                $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: Add-ons bag is requested .";
+                                $msgText = "FLIGHT BOOKING: Add-ons bag is requested .";
                                 $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
                                 if ($sql->execute([$msgText])) {

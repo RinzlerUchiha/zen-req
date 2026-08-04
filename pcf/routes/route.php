@@ -16,6 +16,11 @@ $routes = [
 	'/feedback' => '/pages/feedback.php',
 	'/view_rrr' => '/pages/view_rrr.php',
 	'/view_pcfrequest' => '/pages/view_pcfrequest.php',
+	'/view_changecustodian' => '/pages/view_changecustodian.php',
+	'/change_custodian' => '/pages/change_custodian.php',
+	'/req_changecust' => '/pages/request_change_custodian.php',
+	'/req_pcf' => '/pages/request_pcf.php',
+	'/view_pcf_request' => '/pages/view_pcf_cf_request.php',
 
 
 	'/charts' => '/actions/chart.php',
@@ -43,7 +48,8 @@ $routes = [
 	'/update_pcfrequest' => '/actions/update_pcfrequest.php',
 	'/update_finreplenishment' => '/actions/update_finreplenishment.php',
 	'/update_creplenishment' => '/actions/update_creplenishment.php',
-	'/receive_deposit' => '/actions/receive_deposit.php'
+	'/receive_deposit' => '/actions/receive_deposit.php',
+	'/process_form' => '/actions/process_form.php'
 	
 ];
 

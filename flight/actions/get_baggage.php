@@ -1,5 +1,5 @@
 <?php
-require_once($fl_root."/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 try {
     $fb_db = Database::getConnection('fb');

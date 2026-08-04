@@ -13,7 +13,8 @@ header('Content-Type: application/json');
 // Try to load auth and database
 try {
     require_once (__DIR__ . '/../includes/auth.php');
-    require_once (__DIR__ . '/../database/db.php');
+    // require_once (__DIR__ . '/../database/db.php');
+    require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 } catch (Exception $e) {
     die(json_encode(['success' => false, 'message' => 'Failed to load dependencies: ' . $e->getMessage()]));
 }
@@ -26,7 +27,7 @@ try {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
 } catch (Exception $e) {
     die(json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]));
 }

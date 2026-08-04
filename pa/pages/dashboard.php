@@ -1,8 +1,8 @@
 <?php
 require_once($pa_root."/actions/get_person.php");
-require_once($pa_root."/db/database.php");
-require_once($pa_root."/db/core.php");
-require_once($pa_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 if (!isset($_SESSION['csrf_token1'])) {
     $_SESSION['csrf_token1'] = bin2hex(random_bytes(32)); // Generates a secure random token
 }

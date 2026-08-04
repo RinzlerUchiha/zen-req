@@ -1,6 +1,6 @@
 <?php
 if(session_status() === PHP_SESSION_NONE) session_start(); // Start the session
-require_once($pi_root."/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 try {
    $scms_db = Database::getConnection('scms');

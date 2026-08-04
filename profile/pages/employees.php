@@ -10,7 +10,8 @@
                     <div class="card-block" id="prof-card">
                       <div id="personal-info">
                         <?php
-                        $pdo = new PDO("mysql:host=localhost;dbname=portal_db", "root", "");
+                        require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+                        $pdo = Database::getConnection('port');
                         
                         if (isset($_GET['search'])) {
                             $searchTerm = $_GET['search'];

@@ -14,9 +14,9 @@
     </a>
   </li>
   <li>
-    <a href="#dashboard">
+    <a href="flight">
       <p>
-        <img src="assets/img/jrs.png" width="40" height="40" style="margin-right: 5px;">Jewellery Requisition
+        <img src="assets/img/flight_logo.png" width="40" height="40" style="margin-right: 5px;">Flight Booking
       </p>
     </a>
   </li>

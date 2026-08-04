@@ -1,14 +1,14 @@
 <?php
 	session_start();
-	$con=mysqli_connect("localhost","root","","tngc_hrd2");
+	$con=mysqli_connect((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""),(getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
 	
 //Connect to my database
   class Database
   {
-      // private static $dbName = 'db_hr' ;
-      private static $dbName = 'tngc_hrd2' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      // private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
       private static $dbUserPassword = '';
       private static $cont  = null;
       
@@ -40,7 +40,7 @@
 
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "tngc_hrd2");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), (getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
           return $cont;
       }
   }
@@ -48,9 +48,9 @@
   //Connect to HR Database
   class HRDatabase
   {
-      private static $dbName = 'tngc_hrd2' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -83,7 +83,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "tngc_hrd2");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), (getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
           return $cont;
       }
   }
@@ -91,9 +91,9 @@
   //Connect to db_main database
   class MainDatabase
   {
-      private static $dbName = 'tngc_hrd2' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
       private static $dbUserPassword = '';
       private static $cont  = null;
       
@@ -125,7 +125,7 @@
 
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "tngc_hrd2");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), (getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
           return $cont;
       }
   }
@@ -133,9 +133,9 @@
   //Connect to HR1 Database
   class HR1Database
   {
-      private static $dbName = 'tngc_hrd2' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -168,15 +168,15 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "tngc_hrd2");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), (getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
           return $cont;
       }
   }
    class DTRDatabase
   {
       private static $dbName = 'ecom' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -209,7 +209,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "ecom");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), "ecom");
           return $cont;
       }
   }
@@ -217,8 +217,8 @@
   // class APPDatabase
   // {
   //     private static $dbName = 'db_applicants' ;
-  //     private static $dbHost = 'localhost' ;
-  //     private static $dbUsername = 'root';
+  //     private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+  //     private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
   //     private static $dbUserPassword = '';
 
   //     private static $cont  = null;
@@ -251,7 +251,7 @@
   //     }
   //     public static function mysqli()
   //     {
-  //         $cont = new mysqli("localhost", "root", "", "db_applicants");
+  //         $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), "db_applicants");
   //         return $cont;
   //     }
   // }

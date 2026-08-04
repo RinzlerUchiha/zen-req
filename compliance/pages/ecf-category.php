@@ -1,7 +1,7 @@
 <?php
-require_once($com_root."/db/database.php"); 
-require_once($com_root."/db/core.php"); 
-require_once($com_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 if(isset($_POST["getcat"])){
 	date_default_timezone_set('Asia/Manila');
 	$hr_pdo = HRDatabase::connect();
@@ -9,7 +9,7 @@ if(isset($_POST["getcat"])){
 	$company=$_POST["getcat"];
 
 	$arrset=[];
-	$q = $hr_pdo->prepare("SELECT a.*, GROUP_CONCAT(TRIM(CONCAT('- ',bi_emplname,', ',bi_empfname,' ',bi_empext)) SEPARATOR '<br>') AS empname FROM demo_db_ecf2.tbl_category a
+	$q = $hr_pdo->prepare("SELECT a.*, GROUP_CONCAT(TRIM(CONCAT('- ',bi_emplname,', ',bi_empfname,' ',bi_empext)) SEPARATOR '<br>') AS empname FROM db_ecf2.tbl_category a
 		LEFT JOIN tbl201_basicinfo ON FIND_IN_SET(bi_empno,cat_checker) > 0 AND datastat = 'current'
 		WHERE cat_company = ?
 		GROUP BY cat_id
@@ -39,7 +39,7 @@ if(isset($_POST["getcat"])){
 
 	$arrset=[];
 
-	foreach ($hr_pdo->query("SELECT * FROM demo_db_ecf2.tbl_requirement WHERE req_cat='$cat'") as $val) {
+	foreach ($hr_pdo->query("SELECT * FROM db_ecf2.tbl_requirement WHERE req_cat='$cat'") as $val) {
 		$arrset[]=[ 
 					$val["req_id"],
 					$val["req_cat"],

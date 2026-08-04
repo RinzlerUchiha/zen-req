@@ -9,14 +9,15 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 header('Content-Type: application/json');
 
 requireRole('Admin');
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
 } catch (Exception $e) {
     die(json_encode(['success' => false, 'message' => 'Database connection failed']));
 }
@@ -216,21 +217,6 @@ try {
                 'success' => true,
                 'roles' => $roles
             ]);
-            break;
-            
-        case 'toggleLock':
-            $systemId = intval($_POST['system_id'] ?? 0);
-            $isLocked = intval($_POST['is_locked'] ?? 0);
-
-            if (!$systemId) {
-                echo json_encode(['success' => false, 'message' => 'Invalid system ID']);
-                exit;
-            }
-
-            $stmt = $pdo->prepare("UPDATE systems SET is_locked = ? WHERE id = ?");
-            $stmt->execute([$isLocked, $systemId]);
-
-            echo json_encode(['success' => true, 'is_locked' => $isLocked]);
             break;
 
         case 'deleteSystem':

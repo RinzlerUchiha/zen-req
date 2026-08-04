@@ -1,10 +1,10 @@
 <?php
 	require_once("config.php");
 
-	$host ='localhost';
+	$host =(getenv('ZEN_DB_HOST') ?: "");
 	//$host ='192.168.10.6';
-	$uname='admin';
-	$pword='Administr@t0r';
+	$uname='misadmin';
+	$pword='88224646abxy@';
 	//$pword='';
 	$dbase = DB_HRD;
 	

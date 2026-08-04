@@ -8,10 +8,10 @@ class Transactions extends Dbcon
 	############################################################### user
 		function checkid($redirect = '')
 		{
-			if(!empty($_SESSION['user_id'])) {
+			if(!empty($_SESSION[SESSION_KEY])) {
 				$sql = "SELECT U_ID FROM tbl_user2 WHERE U_ID = ?";
 				$stmt = $this->cont->prepare($sql);
-				$stmt->execute([$_SESSION['user_id']]);
+				$stmt->execute([$_SESSION[SESSION_KEY]]);
 				$results = $stmt->fetchall();
 				foreach ($results as $val) {
 					if($redirect){
@@ -116,7 +116,7 @@ class Transactions extends Dbcon
 		function _log($log){
 			$con = $this->cont;
 			$sql=$con->prepare("INSERT INTO tbl_system_log(log_user,log_info) VALUES(?,?)");
-			$sql->execute(array($this->getUser($_SESSION['user_id'], 'Emp_No'),$log));
+			$sql->execute(array($this->getUser($_SESSION[SESSION_KEY], 'Emp_No'),$log));
 		}
 
 		function getnumber($empno)
@@ -337,8 +337,8 @@ class Transactions extends Dbcon
 		// function logs($logs='')
 		// {
 		// 	$user_empno = "";
-		// 	if(isset($_SESSION['user_id'])){
-		// 		$user_empno = $this->getUser($_SESSION['user_id'], 'Emp_No');
+		// 	if(isset($_SESSION[SESSION_KEY])){
+		// 		$user_empno = $this->getUser($_SESSION[SESSION_KEY], 'Emp_No');
 		// 	}
 
 		// 	$sql = "INSERT INTO tbl_wfh_logs ( logs_user, logs_content, logs_timestamp ) VALUES ( ?, ?, ? )";

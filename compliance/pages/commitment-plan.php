@@ -1,8 +1,8 @@
 <?php
 
-	require_once($com_root."/db/database.php"); 
-	require_once($com_root."/db/core.php"); 
-	require_once($com_root."/db/mysqlhelper.php");
+	require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+	require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+	require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 
     $user_id = fn_get_user_details('U_ID');
 

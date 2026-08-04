@@ -1,5 +1,5 @@
 <?php
-require_once($sr_root . '/db/HR.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/HR.php");
 $db_hr = new HR();
 
 $user_empno = $_SESSION['user_id'] ?? '';
@@ -137,7 +137,7 @@ $user_assign_arr_gp = explode(",", $user_assign_list_gp);
 </style>
 
 <script type="text/javascript">
-	$(function() {
+	/*$(function() {
 		let txtsearchtimer;
 		$("body").on("input", ".custom-table-wrapper .custom-table-searbar", function() {
 			clearTimeout(txtsearchtimer);
@@ -185,7 +185,114 @@ $user_assign_arr_gp = explode(",", $user_assign_list_gp);
 				};
 			}, 1000);
 		});
-	});
+	});*/
+
+	(function () {
+	    // Debounce per searchbar instance (no global timer collisions)
+	    function debounce(fn, wait) {
+	        let t;
+	        return function (...args) {
+	            clearTimeout(t);
+	            t = setTimeout(() => fn.apply(this, args), wait);
+	        };
+	    }
+
+	    function buildRowText($tr) {
+	        const parts = [];
+	        $tr.find("td:visible").each(function () {
+	            const $td = $(this);
+
+	            const $fields = $td.find("input:visible, select:visible, textarea:visible");
+	            if ($fields.length) {
+	                $fields.each(function () {
+	                    parts.push(($(this).val() ?? "").toString());
+	                });
+	            } else {
+	                parts.push($td.text());
+	            }
+	        });
+	        return parts.join(" ").toLowerCase();
+	    }
+
+	    function clearNoRes($tbody) {
+	        $tbody.find("tr.nores").remove();
+	    }
+
+	    function showNoRes($table, $tbody) {
+	        const colSpan = $table.find("thead th:visible").length || 1;
+	        $tbody.append(
+	            `<tr class="nores text-center"><td colspan="${colSpan}">Not Found</td></tr>`
+	        );
+	    }
+
+	    function runSearch(inputEl) {
+	        const $input = $(inputEl);
+	        const $wrapper = $input.closest(".custom-table-wrapper");
+	        const $table = $wrapper.find(".custom-table").first();
+	        const $tbody = $table.find("tbody").first();
+
+	        if (!$table.length || !$tbody.length) return;
+
+	        const q = ($input.val() ?? "").toString().toLowerCase().trim();
+
+	        // only real rows
+	        const $rows = $tbody.find("tr").not(".nores");
+
+	        clearNoRes($tbody);
+	        $table.find("td, tr").removeClass("ifnd");
+
+	        if (!q) {
+	            $rows.show();
+	            return;
+	        }
+
+	        let found = 0;
+
+	        $rows.each(function () {
+	            const $tr = $(this);
+
+	            // lazy cache: compute once per row; survives until row replaced
+	            let text = $tr.data("rowText");
+	            if (text == null) {
+	                text = buildRowText($tr);
+	                $tr.data("rowText", text);
+	            }
+
+	            const ok = text.indexOf(q) !== -1;
+	            $tr.toggle(ok);
+
+	            if (ok) found++;
+	        });
+
+	        if (found === 0) showNoRes($table, $tbody);
+	    }
+
+	    const debouncedSearch = debounce(function () {
+	        runSearch(this);
+	    }, 150);
+
+	    // Delegated: continues working after AJAX .html()
+	    $("body").on("input", ".custom-table-wrapper .custom-table-searbar", debouncedSearch);
+
+	    // If table cells are editable, keep cache updated per row:
+	    $("body").on(
+	        "input change",
+	        ".custom-table-wrapper .custom-table input, .custom-table-wrapper .custom-table select, .custom-table-wrapper .custom-table textarea",
+	        function () {
+	            const $tr = $(this).closest("tr");
+	            if ($tr.length) $tr.data("rowText", buildRowText($tr));
+	        }
+	    );
+
+	    // OPTIONAL: after you replace table HTML, clear caches (safe)
+	    // Call this after $('div').html(table);
+	    window.resetCustomTableSearchCache = function (root) {
+	        const $root = root ? $(root) : $(document);
+	        $root.find(".custom-table tbody tr").removeData("rowText");
+	        $root.find(".custom-table tbody tr.nores").remove();
+	    };
+	})();
+
 </script>
 <!-- custom table -->
 
@@ -1368,6 +1475,7 @@ $user_assign_arr_gp = explode(",", $user_assign_list_gp);
 				},
 				function(res) {
 					$("#display-list").html(res);
+					resetCustomTableSearchCache($('#display-list'));
 				});
 		});
 
@@ -1394,6 +1502,7 @@ $user_assign_arr_gp = explode(",", $user_assign_list_gp);
 					},
 					function(res) {
 						$("#display-list").html(res);
+						resetCustomTableSearchCache($('#display-list'));
 					});
 			}
 		});

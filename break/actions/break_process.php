@@ -1,24 +1,24 @@
 <?php
-// require_once '../db/db_functions.php';
+// require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
 // $trans = new Transactions;
 // $con1 = $trans->connect();
 
-// if(!isset($_SESSION['DEMOHR_UID'])){
+// if(!isset($_SESSION[SESSION_KEY])){
 // 	echo "Please refresh page.";
 // 	exit;
 // }
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
 $load = 'break';
-if (isset($_SESSION['user_id'])) {
-    $user_id = $_SESSION['user_id'];
+if (isset($_SESSION[SESSION_KEY])) {
+    $user_id = $_SESSION[SESSION_KEY];
 }
 
 $action=$_POST['action'];
 
 $timestamp=date("Y-m-d H:i:s");
-$user_empno = $trans->getUser($_SESSION['DEMOHR_UID'], 'Emp_No');
+$user_empno = $trans->getUser($_SESSION[SESSION_KEY], 'Emp_No');
 
 switch ($action) {
 	case 'add':

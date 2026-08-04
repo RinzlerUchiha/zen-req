@@ -162,7 +162,7 @@
     							</li>
 								<?php
   									$current_path = $_SERVER['REQUEST_URI'];
-									require_once($lv_root."/db/db.php");
+									require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 									$date = date("Y-m-d");
 								    $Year = date("Y");
 								    $Month = date("m");
@@ -254,7 +254,7 @@
 									    </li>
 									</ul> -->
 									<?php
-									require_once($lv_root."/db/db.php");
+									require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 								
 									try {
 									    $port = Database::getConnection('port');

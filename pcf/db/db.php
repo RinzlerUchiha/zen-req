@@ -5,59 +5,59 @@
  */
 class Database
 {
-    private static $connections = [];
+	private static $connections = [];
 
-    public static function getConnection($name)
-    {
-        if (!isset(self::$connections[$name])) {
-            $config = [
+	public static function getConnection($name) {
+		if (!isset(self::$connections[$name])) {
+			$config = [
                 "scms" => [
-                    "host" => "52.77.8.164:31121",
-                    "dbname" => "db_sophia",
-                    "username" => "teza",
-                    "password" => "p@ssw0rd"
+                    "host" => (getenv('ZEN_DB_HOST_SCMS') ?: ""),
+                    "dbname" => (getenv('ZEN_DB_DATABASE_SCMS') ?: ""),
+                    "username" => (getenv('ZEN_DB_USERNAME_SCMS') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD_SCMS') ?: "")
                 ],
                 "hr" => [
-                    "host" => "localhost",
-                    "dbname" => "tngc_hrd2",
-                    "username" => "misadmin",
-                    "password" => "88224646abxy@"
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
+                    "dbname" => (getenv('ZEN_DB_DATABASE_HRD2') ?: ""),
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
                 ],
                 "port" => [
-                    "host" => "localhost",
-                    "dbname" => "portal_db",
-                    "username" => "root",
-                    "password" => ""
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
+                    "dbname" => (getenv('ZEN_DB_DATABASE_PORTAL') ?: ""),
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
                 ],
                 "pcf" => [
-                    "host" => "localhost",
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
                     "dbname" => "pcf_db",
-                    "username" => "root",
-                    "password" => ""
-                ],
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
+                ]
+                ,
                 "sms" => [
-                    "host" => "localhost",
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
                     "dbname" => "db_sms",
-                    "username" => "misadmin",
-                    "password" => "88224646abxy@"
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
                 ]
             ];
 
-            if (!array_key_exists($name, $config)) {
+            if(!array_key_exists($name, $config)){
                 throw new Exception("Invalid connection name: $name");
             }
 
-            // Additional configurations if needed (e.g., port)
-            self::$connections[$name] = new PDO(
-                "mysql:host={$config[$name]['host']};dbname={$config[$name]['dbname']};charset=utf8mb4",
-                $config[$name]['username'],
-                $config[$name]['password']
-            );
-            self::$connections[$name]->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            self::$connections[$name]->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        }
-        return self::$connections[$name];
-    }
+			// Additional configurations if needed (e.g., port)
+			self::$connections[$name] = new PDO(
+				"mysql:host={$config[$name]['host']};dbname={$config[$name]['dbname']};charset=utf8mb4",
+				$config[$name]['username'],
+				$config[$name]['password']
+			);
+			self::$connections[$name]->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			self::$connections[$name]->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+		}
+		return self::$connections[$name];
+	}
 }
 
 // class SCMSDatabase

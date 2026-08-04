@@ -1,5 +1,5 @@
 <?php
-require_once($lv_root."/db/dbcon.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/dbcon.php"); 
 $db = new Dbcon;
 $con1 = $db->connect();
 

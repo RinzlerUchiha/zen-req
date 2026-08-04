@@ -11,28 +11,28 @@ class Database
 		if (!isset(self::$connections[$name])) {
 			$config = [
                 "ecf" => [
-                    "host" => "localhost",
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
                     "dbname" => "db_ecf2",
-                    "username" => "root",
-                    "password" => ""
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
                 ],
                 "hr" => [
-                    "host" => "localhost",
-                    "dbname" => "tngc_hrd2",
-                    "username" => "root",
-                    "password" => ""
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
+                    "dbname" => (getenv('ZEN_DB_DATABASE_HRD2') ?: ""),
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
                 ],
                 "port" => [
-                    "host" => "localhost",
-                    "dbname" => "portal_db",
-                    "username" => "root",
-                    "password" => ""
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
+                    "dbname" => (getenv('ZEN_DB_DATABASE_PORTAL') ?: ""),
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
                 ],
                 "atd" => [
-                    "host" => "localhost",
-                    "dbname" => "atd_db",
-                    "username" => "root",
-                    "password" => ""
+                    "host" => (getenv('ZEN_DB_HOST') ?: (getenv('ZEN_DB_HOST') ?: "")),
+                    "dbname" => (getenv('ZEN_DB_DATABASE_ATD') ?: ""),
+                    "username" => (getenv('ZEN_DB_USERNAME') ?: ""),
+                    "password" => (getenv('ZEN_DB_PASSWORD') ?: "")
                 ]
             ];
 

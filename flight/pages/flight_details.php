@@ -1,8 +1,8 @@
 <?php
 require_once($fl_root."/actions/get_flights.php");
-require_once($fl_root . "/db/database.php");
-require_once($fl_root . "/db/core.php");
-require_once($fl_root . "/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $date = date("Y-m-d");
 $Year = date("Y");
 $Month = date("m");
@@ -168,20 +168,20 @@ $approvers = FLIGHT::GetApprovernum($department);
                         if (!empty($f['reviewer_name'])) $reviewer = $f['reviewer_name'];
                         if (!empty($f['approver_name'])) $approver = $f['approver_name'];
 
-                        if ($f['f_empno'] === $empno || get_assign('view_flight','view',$empno)) {
-                          if ($f['f_dept'] === $department && get_assign('view_flight','review',$empno) && $f['f_status'] === 'pending') {
+                        if ($f['f_empno'] === $empno || get_assign_fbr('view_flight','view',$empno)) {
+                          if ($f['f_dept'] === $department && get_assign_fbr('view_flight','review',$empno) && $f['f_status'] === 'pending') {
                             $canConfirm = true;
                           }
-                          if ($f['f_status'] === 'pending' && get_assign('view_flight','edit',$empno)) {
+                          if ($f['f_status'] === 'pending' && get_assign_fbr('view_flight','edit',$empno)) {
                             $canEdit = true;
                           }
-                          if (in_array($f['f_status'], ['pending', 'served', 'rebooked']) && get_assign('view_flight','add_ons',$empno)) {
+                          if (in_array($f['f_status'], ['pending', 'served', 'rebooked']) && get_assign_fbr('view_flight','add_ons',$empno)) {
                             $canAddbag = true;
                           }
-                          if (in_array($f['f_status'], ['served', 'rebooked']) && get_assign('view_flight','rebook',$empno)) {
+                          if (in_array($f['f_status'], ['served', 'rebooked']) && get_assign_fbr('view_flight','rebook',$empno)) {
                             $canRebook = true;
                           }
-                          if (get_assign('view_flight','cancel',$empno)) {
+                          if (get_assign_fbr('view_flight','cancel',$empno)) {
                             $canCancel = true;
                           }
                     

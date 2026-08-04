@@ -381,7 +381,7 @@ function saveNewRow(row, entryId, outlet_dept) {
     let rowData = {
         dis_no: entryId,
         outlet_dept: outlet_dept,
-        date: row.cells[2] ? row.cells[2].innerText.trim() : "",  // ✅ Check if cell exists
+        date: row.cells[2] ? row.cells[2].innerText.trim() : "",
         pcv: row.cells[3] ? row.cells[3].innerText.trim() : "",
         or: row.cells[4] ? row.cells[4].innerText.trim() : "",
         payee: row.cells[5] ? row.cells[5].innerText.trim() : "",
@@ -393,7 +393,7 @@ function saveNewRow(row, entryId, outlet_dept) {
         total: row.cells[11] ? row.cells[11].innerText.trim() : "0.00"
     };
 
-    console.log("Saving row data:", rowData); // ✅ Debugging
+    console.log("Saving row data:", rowData);
 
     $.ajax({
         url: "save_entry",
@@ -438,18 +438,28 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const dis_no = entryIdElement.innerText;
-        const dis_pcv = row.querySelector('[data-field="dis_pcv"]').innerText.trim(); // PCV Field
+        const pcvCell = row.querySelector('[data-field="dis_pcv"]');
+        const dis_pcv = pcvCell ? pcvCell.innerText.trim() : '';
         const dis_date = row.querySelector('[data-field="dis_date"]').value;
-        const dis_or = row.querySelector('[data-field="dis_or"]').innerText;
-        const dis_payee = row.querySelector('[data-field="dis_payee"]').innerText;
-        const dis_office_store = parseFloat(row.querySelector('[data-field="dis_office_store"]').innerText) || 0;
-        const dis_transpo = parseFloat(row.querySelector('[data-field="dis_transpo"]').innerText) || 0;
-        const dis_repair_maint = parseFloat(row.querySelector('[data-field="dis_repair_maint"]').innerText) || 0;
-        const dis_commu = parseFloat(row.querySelector('[data-field="dis_commu"]').innerText) || 0;
-        const dis_misc = parseFloat(row.querySelector('[data-field="dis_misc"]').innerText) || 0;
+        const dis_or = row.querySelector('[data-field="dis_or"]') ? row.querySelector('[data-field="dis_or"]').innerText : '';
+        const dis_payee = row.querySelector('[data-field="dis_payee"]') ? row.querySelector('[data-field="dis_payee"]').innerText : '';
+        const dis_office_store = parseFloat(row.querySelector('[data-field="dis_office_store"]') ? row.querySelector('[data-field="dis_office_store"]').innerText : '0') || 0;
+        const dis_transpo = parseFloat(row.querySelector('[data-field="dis_transpo"]') ? row.querySelector('[data-field="dis_transpo"]').innerText : '0') || 0;
+        const dis_repair_maint = parseFloat(row.querySelector('[data-field="dis_repair_maint"]') ? row.querySelector('[data-field="dis_repair_maint"]').innerText : '0') || 0;
+        const dis_commu = parseFloat(row.querySelector('[data-field="dis_commu"]') ? row.querySelector('[data-field="dis_commu"]').innerText : '0') || 0;
+        const dis_misc = parseFloat(row.querySelector('[data-field="dis_misc"]') ? row.querySelector('[data-field="dis_misc"]').innerText : '0') || 0;
         const total = dis_office_store + dis_transpo + dis_repair_maint + dis_commu + dis_misc;
 
-        // Always update directly without duplicate checking
+        if (dis_pcv && dis_pcv.length > 0) {
+            if (!/^\d+$/.test(dis_pcv)) {
+                return;
+            }
+            
+            if (dis_pcv.length < 4) {
+                return;
+            }
+        }
+
         updateEntry({
             dis_no: dis_no,
             dis_date: dis_date,
@@ -461,43 +471,78 @@ document.addEventListener('DOMContentLoaded', function () {
             dis_repair_maint: dis_repair_maint,
             dis_commu: dis_commu,
             dis_misc: dis_misc,
-            total: total
+            total: total,
+            outlet: $("input[name='outlet']").val()
         });
     });
-});
 
-/**
- * Function to Check PCV Duplicate
- */
-function checkPCVDuplicate(pcvValue, row, callback) {
-    fetch('check_pcv', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: `dis_pcv=${encodeURIComponent(pcvValue)}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.exists) {
-            showAlert('danger', 'PCV already exists!', true);
-            row.querySelector('[data-field="dis_pcv"]').innerText = ''; // Clear the duplicate value
-            callback(true); // PCV is duplicate
-        } else {
-            callback(false); // PCV is unique
+    document.addEventListener('blur', function(event) {
+        const pcvCell = event.target.closest('[data-field="dis_pcv"]');
+        if (pcvCell) {
+            const pcvValue = pcvCell.innerText.trim();
+            
+            if (pcvValue && pcvValue.length > 0) {
+                if (!/^\d+$/.test(pcvValue)) {
+                    showAlert('danger', 'PCV must be a number!', true);
+                    pcvCell.innerText = '';
+                    pcvCell.focus();
+                    return;
+                }
+                
+                if (pcvValue.length < 4) {
+                    showAlert('danger', 'PCV must be at least 4 digits! (e.g., 0123, 0124, 1000)', true);
+                    pcvCell.innerText = '';
+                    pcvCell.focus();
+                    return;
+                }
+                
+                if (/^\d+$/.test(pcvValue) && pcvValue.length < 4) {
+                    const formattedPcv = pcvValue.padStart(4, '0');
+                    pcvCell.innerText = formattedPcv;
+                }
+                
+                // Show success message for valid PCV
+                showAlert('success', 'PCV ' + pcvValue + ' is valid!', true);
+            }
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        callback(true); // Assume duplicate in case of error
-    });
-}
+    }, true);
+
+    document.addEventListener('input', function(event) {
+        const pcvCell = event.target.closest('[data-field="dis_pcv"]');
+        if (pcvCell) {
+            // Only remove non-numeric characters, but don't validate
+            let value = pcvCell.innerText.replace(/[^0-9]/g, '');
+            if (pcvCell.innerText !== value) {
+                pcvCell.innerText = value;
+                // Place cursor at the end
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(pcvCell);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+    }, true);
+});
 
 /**
  * Function to Update Entry in Database
  */
 function updateEntry(data) {
     console.log('Sending data:', data);
+
+    if (data.dis_pcv && data.dis_pcv.length > 0) {
+        if (!/^\d+$/.test(data.dis_pcv)) {
+            showAlert('danger', 'PCV must be a number!', true);
+            return;
+        }
+        
+        if (data.dis_pcv.length < 4) {
+            showAlert('danger', 'PCV must be at least 4 digits!', true);
+            return;
+        }
+    }
 
     fetch('update_entry', {
         method: 'POST',
@@ -533,7 +578,6 @@ function showAlert(type, message, autoClose = false) {
         document.body.appendChild(alertContainer);
     }
 
-    // Create the alert element
     const alertBox = document.createElement('div');
     alertBox.className = `alert alert-${type} alert-dismissible fade show border border-${type}`;
     alertBox.role = 'alert';
@@ -544,18 +588,271 @@ function showAlert(type, message, autoClose = false) {
 
     alertContainer.appendChild(alertBox);
 
-    // Automatically close the alert after 3 seconds
     if (autoClose) {
         setTimeout(() => {
             alertBox.classList.remove('show');
             setTimeout(() => {
                 alertBox.remove();
-            }, 500); // Wait for fade effect
+            }, 500);
         }, 500);
     }
 }
 
+// Select modal and elements properly
+// const modal = document.getElementById("signature-modal");
+// const openModalBtn = document.getElementById("open-modal");
+// const cancelBtn = document.getElementById("cancel-btn");
+// const confirmBtn = document.getElementById("confirm-btn");
+// const clearBtn = document.getElementById("clear-btn");
+// const canvas = document.getElementById("signature-pad");
+// const signaturePad = new SignaturePad(canvas);
+// const ctx = canvas.getContext("2d");
+// let drawing = false;
 
+// // Open modal
+// openModalBtn.addEventListener("click", () => {
+//     modal.style.display = "flex";  // Ensure modal is defined
+// });
+
+// // Close modal
+// cancelBtn.addEventListener("click", () => {
+//     modal.style.display = "none";  // Ensure modal is defined
+// });
+
+// // Clear signature
+// clearBtn.addEventListener("click", () => {
+//     signaturePad.clear();
+// });
+
+// // Drawing event listeners
+// canvas.addEventListener("mousedown", (event) => {
+//     drawing = true;
+//     ctx.beginPath();
+//     ctx.moveTo(event.offsetX, event.offsetY);
+// });
+
+// canvas.addEventListener("mousemove", (event) => {
+//     if (!drawing) return;
+//     ctx.lineTo(event.offsetX, event.offsetY);
+//     ctx.stroke();
+// });
+
+// canvas.addEventListener("mouseup", () => {
+//     drawing = false;
+// });
+
+// // Function to check if canvas is empty
+// function isCanvasEmpty(canvas) {
+//     const pixelData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+//     return !pixelData.some((pixel, index) => index % 4 === 3 && pixel !== 0);
+// }
+
+// //ORIGINAL REQUEST SUBMIT CODE
+// confirmBtn.addEventListener("click", () => {
+//     if (signaturePad.isEmpty()) {
+//         alert("Please sign before confirming.");
+//         return;
+//     }
+
+//     let disNumbersToCheck = [];
+
+//     // Validate selected rows and collect dis_no
+//     $("#myTable tr").each(function () {
+//         if ($(this).find('input[type="checkbox"]').is(":checked")) {
+//             const dis_no = $(this).find('[data-field="dis_no"]').text().trim();
+//             const dis_pcv = $(this).find('[data-field="dis_pcv"]').text().trim();
+//             const dis_payee = $(this).find('[data-field="dis_payee"]').text().trim();
+//             const dis_date = $(this).find('[data-field="dis_date"]').val() || $(this).find('[data-field="dis_date"]').text().trim();
+
+//             // if (!dis_pcv || !dis_date || !dis_payee) {
+//             //     alert("PCV, payee or date field is empty in one or more selected rows. Cannot send replenish request.");
+//             //     modal.style.display = "none";
+//             //     return false; 
+//             // }
+
+//             if (dis_no) disNumbersToCheck.push(dis_no);
+//         }
+//     });
+
+//     // if (disNumbersToCheck.length === 0) {
+//     //     alert("No disbursement selected.");
+//     //     return;
+//     // }
+
+//     // Validate dis_no existence first
+//     $.ajax({
+//         url: "check_dis_no_exists",
+//         type: "POST",
+//         dataType: "json",
+//         data: {
+//             dis_numbers: JSON.stringify(disNumbersToCheck),
+//             pcfID: $("input[name='pcfID']").val()
+//         },
+//         success: function (response) {
+//             if (response.missing_count === disNumbersToCheck.length) {
+//                 alert("Please upload attachment. Cannot proceed.");
+//                 return;
+//             } else if (response.missing_count > 0) {
+//                 alert("Some selected disbursement entries doesn't have attachment");
+//                 return;
+//             }
+
+//             // All dis_no are valid — now proceed with saving
+
+//             const svgData = signaturePad.toDataURL('image/svg+xml');
+//             $("#signature-container").html(`<img src="${svgData}" alt="Signature" width="100" height="40">`);
+//             $("#dateSign").text(new Date().toISOString().split("T")[0]);
+
+//             const replNo = $("td#replNo").map(function () {
+//                 return $(this).text().trim();
+//             }).get().join(", ");
+
+//             const replNoRRR = $("td#replNoRRR").map(function () {
+//                 return $(this).text().trim();
+//             }).get().join(", ");
+
+//             const appPCF = parseFloat($("#appPCF").text().trim().replace(/,/g, '')) || 0;
+//             const cashOnhand = parseFloat($("#cashhand").text().trim().replace(/,/g, '')) || 0;
+//             const endbalance = parseFloat($("#balances").text().trim().replace(/,/g, '')) || 0;
+//             const variance = $("#variances").text().trim();
+//             const requestAmt = $("#rtotal").text().trim();
+//             const unreplenish = $("#ototal").text().trim();
+//             const section = $("#outlet").text().trim();
+//             const pcfID = $("input[name='pcfID']").val();
+//             const company = $("input[name='company']").val();
+//             const outlet = $("select[name='unit']").val();
+//             const Hcontact = $("input[name='headcontact']").val();
+
+//             let disbData = [];
+//             $(".clickable-row").each(function () {
+//                 var rowPcfID = $(this).find(".entry-id").text().trim();
+//                 if (rowPcfID === pcfID) {
+//                     disbData.push({ dis_no: $(this).data("id") });
+//                 }
+//             });
+
+//             $.ajax({
+//                 url: "save_replenish",
+//                 type: "POST",
+//                 data: {
+//                     replNo: replNo,
+//                     replNoRRR: replNoRRR,
+//                     appPCF: appPCF,
+//                     cashOnhand: cashOnhand,
+//                     endbalance: endbalance,
+//                     variance: variance,
+//                     requestAmt: requestAmt,
+//                     unreplenish: unreplenish,
+//                     pcfID: pcfID,
+//                     company: company,
+//                     outlet: outlet,
+//                     section: section,
+//                     Hcontact: Hcontact,
+//                     signature: encodeURIComponent(svgData),
+//                     disbursements: JSON.stringify(disbData)
+//                 },
+//                 success: function (response) {
+//                     alert("Signature saved successfully!");
+//                     modal.style.display = "none";
+//                 },
+//                 error: function (xhr, status, error) {
+//                     console.error("AJAX Error: " + error);
+//                 }
+//             });
+//         },
+//         error: function (xhr, status, error) {
+//             console.error("AJAX Error: " + error);
+//             alert("An error occurred while checking disbursement numbers.");
+//         }
+//     });
+// });
+
+
+
+// $(document).on("click", "#confirm-btn", function () {
+//     let disbursements = [];
+//     let pcfID = $("#pcfIDs").val();
+//     let disNumbersToCheck = [];
+//     let invalid = false;
+
+//     // Collect and validate rows
+//     $("#myTable tr").each(function () {
+//         if ($(this).find('input[type="checkbox"]').is(":checked")) {
+//             const dis_no = $(this).data("id");
+//             const dis_pcv = $(this).find('[data-field="dis_pcv"]').text().trim();
+//             const dis_payee = $(this).find('[data-field="dis_payee"]').text().trim();
+//             const dis_date = $(this).find('[data-field="dis_date"]').val() || $(this).find('[data-field="dis_date"]').text().trim();
+//             const dis_total_raw = $(this).find('[data-field="dis_total"]').text().trim().replace(/,/g, '');
+//             const dis_total = parseFloat(dis_total_raw) || 0;
+
+//             if (!dis_pcv || !dis_date || !dis_payee || dis_total_raw <= 0) {
+//                 alert("PCV, payee, date field is empty or no amount in your selected rows. Cannot request to replenish");
+//                 $("#yourModalId").hide();
+//                 invalid = true;
+//                 return false;
+//             }
+
+//             if (dis_no) {
+//                 disbursements.push({
+//                     dis_no: dis_no,
+//                     dis_pcv: dis_pcv,
+//                     dis_total: dis_total
+//                 });
+//                 disNumbersToCheck.push(dis_no);
+//             }
+//         }
+//     });
+
+//     if (invalid || disbursements.length === 0) {
+//         if (!invalid) alert("No disbursements selected.");
+//         return;
+//     }
+
+//     // Check if dis_no exists
+//     $.ajax({
+//         url: "check_dis_no_exists",
+//         type: "POST",
+//         dataType: "json",
+//         data: {
+//             dis_numbers: JSON.stringify(disNumbersToCheck),
+//             pcfID: pcfID
+//         },
+//         success: function (response) {
+//             if (response.missing_count === disNumbersToCheck.length) {
+//                 alert("All selected disbursement numbers are NOT found in the system. Cannot proceed.");
+//                 return;
+//             } else if (response.missing_count > 0) {
+//                 // alert("Some disbursement numbers are missing:\n" + response.missing_numbers.join(", "));
+//                 return;
+//             }
+
+//             // Only proceed if NO missing dis_no
+//             $.ajax({
+//                 url: "update_disburse",
+//                 type: "POST",
+//                 data: {
+//                     pcfID: pcfID,
+//                     disbursements: JSON.stringify(disbursements)
+//                 },
+//                 success: function (response) {
+//                     console.log("Server Response:", response);
+//                     alert("Processed successfully!");
+//                     location.reload();
+//                 },
+//                 error: function (xhr, status, error) {
+//                     console.error("AJAX Error:", error);
+//                 }
+//             });
+//         },
+//         error: function (xhr, status, error) {
+//             console.error("AJAX Error: " + error);
+//             alert("System error occurred during validation.");
+//         }
+//     });
+// });
+
+
+// SAVING PCF REQUEST
 // Select modal and elements properly
 const modal = document.getElementById("signature-modal");
 const openModalBtn = document.getElementById("open-modal");
@@ -622,11 +919,6 @@ confirmBtn.addEventListener("click", () => {
             const dis_payee = $(this).find('[data-field="dis_payee"]').text().trim();
             const dis_date = $(this).find('[data-field="dis_date"]').val() || $(this).find('[data-field="dis_date"]').text().trim();
 
-            // if (!dis_pcv || !dis_date || !dis_payee) {
-            //     alert("PCV, payee or date field is empty in one or more selected rows. Cannot send replenish request.");
-            //     modal.style.display = "none";
-            //     return false; 
-            // }
 
             if (dis_no) disNumbersToCheck.push(dis_no);
         }
@@ -669,6 +961,7 @@ confirmBtn.addEventListener("click", () => {
                 return $(this).text().trim();
             }).get().join(", ");
 
+            const appPCF = parseFloat($("#appPCF").text().trim().replace(/,/g, '')) || 0;
             const cashOnhand = parseFloat($("#cashhand").text().trim().replace(/,/g, '')) || 0;
             const endbalance = parseFloat($("#balances").text().trim().replace(/,/g, '')) || 0;
             const variance = $("#variances").text().trim();
@@ -694,6 +987,7 @@ confirmBtn.addEventListener("click", () => {
                 data: {
                     replNo: replNo,
                     replNoRRR: replNoRRR,
+                    appPCF: appPCF,
                     cashOnhand: cashOnhand,
                     endbalance: endbalance,
                     variance: variance,
@@ -807,132 +1101,87 @@ $(document).on("click", "#confirm-btn", function () {
     });
 });
 
+// confirmBtn.addEventListener("click", function () {
 
-// REQUEST SUBMIT
-// $(document).on("click", "#confirm-btn", function () {
-
-//     // 1. Signature validation
 //     if (signaturePad.isEmpty()) {
 //         alert("Please sign before confirming.");
 //         return;
 //     }
 
+//     let disNumbers = [];
 //     let disbursements = [];
-//     let disNumbersToCheck = [];
-//     let pcfID = $("input[name='pcfID']").val();
 //     let invalid = false;
 
-//     // 2. Collect + Validate rows
 //     $("#myTable tr").each(function () {
 //         if ($(this).find('input[type="checkbox"]').is(":checked")) {
 
-//             const dis_no     = $(this).data("id");
-//             const dis_pcv    = $(this).find('[data-field="dis_pcv"]').text().trim();
-//             const dis_payee  = $(this).find('[data-field="dis_payee"]').text().trim();
-//             const dis_date   = $(this).find('[data-field="dis_date"]').val() || 
-//                                $(this).find('[data-field="dis_date"]').text().trim();
-//             const dis_total_raw = $(this).find('[data-field="dis_total"]').text().trim().replace(/,/g, '');
-//             const dis_total = parseFloat(dis_total_raw) || 0;
+//             const dis_no = $(this).data("id");
+//             const dis_pcv = $(this).find('[data-field="dis_pcv"]').text().trim();
+//             const dis_payee = $(this).find('[data-field="dis_payee"]').text().trim();
+//             const dis_date = $(this).find('[data-field="dis_date"]').text().trim();
+//             const dis_total = parseFloat($(this).find('[data-field="dis_total"]').text().replace(/,/g, '')) || 0;
 
-//             if (!dis_pcv || !dis_payee || !dis_date || dis_total <= 0) {
-//                 alert("PCV, Payee, Date or Amount is missing in selected rows.");
+//             if (!dis_pcv || !dis_date || !dis_payee || dis_total <= 0) {
+//                 alert("Incomplete data in selected rows.");
 //                 invalid = true;
 //                 return false;
 //             }
 
-//             disbursements.push({
-//                 dis_no: dis_no,
-//                 dis_pcv: dis_pcv,
-//                 dis_total: dis_total
-//             });
+//             disNumbers.push(dis_no);
 
-//             disNumbersToCheck.push(dis_no);
+//             disbursements.push({
+//                 dis_no,
+//                 dis_pcv,
+//                 dis_total
+//             });
 //         }
 //     });
 
-//     if (invalid || disbursements.length === 0) {
-//         if (!invalid) alert("No disbursement selected.");
+//     if (invalid || disNumbers.length === 0) {
+//         if (!invalid) alert("No selected disbursements.");
 //         return;
 //     }
 
-//     // 3. Check attachment existence
+//     const svgData = signaturePad.toDataURL('image/svg+xml');
+
 //     $.ajax({
-//         url: "check_dis_no_exists",
+//         url: "save_replenish_all.php",
 //         type: "POST",
 //         dataType: "json",
 //         data: {
-//             dis_numbers: JSON.stringify(disNumbersToCheck),
-//             pcfID: pcfID
+//             signature: encodeURIComponent(svgData),
+//             dis_numbers: JSON.stringify(disNumbers),
+//             disbursements: JSON.stringify(disbursements),
+
+//             replNo: $("#replNo").text(),
+//             replNoRRR: $("#replNoRRR").text(),
+//             appPCF: $("#appPCF").text(),
+//             cashOnhand: $("#cashhand").text(),
+//             endbalance: $("#balances").text(),
+//             variance: $("#variances").text(),
+//             requestAmt: $("#rtotal").text(),
+//             unreplenish: $("#ototal").text(),
+//             pcfID: $("input[name='pcfID']").val(),
+//             company: $("input[name='company']").val(),
+//             outlet: $("select[name='unit']").val(),
+//             section: $("#outlet").text(),
+//             Hcontact: $("input[name='headcontact']").val()
 //         },
-//         success: function (response) {
-
-//             if (response.missing_count === disNumbersToCheck.length) {
-//                 alert("Please upload attachments. Cannot proceed.");
-//                 return;
+//         success: function (res) {
+//             if (res.status === "success") {
+//                 alert(res.message);
+//                 modal.style.display = "none";
+//                 location.reload();
+//             } else {
+//                 alert(res.message || "Error occurred");
 //             }
-//             if (response.missing_count > 0) {
-//                 alert("Some selected disbursements do not have attachments.");
-//                 return;
-//             }
-
-//             // 4. Save signature + replenish
-//             const svgData = signaturePad.toDataURL('image/svg+xml');
-
-//             const savePayload = {
-//                 replNo: $("td#replNo").text().trim(),
-//                 replNoRRR: $("td#replNoRRR").text().trim(),
-//                 cashOnhand: parseFloat($("#cashhand").text().replace(/,/g,'')) || 0,
-//                 endbalance: parseFloat($("#balances").text().replace(/,/g,'')) || 0,
-//                 variance: $("#variances").text().trim(),
-//                 requestAmt: $("#rtotal").text().trim(),
-//                 unreplenish: $("#ototal").text().trim(),
-//                 pcfID: pcfID,
-//                 company: $("input[name='company']").val(),
-//                 outlet: $("select[name='unit']").val(),
-//                 section: $("#outlet").text().trim(),
-//                 Hcontact: $("input[name='headcontact']").val(),
-//                 signature: encodeURIComponent(svgData),
-//                 disbursements: JSON.stringify(disbursements)
-//             };
-
-//             $.ajax({
-//                 url: "save_replenish",
-//                 type: "POST",
-//                 data: savePayload,
-//                 success: function () {
-
-//                     // 5. After replenish is saved → update disbursements
-//                     $.ajax({
-//                         url: "update_disburse",
-//                         type: "POST",
-//                         data: {
-//                             pcfID: pcfID,
-//                             disbursements: JSON.stringify(disbursements)
-//                         },
-//                         success: function () {
-//                             alert("Replenishment submitted successfully!");
-//                         },
-//                         error: function (xhr, status, error) {
-//                             console.error("Update disburse error:", error);
-//                         }
-//                     });
-
-//                 },
-//                 error: function (xhr, status, error) {
-//                     console.error("Save replenish error:", error);
-//                 }
-//             });
 //         },
-//         error: function (xhr, status, error) {
-//             console.error("Check disbursement error:", error);
-//             alert("System error during attachment validation.");
+//         error: function (xhr) {
+//             console.log(xhr.responseText);
+//             alert("Server error occurred.");
 //         }
 //     });
 // });
-
-
-
-
 
 $(document).ready(function() {
     // Set up the click handler
@@ -942,7 +1191,7 @@ $(document).ready(function() {
         $('.right-side').hide();
         const id = $(this).data('id');
         $('#' + id).show();
-        $('#center-sided').css('width', '59%');
+        // $('#center-sided').css('width', '59%');
     });
     
     // Automatically click the first clickable row

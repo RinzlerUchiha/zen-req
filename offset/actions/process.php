@@ -1,5 +1,5 @@
 <?php
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
 
@@ -10,8 +10,8 @@ $timestamp = date("Y-m-d H:i:s");
 // foreach ($con1->query("SELECT Emp_No FROM tbl_user2 WHERE U_ID = '" . $_SESSION['SIS_ID'] . "'") as $k => $v) {
 // 	$user_id = $v['Emp_No'];
 // }
-if (isset($_SESSION['user_id'])) {
-        $user_id = $_SESSION['user_id'];
+if (isset($_SESSION[SESSION_KEY])) {
+        $user_id = $_SESSION[SESSION_KEY];
 }
 $action=$_POST['action'];
 switch ($action) {

@@ -1,5 +1,5 @@
 <?php
-require_once($sr_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

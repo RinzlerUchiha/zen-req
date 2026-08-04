@@ -2,7 +2,8 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isAuthenticated()) {
     http_response_code(403);
@@ -10,7 +11,7 @@ if (!isAuthenticated()) {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     $currentUser = getCurrentUser();
 
     error_log("notification_action: emp_no=" . ($currentUser['emp_no'] ?? 'NULL'));

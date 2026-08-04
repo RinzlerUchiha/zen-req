@@ -1,8 +1,9 @@
 <?php
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 if(isset($_FILES['upload'])){
    // ------ Process your file upload code -------
         $filen = $_FILES['upload']['tmp_name']; 
-        $con_images = "../announcement/".$_FILES['upload']['name'];
+        $con_images = $FILES_DIR."/announcements/".$_FILES['upload']['name'];
 
         // Set a maximum height and width
         $width = 2000;

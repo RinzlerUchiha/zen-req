@@ -8,7 +8,8 @@ header('Content-Type: application/json');
 error_log("revise_submit_action.php START");
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 require_once (__DIR__ . '/../includes/notifications.php');
 require_once (__DIR__ . '/../includes/sms.php');
 
@@ -63,7 +64,7 @@ if (empty($access_types)) {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     error_log("revise_submit_action: Got PDO connection");
 
     $emp_no = $current_user['emp_no'];

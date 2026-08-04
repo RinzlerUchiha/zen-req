@@ -2,7 +2,8 @@
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 header('Content-Type: application/json');
 
@@ -12,7 +13,7 @@ if (!isAuthenticated()) {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     $currentUser = getCurrentUser();
 
     $stmt = $pdo->prepare("SELECT id FROM users WHERE employee_id = ?");

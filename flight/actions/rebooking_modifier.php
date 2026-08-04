@@ -1,5 +1,5 @@
 <?php
-require_once($fl_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'User not authenticated']);
@@ -105,7 +105,7 @@ try {
                 $requesterNo = $_POST['employeenum'] ?? '';
                 $employee    = $_SESSION['user_id'] ?? '';
                 $date        = date('Y-m-d');
-                $finance     = '09501432700';
+                $finance     = '9176332722';
 
                 if (empty($flightID) || empty($employee)) {
                     echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
@@ -166,7 +166,7 @@ try {
                         if ($user && !empty($user['pi_mobileno'])) {
                             $contact = $user['pi_mobileno'];
 
-                            $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: Your flight rebooking request has been reviewed by your immediate head. Thank you.";
+                            $msgText = "FLIGHT BOOKING: Your flight rebooking request has been reviewed by your immediate head. Thank you.";
                             $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
                             if ($sql->execute([$msgText])) {
@@ -184,7 +184,7 @@ try {
                    SMS NOTIFICATION – FINANCE
                 ============================ */
                 if (!empty($finance)) {
-                    $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: New flight rebooking request is ready for your review and approval. Thank you.";
+                    $msgText = "FLIGHT BOOKING: New flight rebooking request is ready for your review and approval. Thank you.";
                     $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
                     if ($sql->execute([$msgText])) {
@@ -359,7 +359,7 @@ try {
                             if ($user && !empty($user['pi_mobileno'])) {
                                 $contact = $user['pi_mobileno'];
 
-                                $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: Your flight rebooking request has been declined by your immediate head. Thank you.";
+                                $msgText = "FLIGHT BOOKING: Your flight rebooking request has been declined by your immediate head. Thank you.";
                                 $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
                                 if ($sql->execute([$msgText])) {

@@ -158,7 +158,7 @@
         							</a>
     							</li>
 								<?php
-								require_once($sr_root."/db/db.php");
+								require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 								
 								try {
 								    // $scms_db = Database::getConnection('scms');

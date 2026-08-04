@@ -8,7 +8,8 @@ header('Content-Type: application/json');
 error_log("revise_action.php START");
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 require_once (__DIR__ . '/../includes/notifications.php');
 require_once (__DIR__ . '/../includes/sms.php');
 
@@ -41,7 +42,7 @@ if (!$id || !$revision_message) {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     error_log("revise_action: Got PDO connection");
 
     $stmt = $pdo->prepare("UPDATE requests SET status = 'needs_revision', updated_at = NOW() WHERE id = ?");

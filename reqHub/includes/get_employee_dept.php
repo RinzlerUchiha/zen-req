@@ -10,7 +10,8 @@ if (!isset($reqhub_root)) {
 
 try {
     require_once ($reqhub_root . '/includes/auth.php');
-    require_once ($reqhub_root . '/database/db.php');
+    // require_once ($reqhub_root . '/database/db.php');
+    require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 } catch (Exception $e) {
     error_log("ERROR including files: " . $e->getMessage());
     http_response_code(500);
@@ -33,7 +34,7 @@ if (!$emp_no) {
 
 try {
     // Connect to ZenHub database to get job record data
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     
     error_log("get_employee_dept: Querying tbl201_jobrec for emp_no: $emp_no");
     

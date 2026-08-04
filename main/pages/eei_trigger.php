@@ -1,7 +1,7 @@
 <?php
-require_once($main_root."/db/database.php");
-require_once($main_root."/db/core.php");
-require_once($main_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $hr_pdo = HRDatabase::connect();
 
 $now = new DateTime(date("Y-m-d"));

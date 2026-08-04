@@ -1,9 +1,9 @@
 <?php
-require_once($main_root."../dtrdb/database.php");
-require_once($main_root."../dtrdb/core.php");
-require_once($main_root."../dtrdb/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 
-$pdo = DB::connect();
+// $pdo = DB::connect();
 $hr_pdo = HRDatabase::connect();
 
 if (isset($_SESSION['user_id'])) {
@@ -72,7 +72,7 @@ switch ($countthis) {
             ");
             $count2 = $stmt ? (int)$stmt->fetchColumn() : 0;
         
-            if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+            if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
                 $stmt = $hr_pdo->query("
                     SELECT COUNT(*) 
                     FROM tbl201_leave WHERE la_status='approved'
@@ -80,7 +80,7 @@ switch ($countthis) {
                 $approved2 = $stmt ? (int)$stmt->fetchColumn() : 0;
             }
         
-        } else if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+        } else if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
             $stmt = $hr_pdo->query("
                 SELECT COUNT(*) 
                 FROM tbl201_leave WHERE la_status='approved'
@@ -98,7 +98,7 @@ switch ($countthis) {
             ");
             $count5 = $stmt ? (int)$stmt->fetchColumn() : 0;
         
-            if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+            if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
                 $stmt = $hr_pdo->query("
                     SELECT COUNT(*) 
                     FROM tbl201_offset WHERE os_status='approved'
@@ -106,7 +106,7 @@ switch ($countthis) {
                 $approved5 = $stmt ? (int)$stmt->fetchColumn() : 0;
             }
         
-        } else if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+        } else if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
             $stmt = $hr_pdo->query("
                 SELECT COUNT(*) 
                 FROM tbl201_offset WHERE os_status='approved'
@@ -128,7 +128,7 @@ switch ($countthis) {
             ");
             $count6 = $stmt ? (int)$stmt->fetchColumn() : 0;
         
-            if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+            if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
                 $stmt = $hr_pdo->query("
                     SELECT COUNT(*) 
                     FROM tbl201_ot 
@@ -137,7 +137,7 @@ switch ($countthis) {
                 $approved6 = $stmt ? (int)$stmt->fetchColumn() : 0;
             }
         
-        } else if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+        } else if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
             $stmt = $hr_pdo->query("
                 SELECT COUNT(*) 
                 FROM tbl201_ot 
@@ -155,14 +155,14 @@ switch ($countthis) {
             $count7 = $stmt ? (int)$stmt->fetchColumn() : 0;
             
         
-            if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+            if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
                 $stmt = $hr_pdo->query("
                     SELECT COUNT(*) FROM tbl201_drd WHERE drd_status='approved'
                 ");
                 $approved7 = $stmt ? (int)$stmt->fetchColumn() : 0;
             }
             
-        }else if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+        }else if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
             $stmt = $hr_pdo->query("
                 SELECT COUNT(*) FROM tbl201_drd WHERE drd_status='approved'
             ");
@@ -177,14 +177,14 @@ switch ($countthis) {
             $countdhd = $stmt ? (int)$stmt->fetchColumn() : 0;
             
         
-            if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+            if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
                 $stmt = $hr_pdo->query("
                     SELECT COUNT(*) FROM tbl201_dhd WHERE dhd_status='approved'
                 ");
                 $approveddhd = $stmt ? (int)$stmt->fetchColumn() : 0;
             }
             
-        }else if (get_assign('timeoff', 'viewall', fn_get_user_info("user_id"))) {
+        }else if (get_assign('timeoff', 'viewall', fn_get_user_info("U_ID"))) {
             $stmt = $hr_pdo->query("
                 SELECT COUNT(*) FROM  tbl201_dhd WHERE dhd_status='approved'
             ");
@@ -211,76 +211,77 @@ switch ($countthis) {
         }
         
         // ---- Activities ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(act_id) 
-            FROM tbl201_activities 
-            WHERE act_stat='pending' 
-              AND FIND_IN_SET(act_empno, '".check_auth($empno, "Activity")."') > 0
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(act_id) 
+        //     FROM tbl201_activities 
+        //     WHERE act_stat='pending' 
+        //       AND FIND_IN_SET(act_empno, '".check_auth($empno, "Activity")."') > 0
+        // ");
         $count8 = $stmt ? (int)$stmt->fetchColumn() : 0;
         
         // ---- Training ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(t_id) 
-            FROM tbl201_training 
-            JOIN tbl_trainings_sched ON trngsched_id = t_schedid AND trngsched_status='Active'
-            JOIN tbl_trainings ON trng_id = trngsched_trngid AND trng_stat='Active'
-            WHERE t_empno = '$empno' AND t_status='invited'
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(t_id) 
+        //     FROM tbl201_training 
+        //     JOIN tbl_trainings_sched ON trngsched_id = t_schedid AND trngsched_status='Active'
+        //     JOIN tbl_trainings ON trng_id = trngsched_trngid AND trng_stat='Active'
+        //     WHERE t_empno = '$empno' AND t_status='invited'
+        // ");
         $count3 = $stmt ? (int)$stmt->fetchColumn() : 0;
         
+        $stmt = null;
         // ---- Grievance ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(gri_id) 
-            FROM tbl201_grievance 
-            WHERE gri_stat='pending' 
-              AND FIND_IN_SET(gri_empno, '".check_auth($empno, "Grievance")."') > 0
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(gri_id) 
+        //     FROM tbl201_grievance 
+        //     WHERE gri_stat='pending' 
+        //       AND FIND_IN_SET(gri_empno, '".check_auth($empno, "Grievance")."') > 0
+        // ");
         $grievancecnt = $stmt ? (int)$stmt->fetchColumn() : 0;
         
         // ---- IR ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(ir_id) 
-            FROM tbl201_ir 
-            WHERE ir_stat='pending' 
-              AND FIND_IN_SET(ir_empno, '".check_auth($empno, "IR")."') > 0
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(ir_id) 
+        //     FROM tbl201_ir 
+        //     WHERE ir_stat='pending' 
+        //       AND FIND_IN_SET(ir_empno, '".check_auth($empno, "IR")."') > 0
+        // ");
         $ir_cnt = $stmt ? (int)$stmt->fetchColumn() : 0;
         
         // ---- 13a ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(req_id) 
-            FROM tbl201_13a 
-            WHERE req_stat='pending' 
-              AND FIND_IN_SET(req_empno, '".check_auth($empno, "13a")."') > 0
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(req_id) 
+        //     FROM tbl201_13a 
+        //     WHERE req_stat='pending' 
+        //       AND FIND_IN_SET(req_empno, '".check_auth($empno, "13a")."') > 0
+        // ");
         $_13a_cnt = $stmt ? (int)$stmt->fetchColumn() : 0;
         
         // ---- 13b ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(req_id) 
-            FROM tbl201_13b 
-            WHERE req_stat='pending' 
-              AND FIND_IN_SET(req_empno, '".check_auth($empno, "13b")."') > 0
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(req_id) 
+        //     FROM tbl201_13b 
+        //     WHERE req_stat='pending' 
+        //       AND FIND_IN_SET(req_empno, '".check_auth($empno, "13b")."') > 0
+        // ");
         $_13b_cnt = $stmt ? (int)$stmt->fetchColumn() : 0;
         
         // ---- Commitment ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(com_id) 
-            FROM tbl201_commitment 
-            WHERE com_stat='pending' 
-              AND FIND_IN_SET(com_empno, '".check_auth($empno, "Commitment")."') > 0
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(com_id) 
+        //     FROM tbl201_commitment 
+        //     WHERE com_stat='pending' 
+        //       AND FIND_IN_SET(com_empno, '".check_auth($empno, "Commitment")."') > 0
+        // ");
         $commit_cnt = $stmt ? (int)$stmt->fetchColumn() : 0;
         
         // ---- Clearance ----
-        $stmt = $hr_pdo->query("
-            SELECT COUNT(ecf_id) 
-            FROM tbl201_ecf 
-            WHERE ecf_stat='pending' 
-              AND FIND_IN_SET(ecf_empno, '".check_auth($empno, "Clearance")."') > 0
-        ");
+        // $stmt = $hr_pdo->query("
+        //     SELECT COUNT(ecf_id) 
+        //     FROM tbl201_ecf 
+        //     WHERE ecf_stat='pending' 
+        //       AND FIND_IN_SET(ecf_empno, '".check_auth($empno, "Clearance")."') > 0
+        // ");
         $clr = $stmt ? (int)$stmt->fetchColumn() : 0;
 
 

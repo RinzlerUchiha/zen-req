@@ -9,14 +9,15 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 class Profile
 {
     private static function getDatabaseConnection($db)
     {
         try {
-            return ReqHubDatabase::getConnection($db);
+            return Database::getConnection($db);
         } catch (Exception $e) {
             error_log("Database connection error for '$db': " . $e->getMessage());
             return null;

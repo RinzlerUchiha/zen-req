@@ -1,5 +1,5 @@
 <?php
-require_once($pcf_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 try {
     $pcf_db = Database::getConnection('pcf');
     $pcf_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

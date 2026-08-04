@@ -1,5 +1,5 @@
 <?php
-require_once($pcf_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 
 if (!isset($_SESSION['user_id'])) {
@@ -16,6 +16,22 @@ try {
         $dis_no = $_POST['dis_no'];
         $status = $_POST['status'];
         $reason = isset($_POST['reason']) ? trim($_POST['reason']) : null;
+        
+        $check_query = "SELECT dis_pcv, dis_date FROM tbl_disbursement_entry WHERE dis_no = :dis_no";
+        $check_stmt = $pcf_db->prepare($check_query);
+        $check_stmt->bindParam(":dis_no", $dis_no);
+        $check_stmt->execute();
+        $row = $check_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($row) {
+            $pcv = trim($row['dis_pcv'] ?? '');
+            $date = trim($row['dis_date'] ?? '');
+            
+            if (empty($pcv) && empty($date)) {
+                echo "pcv_date_empty";
+                exit;
+            }
+        }
 
         $query = "UPDATE tbl_disbursement_entry 
                   SET dis_status = :status, dis_reason = :reason 

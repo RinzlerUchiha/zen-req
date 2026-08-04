@@ -1,7 +1,7 @@
 <?php
-require_once($com_root."/db/database.php"); 
-require_once($com_root."/db/core.php"); 
-require_once($com_root."/db/mysqlhelper.php");  
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");  
 
 if(isset($_REQUEST["phone"]) && $_REQUEST["phone"]!='' && (get_assign("phonecontract","viewall",$user_id) || get_assign("phonecontract","view",$user_id) || get_assign("phonecontract","approve",$user_id))){
 

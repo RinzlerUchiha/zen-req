@@ -170,7 +170,10 @@
         							</a>
     							</li>
 								<?php
-								require_once($pcf_root."/db/db.php");
+								require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+								require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+								require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+								require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 								
 								try {
 								    // $scms_db = Database::getConnection('scms');
@@ -205,6 +208,7 @@
 								        $empno = $user['bi_empno'];
 								        $position = $user['jd_title'];
 								        $outlet = $user['jrec_department'];
+								        $mydept = $user['jrec_department'];
 								    } else {
 								        error_log("No user found for ID: $user_id");
 								        $username = "Guest";

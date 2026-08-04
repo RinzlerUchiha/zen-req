@@ -1,9 +1,9 @@
 <?php
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=tngc_hrd2", "misadmin", "88224646abxy@", [
+    $pdo = new PDO("mysql:host=192.168.105.221;dbname=tngc_hrd2", (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
-
+    
     $query = isset($_POST['query']) ? trim($_POST['query']) : '';
 
     if (!empty($query)) {
@@ -24,9 +24,10 @@ try {
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($results as $row) {
-            echo "<div class='mention-item'>" . htmlspecialchars($row['bi_empfname'] . ' ' . $row['bi_emplname']) . "</div>";
+            echo "<div class='mention-item'>" . htmlspecialchars($row['bi_empfname'] . ' ' . $row['bi_emplname']) ."</div>";
         }
     }
 } catch (PDOException $e) {
     echo "Database error: " . $e->getMessage();
 }
+?>

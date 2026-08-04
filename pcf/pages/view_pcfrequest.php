@@ -12,40 +12,222 @@ if (isset($_GET['rliD'])) {
 
     $replenish = PCF::GetReplenish($ID);
     $repl = PCF::GetCOH($ID);
+    $appPCF = PCF::GetApprovedPCF($ID);
 
 }
 $pcf = PCF::GetPCFdetail($user_id,$outlet);
-// $pcf = PCF::GetPCFdetail($outlet);
 $repl_request = PCF::GetReplenishRequest($ID); 
 $sign_owner = PCF::GetSign($ID); 
 
 ?>
-<style>
-    @media print {
-  .table-container {
-    overflow: visible !important;
-    width: 100% !important;
-  }
-  
-  table {
-    width: 100% !important;
-    max-width: none !important;
-    table-layout: fixed !important;
-  }
-  
-  th, td {
-    min-width: 70px !important;
-    max-width: none !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    font-size: 10px !important;
-  }
-  
-  .modal {
-    display: none !important;
-  }
-}
-</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.6/dist/signature_pad.umd.min.js"></script>
+    <style>
+      * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f4f7fc;
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .page-wrapper {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .page-body {
+            padding: 0.75rem;
+        }
+
+        .my-div {
+            background: #fff;
+            /*border-radius: 20px;*/
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            width: 280px;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            /*margin-right: 10px;*/
+        }
+
+        @media (max-width: 768px) {
+            .row[style*="display: flex"] {
+                flex-direction: column !important;
+            }
+            .my-div {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            #center-sided {
+                width: 100% !important;
+            }
+        }
+
+        #center-sided {
+            flex: 1;
+            min-width: 0; 
+            /*max-width: 59% !important;*/
+            width: calc(100% - 300px);
+        }
+
+        .card {
+            border: none;
+           /*border-radius: 28px;*/
+            background: #ffffff;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .card-block {
+            /*padding: 1.2rem;*/
+            overflow-y: auto;
+            height: auto;
+            max-height: 85vh;
+        }
+
+        .first {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: #f9fafc;
+            /*padding: 12px 16px;*/
+            border-radius: 40px;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 1.2rem;
+           /*border-radius: 20px;*/
+        }
+
+        .table {
+            min-width: 900px;
+            width: 100%;
+            font-size: 0.85rem;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 640px) {
+            .table {
+                font-size: 0.75rem;
+                min-width: 780px;
+            }
+            .btn-mini {
+                padding: 0.2rem 0.5rem;
+                font-size: 0.7rem;
+            }
+        }
+
+        .table-container > div[style*="border: 1px solid #ccc"] {
+            float: none !important;
+            margin: 20px 0 0 0 !important;
+            width: 100% !important;
+            overflow-x: auto;
+        }
+
+        .table-container > div table {
+            min-width: 400px;
+        }
+
+        .fourth {
+            margin-top: 25px;
+            border-top: 1px solid #e9ecef;
+            padding-top: 20px;
+        }
+        /*.sign-card {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            background: #fef9e6;
+            padding: 15px 20px;
+            border-radius: 48px;
+        }*/
+        .app-detail, .app-sign {
+            flex: 1 1 auto;
+        }
+        @media (max-width: 560px) {
+            .sign-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        .sign-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .sign-modal .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 32px;
+            max-width: 90%;
+            width: 460px;
+            text-align: center;
+        }
+        canvas {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            background: #fff;
+            width: 100%;
+            height: auto;
+        }
+        
+        .form-control-sm-custom {
+            width: auto;
+            min-width: 140px;
+        }
+        .coh-cards {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .widget-card {
+            background: #f2f6fd;
+            border-radius: 24px;
+            padding: 8px 15px;
+            margin: 8px 0;
+        }
+        #error, #errormess {
+            display: none;
+        }
+        .undo-btn, .cancel-btn {
+            margin: 0 2px;
+        }
+        .attachment-card img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin: 4px;
+            cursor: pointer;
+        }
+        .right-side {
+            display: none;
+        }
+        .clickable-row {
+            cursor: pointer;
+        }
+    </style>
 <div class="page-wrapper">
   <div class="page-body">
     <div class="row" style="display: flex;">
@@ -53,642 +235,630 @@ $sign_owner = PCF::GetSign($ID);
         <div style="text-align:right;">
           <button onclick="toggleSidebarIcon()">
             <i id="toggle-icon" class="fa fa-navicon"></i>
-        </button>
-    </div>
-    <?php if (!empty($hotside)) include_once($hotside); ?>
-    <div style="height: 50px;padding: 10px;text-align: left;">
-      <span>TNGC | 2025</span>
-  </div>
-</div>
-<!-- <div class="col-md-9" id="right-sided"> -->
-  <div id="center-sided">
-    <div class="card">
-      <div class="card-block" style="height: 87vh;margin-top: 5px;margin-bottom: 5px;overflow: auto;">
-        <div class="first">
-          <?php if (!empty($repl)) { foreach ($repl as $r) { ?>
+          </button>
+        </div>
+        <?php if (!empty($hotside)) include_once($hotside); ?>
+        <div style="height: 50px;padding: 10px;text-align: left;">
+          <span>TNGC | 2025</span>
+        </div>
+      </div>
+      <!-- <div class="col-md-9" id="right-sided"> -->
+      <div id="center-sided">
+        <div class="card">
+          <div class="card-block" style="height: 87vh;margin-top: 5px;margin-bottom: 5px;overflow: auto;">
+            <div class="first">
+              <?php if (!empty($repl)) { foreach ($repl as $r) { ?>
               <div style="display: flex;">
                 <!-- <i class='bx bxs-buildings'></i> -->
                 <input type="text" class="form-control" style="width:300px;" name="" value="<?=$r['repl_company']?>" readonly>
                 <input type='text' class='form-control' id='pcfIDs' name='pcfID' value='<?=$r['repl_no']?>'readonly/>
-                <input type='hidden' class='form-control' id='unit' name='unit' value='<?=$r['repl_outlet']?>'readonly/>
-                <input type='hidden' class='form-control' id='pcfstatus' name='status' value='<?=$r['repl_status']?>'readonly/>
-            </div>
-            <div style="display: flex;flex-wrap: wrap; gap:10px;margin-right: 10px;">
+              </div>
+              <div style="display: flex;flex-wrap: wrap; gap:10px;margin-right: 10px;">
                 <?php if ($r['repl_status'] == 'deposited') {?>
-                    <a href="#" data-toggle="modal" data-target="#<?=$r['repl_no']?>-Modal" style="align-content: center;height: 25px" class="btn btn-inverse btn-outline-inverse btn-mini">Receive</a>
+                <a href="#" data-toggle="modal" data-target="#<?=$r['repl_no']?>-Modal" style="align-content: center;height: 25px" class="btn btn-inverse btn-outline-inverse btn-mini">Receive</a>
                     <!-- <a href="#" data-toggle="modal" data-target="#<?=$r['repl_no']?>-Modal"style="align-content: center;height: 25px" class="btn btn-inverse btn-outline-inverse btn-mini">
                       <i class="icofont icofont-image" style="font-size: 12px;"></i>
-                  </a> -->
-                  <div class="modal fade" id="<?=$r['repl_no']?>-Modal" tabindex="-1" role="dialog">
-                   <div class="modal-dialog modal-lg" role="document">
-                     <div class="modal-content">
-                       <div class="modal-header">
-                         <h4 class="modal-title">Deposit Info</h4>
-                         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                           <span aria-hidden="true"><i class="icofont icofont-close-circled"></i></span>
-                       </button>
+                    </a> -->
+                    <div class="modal fade" id="<?=$r['repl_no']?>-Modal" tabindex="-1" role="dialog">
+                     <div class="modal-dialog modal-lg" role="document">
+                       <div class="modal-content">
+                         <div class="modal-header">
+                           <h4 class="modal-title">Deposit Info</h4>
+                           <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                             <span aria-hidden="true"><i class="icofont icofont-close-circled"></i></span>
+                           </button>
+                         </div>
+                         <div class="modal-body">
+                          <div class="form-group row">
+                            <label class="col-sm-2 col-form-label">Replenish No</label>
+                            <div class="col-sm-3">
+                              <input type="text" class="form-control" id="replenishNum" value="<?=$r['repl_no']?>" readonly>
+                            </div>
+                            <label class="col-sm-2 col-form-label">Check number</label>
+                            <div class="col-sm-3">
+                              <input type="text" class="form-control" value="<?=$r['repl_check_no']?>" readonly>
+                            </div>
+                          </div>
+                          <div class="form-group row">
+                            <label class="col-sm-2 col-form-label">Deposit date</label>
+                            <div class="col-sm-3">
+                              <input type="text" class="form-control" value="<?=$r['repl_depo_dt']?>" readonly>
+                            </div>
+                            <label class="col-sm-2 col-form-label">Deposited amount</label>
+                            <div class="col-sm-3">
+                              <input type="text" class="form-control form-control-right" value="<?=number_format($r['repl_depo_amount'],2)?>" readonly>
+                            </div>
+                          </div>
+                          <div class="form-group row">
+                            <label class="col-sm-2 col-form-label">Attachment</label>
+                            <div class="col-sm-6">
+                              <img width="400" src="<?=$r['repl_depo_image']?>">
+                            </div>
+                          </div>
+                        </div>
+                        <div class="modal-footer">
+                         <button class="btn btn-primary btn-mini receive-status" id="receiveDeposit" data-replenish="<?=$r['repl_no']?>">Received</button>
+                       </div>
+                     </div>
                    </div>
-                   <div class="modal-body">
-                      <div class="form-group row">
-                        <label class="col-sm-2 col-form-label">Replenish No</label>
-                        <div class="col-sm-3">
-                          <input type="text" class="form-control" id="replenishNum" value="<?=$r['repl_no']?>" readonly>
-                      </div>
-                      <label class="col-sm-2 col-form-label">Check number</label>
-                      <div class="col-sm-3">
-                          <input type="text" class="form-control" value="<?=$r['repl_check_no']?>" readonly>
-                      </div>
-                  </div>
-                  <div class="form-group row">
-                    <label class="col-sm-2 col-form-label">Deposit date</label>
-                    <div class="col-sm-3">
-                      <input type="text" class="form-control" value="<?=$r['repl_depo_dt']?>" readonly>
-                  </div>
-                  <label class="col-sm-2 col-form-label">Deposited amount</label>
-                  <div class="col-sm-3">
-                      <input type="text" class="form-control form-control-right" value="<?=number_format($r['repl_depo_amount'],2)?>" readonly>
-                  </div>
-              </div>
-              <div class="form-group row">
-                <label class="col-sm-2 col-form-label">Attachment</label>
-                <div class="col-sm-6">
-                  <img width="400" src="<?=$r['repl_depo_image']?>">
-              </div>
-          </div>
-      </div>
-      <div class="modal-footer">
-       <button class="btn btn-primary btn-mini receive-status" id="receiveDeposit" data-replenish="<?=$r['repl_no']?>">Received</button>
-   </div>
-</div>
-</div>
-</div>
-<?php }else{ ?>
-   <a href="#"style="align-content: center;height: 25px" class="btn btn-inverse btn-outline-inverse btn-mini" id="downloadPDF"><i class="icofont icofont-download-alt" style="font-size: 12px;"></i></a>
-   <a href="#"style="align-content: center;height: 25px" class="btn btn-inverse btn-outline-inverse btn-mini" id="print"><i class="icofont icofont-printer" style="font-size: 12px;"></i></a>
-<?php } ?>
-</div>
-<?php } } ?>
-</div>
-<div class="third">
-  <div class="table-container" id="table-containers">
-    <table class="table table-striped table-bordered nowrap">
-      <thead>
-        <tr>
-           <td id="m"></td>
-           <th id="m">Passed</th>
-           <th id="m">Failed</th>
-           <th id="a">Date</th>
-           <th id="a">PCV#</th>
-           <th id="a">OR#</th>
-           <th id="a">Payee</th>
-           <th id="a">Office/Store Supply</th>
-           <th id="a">Transportation</th>
-           <th id="a">Repairs & Maintenance</th>
-           <th id="a">Communication</th>
-           <th id="a">Miscellaneous</th>
-           <th id="a">Total</th>
-           <?php if (!empty($repl)) { foreach ($repl as $r) { 
-              if ($r == 'returned') {
-                 echo "<th></th>";
-             } ?>
-         <?php }} ?>
-     </tr>
- </thead>
- <tbody id="myTable">
-   <?php 
-   if (!empty($replenish)) { 
-    foreach ($replenish as $k => $r) {
-      $outlet = $r['dis_outdept'];
-      $disNo = $r['dis_no'];
-      $notif = PCF::GetDisbMessage($disNo);
-      $attachment = PCF::GetAttachment($disNo);
-      $coh = PCF::GetCOHand($outlet);
-      if(in_array($r['dis_status'], ['returned','f-returned','c-returned'])) {
-       ?>
-       <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
-           <td id="m">
-               <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
-                   <i class="icon-bubble" style="font-size:14px;color: red;"></i>
-               <?php } } ?>
-               <?php if (!empty($attachment)) { ?>
-                   <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
-               <?php  } ?>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="submit" disabled>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="returned" checked disabled>
-           </td>
-           <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
-           <td id="a">
-               <input type="date" class="date-input" data-field="dis_date" id="datePCF" value="<?= $r['dis_date'] ?>">
-           </td>
-           <td id="a" contenteditable data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
-           <td id="a" contenteditable data-field="dis_or"><?= $r['dis_or'] ?></td>
-           <?php if (($r['dis_status']) == 'cancelled') { ?>
-               <td style="text-align: center; color: red">Cancelled</td>
-           <?php } else { ?>
-               <td id="p" contenteditable data-field="dis_payee"><?= $r['dis_payee'] ?></td>
-           <?php } ?>
-           <td id="n" contenteditable data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
-           <td id="n" contenteditable data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
-           <td id="n" contenteditable data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
-           <td id="n" contenteditable data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
-           <td id="n" contenteditable data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
-           <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>
-           <td>
-               <a href="#" class="btn btn-outline-danger btn-mini" data-toggle="modal" data-target="#cancel<?=$r['dis_no']?>" data-id="<?=$r['dis_no']?>"><i class="ion-close"></i></a>
-           </td>
-       </tr>
-       <div class="modal fade" id="cancel<?=$r['dis_no']?>" tabindex="-1" role="dialog">
-           <div class="modal-dialog modal-sm" role="document">
-               <div class="modal-content">
-                   <div class="modal-header">
-                       <h4 class="modal-title">Reason to Cancel</h4>
-                       <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                           <span aria-hidden="true">&times;</span>
-                       </button>
-                   </div>
-                   <div class="modal-body">
-                       <select class="form-control" name="reason">
-                           <option>Select Reason</option>
-                           <option value="Returned of full amount">Returned of full amount</option>
-                           <option value="Wrong date">Wrong date</option>
-                           <option value="Wrong detail/s in the PCV">Wrong detail/s in the PCV</option>
-                           <option value="Wrong receiver/requestor name">Wrong receiver/requestor name</option>
-                           <option value="Wrong amount">Wrong amount</option>
-                           <option value="PCV with alteration or use of correction pen">PCV with alteration or use of correction pen</option> 
-                       </select>
-                   </div>
-                   <div class="modal-footer">
-                       <button type="button" class="btn btn-danger waves-effect btn-mini " data-dismiss="modal">cancel</button>
-                       <button type="button" class="btn btn-primary waves-effect btn-mini  cancel-entry-btn" data-dismiss="modal">save</button>
-                   </div>
+                 </div>
+                 <?php }else{ ?>
+                 <a href="#"style="align-content: center;height: 25px" class="btn btn-inverse btn-outline-inverse btn-mini" id="downloadPDF"><i class="icofont icofont-download-alt" style="font-size: 12px;"></i></a>
+                 <a href="#"style="align-content: center;height: 25px" class="btn btn-inverse btn-outline-inverse btn-mini" id="print"><i class="icofont icofont-printer" style="font-size: 12px;"></i></a>
+                 <?php } ?>
                </div>
-           </div>
-       </div>
-       <!-- FOR ADJUSTMENT SAVING -->
-       <tr style="display:none;" class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
-           <td id="a" class="entry-id" style="display:none;" data-field="old_dis_no"><?= $r['dis_no'] ?></td>
-           <td id="a">
-               <input type="date" class="date-input" data-field="old_dis_date" id="datePCF" value="<?= $r['dis_date'] ?>" disabled>
-           </td>
-           <td id="a" data-field="old_dis_pcv"><?= $r['dis_pcv'] ?></td>
-           <td id="a" data-field="old_dis_or"><?= $r['dis_or'] ?></td>
-           <?php if (($r['dis_status']) == 'cancelled') { ?>
-               <td  data-field="old_dis_payee" style="text-align: center; color: red">Cancelled</td>
-           <?php } else { ?>
-               <td id="p" data-field="old_dis_payee"><?= $r['dis_payee'] ?></td>
-           <?php } ?>
-           <td data-field="old_dis_office_store"><?= $r['dis_office_store'] ?></td>
-           <td data-field="old_dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
-           <td data-field="old_dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
-           <td data-field="old_dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
-           <td data-field="old_dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
-           <td data-field="old_dis_total"><?= number_format($r['dis_total'], 2) ?></td>
-       </tr>
-   <?php }elseif ($r['dis_empno'] == $user_id || $r['custodian'] == $user_id && in_array($r['dis_status'] , ['h-approved','checked','f-approved','deposited','received'])) { ?>
-       <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
-           <td id="m">
-               <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
-                   <i class="icon-bubble" style="font-size:14px;color: red;"> 
-                   </i>
                <?php } } ?>
-               <?php if (!empty($attachment)) { ?>
-                   <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
-               <?php  } ?>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="submit" checked disabled>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="returned" disabled>
-           </td>
-           <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
-           <td id="a">
-               <?= !empty($r['dis_date']) ? date('m/d/Y', strtotime($r['dis_date'])) : 'N/A'; ?>
-           </td>
-           <td id="a" data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
-           <td id="a" data-field="dis_or"><?= $r['dis_or'] ?></td>
-           <?php if (($r['dis_status']) == 'cancelled') { ?>
-               <td style="text-align: center; color: red">Cancelled</td>
-           <?php } else { ?>
-               <td id="p" data-field="dis_payee"><?= $r['dis_payee'] ?></td>
-           <?php } ?>
-           <td id="n" data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
-           <td id="n" data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
-           <td id="n" data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
-           <td id="n" data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
-           <td id="n" data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
-           <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>
-       </tr>
-   <?php }elseif ($r['dis_empno'] == $user_id || $r['custodian'] == $user_id && in_array($r['repl_status'] , ['h-approved','checked','f-approved','deposited']) && $r['dis_status'] == 'cancelled') { ?>
-       <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
-           <td id="m">
-               <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
-                   <i class="icon-bubble" style="font-size:14px;color: red;"> 
-                   </i>
-               <?php } } ?>
-               <?php if (!empty($attachment)) { ?>
-                   <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
-               <?php  } ?>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="submit" checked disabled>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="returned" disabled>
-           </td>
-           <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
-           <td id="a">
-               <?= !empty($r['dis_date']) ? date('m/d/Y', strtotime($r['dis_date'])) : 'N/A'; ?>
-           </td>
-           <td id="a" data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
-           <td id="a" data-field="dis_or"><?= $r['dis_or'] ?></td>
-           <?php if (($r['dis_status']) == 'cancelled') { ?>
-               <td style="text-align: center; color: red">Cancelled</td>
-           <?php } else { ?>
-               <td id="p" data-field="dis_payee"><?= $r['dis_payee'] ?></td>
-           <?php } ?>
-           <td id="n" data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
-           <td id="n" data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
-           <td id="n" data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
-           <td id="n" data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
-           <td id="n" data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
-           <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>                       
-       </tr>
-   <?php }elseif ($r['dis_empno'] == $user_id || $r['custodian'] == $user_id && in_array($r['repl_status'] , ['c-returned','f-returned']) && $r['dis_status'] == 'cancelled') { ?>
-       <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
-           <td id="m">
-               <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
-                   <i class="icon-bubble" style="font-size:14px;color: red;"> 
-                   </i>
-               <?php } } ?>
-               <?php if (!empty($attachment)) { ?>
-                   <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
-               <?php  } ?>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="submit" checked disabled>
-           </td>
-           <td id="m">
-               <input type="radio" name="radio<?=$k?>" value="returned" disabled>
-           </td>
-           <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
-           <td id="a">
-               <?= !empty($r['dis_date']) ? date('m/d/Y', strtotime($r['dis_date'])) : 'N/A'; ?>
-           </td>
-           <td id="a" data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
-           <td id="a" data-field="dis_or"><?= $r['dis_or'] ?></td>
-           <?php if (($r['dis_status']) == 'cancelled') { ?>
-               <td style="text-align: center; color: red">Cancelled</td>
-           <?php } else { ?>
-               <td id="p" data-field="dis_payee"><?= $r['dis_payee'] ?></td>
-           <?php } ?>
-           <td id="n" data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
-           <td id="n" data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
-           <td id="n" data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
-           <td id="n" data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
-           <td id="n" data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
-           <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>
-           <td><a href="#" class="btn btn-outline-success btn-mini undo-btn" data-id="<?=$r['dis_no']?>"><i class="fa fa-undo"></i></a></td>                         
-       </tr>
-       <!-- FOR ADJUSTMENT SAVING -->
-       <tr style="display:none;" class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
-           <td id="a" class="entry-id" style="display:none;" data-field="old_dis_no"><?= $r['dis_no'] ?></td>
-           <td id="a">
-               <input type="date" class="date-input" data-field="old_dis_date" id="datePCF" value="<?= $r['dis_date'] ?>" disabled>
-           </td>
-           <td id="a" data-field="old_dis_pcv"><?= $r['dis_pcv'] ?></td>
-           <td id="a" data-field="old_dis_or"><?= $r['dis_or'] ?></td>
-           <?php if (($r['dis_status']) == 'cancelled') { ?>
-               <td  data-field="old_dis_payee" style="text-align: center; color: red">Cancelled</td>
-           <?php } else { ?>
-               <td id="p" data-field="old_dis_payee"><?= $r['dis_payee'] ?></td>
-           <?php } ?>
-           <td id="n" data-field="old_dis_office_store"><?= $r['dis_office_store'] ?></td>
-           <td id="n" data-field="old_dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
-           <td id="n" data-field="old_dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
-           <td id="n" data-field="old_dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
-           <td id="n" data-field="old_dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
-           <td id="total" class="num" data-field="old_dis_total"><?= number_format($r['dis_total'], 2) ?></td>
-       </tr>
-   <?php } ?>
-<?php } } ?>
-</tbody>
-<tfoot>
-  <tr class="foot">
-    <td id="m"></td>
-    <?php if (!empty($repl)) { foreach ($repl as $r) { 
-       if ($r['repl_status'] == 'returned') {
-          echo '<td id="m"></td>';
-      }else{
-          echo '<td id="m"></td>';
-      } ?>
-  <?php }} ?>
-  <td id="m"></td>
-  <td id="a"></td>
-  <td id="a"></td>
-  <td id="a"></td>
-  <td id="t"style="text-align: right;">Total</td>
-  <td id="ftotal"></td>
-  <td id="ftotal"></td>
-  <td id="ftotal"></td>
-  <td id="ftotal"></td>
-  <td id="ftotal"></td>
-  <td id="alltotal"></td>
-</tr>
-<tr style="display:none!important;">
- <td id="t" colspan="9" style="background-color: transparent!important;"></td>
- <td class="foot" id="t"></td>
- <td class="foot" id="etotal"></td>
- <td></td>
-</tr>
-<?php if ($r['repl_custodian'] == $user_id && $r['repl_status'] == 'returned') { ?>
-    <tr>
-      <td colspan="11"></td>
-      <td style="text-align: center;"><button style="width:50px;" class="btn btn-success btn-mini"onClick="addRow()">Add</button></td>
-      <td><button style="width:60px;" class="btn btn-primary btn-mini" id="update_entry">Update</button></td>
-  </tr>
-<?php } elseif($r['repl_custodian'] == $user_id && $r['repl_status'] == 'f-returned') { ?>
-    <tr>
-      <td colspan="11"></td>
-      <td style="text-align: center;"><button style="width:50px;" class="btn btn-success btn-mini"onClick="addRow()">Add</button></td>
-      <td><button style="width:60px;" class="btn btn-primary btn-mini" id="updatefin_entry">Update</button></td>
-  </tr>
-<?php } elseif($r['repl_custodian'] == $user_id && $r['repl_status'] == 'c-returned') { ?>
-    <tr>
-      <td colspan="11"></td>
-      <td style="text-align: center;"><button style="width:50px;" class="btn btn-success btn-mini"onClick="addRow()">Add</button></td>
-      <td><button style="width:60px;" class="btn btn-primary btn-mini" id="updatec_entry">Update</button></td>
-  </tr>
-<?php }elseif ($r['repl_status'] == 'submit' && $r['repl_custodian'] <> $user_id || $Mypos == 'SIC' ||  $Mypos == 'TL') { ?>
-    <tr>
-        <td colspan="11" style="background-color: transparent!important;"></td>
-        <td style="text-align: center;">
-            <button style="width:60px;" class="btn btn-danger btn-mini" id="return_entry">Return</button>
-        </td>
-        <td style="text-align: center;">
-            <button style="width:60px;" class="btn btn-primary btn-mini" id="approve-modal">Approve</button>
-        </td>
-    </tr>
-<?php } ?>
-</tfoot>
-<tfoot>
-</tfoot>
-</table>
-</div>
-    <div class="table-container">
-       <div style="gap: 10px; flex-wrap: unwrap;">
-            <?php require_once($pcf_root."/pages/request_summary.php"); ?>
-            <?php require_once($pcf_root."/pages/adjustment_summary.php"); ?>  
-        </div>
-        <div style="display: none;">
-            <?php require_once($pcf_root."/pages/request_change.php"); ?>  
-        </div> 
-    </div>
-</div>
-<?php if (!empty($sign_owner)) { ?>
-   <div class="fourth">
-      <?php foreach ($sign_owner as $so) { ?>
-          <?php if (!empty($so['cust_name'])) { ?>
-              <div class="sign-card">
-                <div class="app-detail">
-                  <h4 class="prep">Prepared by:</h4>
-                  <h5><?php echo htmlspecialchars($so['cust_name'] ?? ''); ?></h5>
+             </div>
+             <div class="third">
+              <div class="table-container">
+                <table class="table table-striped table-bordered nowrap">
+                  <thead>
+                    <tr>
+                     <td id="m"></td>
+                     <th id="m">Passed</th>
+                     <th id="m">Failed</th>
+                     <th id="a">Date</th>
+                     <th id="a">PCV#</th>
+                     <th id="a">OR#</th>
+                     <th id="a">Payee</th>
+                     <th id="a">Office/Store Supply</th>
+                     <th id="a">Transportation</th>
+                     <th id="a">Repairs & Maintenance</th>
+                     <th id="a">Communication</th>
+                     <th id="a">Miscellaneous</th>
+                     <th id="a">Total</th>
+                     <?php if (!empty($repl)) { foreach ($repl as $r) { 
+                      if ($r == 'returned') {
+                       echo "<th></th>";
+                     } ?>
+                     <?php }} ?>
+                   </tr>
+                 </thead>
+                 <tbody id="myTable">
+                 <?php 
+                     if (!empty($replenish)) { 
+                        foreach ($replenish as $k => $r) {
+                          $outlet = $r['dis_outdept'];
+                          $disNo = $r['dis_no'];
+                          $notif = PCF::GetDisbMessage($disNo);
+                          $attachment = PCF::GetAttachment($disNo);
+                          $coh = PCF::GetCOHand($outlet);
+                          if(in_array($r['dis_status'], ['returned','f-returned','c-returned'])) {
+                 ?>
+                 <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
+                     <td id="m">
+                         <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
+                         <i class="icon-bubble" style="font-size:14px;color: red;"></i>
+                         <?php } } ?>
+                         <?php if (!empty($attachment)) { ?>
+                         <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
+                         <?php  } ?>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="submit" disabled>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="returned" checked disabled>
+                     </td>
+                     <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
+                     <td id="a">
+                         <input type="date" class="date-input" data-field="dis_date" id="datePCF" value="<?= $r['dis_date'] ?>">
+                     </td>
+                     <td id="a" contenteditable data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
+                     <td id="a" contenteditable data-field="dis_or"><?= $r['dis_or'] ?></td>
+                     <?php if (($r['dis_status']) == 'cancelled') { ?>
+                     <td style="text-align: center; color: red">Cancelled</td>
+                     <?php } else { ?>
+                     <td id="p" contenteditable data-field="dis_payee"><?= $r['dis_payee'] ?></td>
+                     <?php } ?>
+                     <td id="n" contenteditable data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
+                     <td id="n" contenteditable data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
+                     <td id="n" contenteditable data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
+                     <td id="n" contenteditable data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
+                     <td id="n" contenteditable data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
+                     <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>
+                     <td>
+                         <a href="#" class="btn btn-outline-danger btn-mini" data-toggle="modal" data-target="#cancel<?=$r['dis_no']?>" data-id="<?=$r['dis_no']?>"><i class="ion-close"></i></a>
+                     </td>
+                 </tr>
+                 <div class="modal fade" id="cancel<?=$r['dis_no']?>" tabindex="-1" role="dialog">
+                     <div class="modal-dialog modal-sm" role="document">
+                         <div class="modal-content">
+                             <div class="modal-header">
+                                 <h4 class="modal-title">Reason to Cancel</h4>
+                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                     <span aria-hidden="true">&times;</span>
+                                 </button>
+                             </div>
+                             <div class="modal-body">
+                                 <select class="form-control" name="reason">
+                                     <option>Select Reason</option>
+                                     <option value="Returned of full amount">Returned of full amount</option>
+                                     <option value="Wrong date">Wrong date</option>
+                                     <option value="Wrong detail/s in the PCV">Wrong detail/s in the PCV</option>
+                                     <option value="Wrong receiver/requestor name">Wrong receiver/requestor name</option>
+                                     <option value="Wrong amount">Wrong amount</option>
+                                     <option value="PCV with alteration or use of correction pen">PCV with alteration or use of correction pen</option> 
+                                 </select>
+                             </div>
+                             <div class="modal-footer">
+                                 <button type="button" class="btn btn-danger waves-effect btn-mini " data-dismiss="modal">cancel</button>
+                                 <button type="button" class="btn btn-primary waves-effect btn-mini  cancel-entry-btn" data-dismiss="modal">save</button>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+                 <!-- FOR ADJUSTMENT SAVING -->
+                 <tr style="display:none;" class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
+                     <td id="a" class="entry-id" style="display:none;" data-field="old_dis_no"><?= $r['dis_no'] ?></td>
+                     <td id="a">
+                         <input type="date" class="date-input" data-field="old_dis_date" id="datePCF" value="<?= $r['dis_date'] ?>" disabled>
+                     </td>
+                     <td id="a" data-field="old_dis_pcv"><?= $r['dis_pcv'] ?></td>
+                     <td id="a" data-field="old_dis_or"><?= $r['dis_or'] ?></td>
+                     <?php if (($r['dis_status']) == 'cancelled') { ?>
+                     <td  data-field="old_dis_payee" style="text-align: center; color: red">Cancelled</td>
+                     <?php } else { ?>
+                     <td id="p" data-field="old_dis_payee"><?= $r['dis_payee'] ?></td>
+                     <?php } ?>
+                     <td data-field="old_dis_office_store"><?= $r['dis_office_store'] ?></td>
+                     <td data-field="old_dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
+                     <td data-field="old_dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
+                     <td data-field="old_dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
+                     <td data-field="old_dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
+                     <td data-field="old_dis_total"><?= number_format($r['dis_total'], 2) ?></td>
+                 </tr>
+                 <?php }elseif ( in_array($r['dis_status'] , ['h-approved','checked','f-approved','deposited','received'])) { ?>
+                 <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
+                     <td id="m">
+                         <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
+                         <i class="icon-bubble" style="font-size:14px;color: red;"> 
+                         </i>
+                         <?php } } ?>
+                         <?php if (!empty($attachment)) { ?>
+                         <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
+                         <?php  } ?>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="submit" checked disabled>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="returned" disabled>
+                     </td>
+                     <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
+                     <td id="a">
+                         <?= !empty($r['dis_date']) ? date('m/d/Y', strtotime($r['dis_date'])) : 'N/A'; ?>
+                     </td>
+                     <td id="a" data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
+                     <td id="a" data-field="dis_or"><?= $r['dis_or'] ?></td>
+                     <?php if (($r['dis_status']) == 'cancelled') { ?>
+                     <td style="text-align: center; color: red">Cancelled</td>
+                     <?php } else { ?>
+                     <td id="p" data-field="dis_payee"><?= $r['dis_payee'] ?></td>
+                     <?php } ?>
+                     <td id="n" data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
+                     <td id="n" data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
+                     <td id="n" data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
+                     <td id="n" data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
+                     <td id="n" data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
+                     <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>
+                 </tr>
+                 <?php }elseif ( in_array($r['repl_status'] , ['h-approved','checked','f-approved','deposited']) && $r['dis_status'] == 'cancelled') { ?>
+                 <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
+                     <td id="m">
+                         <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
+                         <i class="icon-bubble" style="font-size:14px;color: red;"> 
+                         </i>
+                         <?php } } ?>
+                         <?php if (!empty($attachment)) { ?>
+                         <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
+                         <?php  } ?>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="submit" checked disabled>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="returned" disabled>
+                     </td>
+                     <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
+                     <td id="a">
+                         <?= !empty($r['dis_date']) ? date('m/d/Y', strtotime($r['dis_date'])) : 'N/A'; ?>
+                     </td>
+                     <td id="a" data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
+                     <td id="a" data-field="dis_or"><?= $r['dis_or'] ?></td>
+                     <?php if (($r['dis_status']) == 'cancelled') { ?>
+                     <td style="text-align: center; color: red">Cancelled</td>
+                     <?php } else { ?>
+                     <td id="p" data-field="dis_payee"><?= $r['dis_payee'] ?></td>
+                     <?php } ?>
+                     <td id="n" data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
+                     <td id="n" data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
+                     <td id="n" data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
+                     <td id="n" data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
+                     <td id="n" data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
+                     <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>                       
+                 </tr>
+                 <?php }elseif ( in_array($r['repl_status'] , ['c-returned','f-returned']) && $r['dis_status'] == 'cancelled') { ?>
+                 <tr class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
+                     <td id="m">
+                         <?php if (!empty($notif)) { foreach ($notif as $n) { ?>
+                         <i class="icon-bubble" style="font-size:14px;color: red;"> 
+                         </i>
+                         <?php } } ?>
+                         <?php if (!empty($attachment)) { ?>
+                         <i class="fa fa-file-photo-o" style="font-size:14px;color: blue;"></i>
+                         <?php  } ?>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="submit" checked disabled>
+                     </td>
+                     <td id="m">
+                         <input type="radio" name="radio<?=$k?>" value="returned" disabled>
+                     </td>
+                     <td id="a" class="entry-id" style="display:none;" data-field="dis_no"><?= $r['dis_no'] ?></td>
+                     <td id="a">
+                         <?= !empty($r['dis_date']) ? date('m/d/Y', strtotime($r['dis_date'])) : 'N/A'; ?>
+                     </td>
+                     <td id="a" data-field="dis_pcv"><?= $r['dis_pcv'] ?></td>
+                     <td id="a" data-field="dis_or"><?= $r['dis_or'] ?></td>
+                     <?php if (($r['dis_status']) == 'cancelled') { ?>
+                     <td style="text-align: center; color: red">Cancelled</td>
+                     <?php } else { ?>
+                     <td id="p" data-field="dis_payee"><?= $r['dis_payee'] ?></td>
+                     <?php } ?>
+                     <td id="n" data-field="dis_office_store"><?= $r['dis_office_store'] ?></td>
+                     <td id="n" data-field="dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
+                     <td id="n" data-field="dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
+                     <td id="n" data-field="dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
+                     <td id="n" data-field="dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
+                     <td id="total" class="num" data-field="dis_total"><?= number_format($r['dis_total'], 2) ?></td>
+                     <td><a href="#" class="btn btn-outline-success btn-mini undo-btn" data-id="<?=$r['dis_no']?>"><i class="fa fa-undo"></i></a></td>                         
+                 </tr>
+                 <!-- FOR ADJUSTMENT SAVING -->
+                 <tr style="display:none;" class="clickable-row" data-id="<?= $r['dis_no'] ?>" data-stat="<?= $r['dis_status'] ?>">
+                     <td id="a" class="entry-id" style="display:none;" data-field="old_dis_no"><?= $r['dis_no'] ?></td>
+                     <td id="a">
+                         <input type="date" class="date-input" data-field="old_dis_date" id="datePCF" value="<?= $r['dis_date'] ?>" disabled>
+                     </td>
+                     <td id="a" data-field="old_dis_pcv"><?= $r['dis_pcv'] ?></td>
+                     <td id="a" data-field="old_dis_or"><?= $r['dis_or'] ?></td>
+                     <?php if (($r['dis_status']) == 'cancelled') { ?>
+                     <td  data-field="old_dis_payee" style="text-align: center; color: red">Cancelled</td>
+                     <?php } else { ?>
+                     <td id="p" data-field="old_dis_payee"><?= $r['dis_payee'] ?></td>
+                     <?php } ?>
+                     <td id="n" data-field="old_dis_office_store"><?= $r['dis_office_store'] ?></td>
+                     <td id="n" data-field="old_dis_transpo"><?= number_format($r['dis_transpo'], 2) ?></td>
+                     <td id="n" data-field="old_dis_repair_maint"><?= number_format($r['dis_repair_maint'], 2) ?></td>
+                     <td id="n" data-field="old_dis_commu"><?= number_format($r['dis_commu'], 2) ?></td>
+                     <td id="n" data-field="old_dis_misc"><?= number_format($r['dis_misc'], 2) ?></td>
+                     <td id="total" class="num" data-field="old_dis_total"><?= number_format($r['dis_total'], 2) ?></td>
+                 </tr>
+                 <?php } ?>
+                 <?php } } ?>
+                 </tbody>
+                         <tfoot>
+                          <tr class="foot">
+                            <td id="m"></td>
+                            <?php if (!empty($repl)) { foreach ($repl as $r) { 
+                             if ($r['repl_status'] == 'returned') {
+                              echo '<td id="m"></td>';
+                            }else{
+                              echo '<td id="m"></td>';
+                            } ?>
+                            <?php }} ?>
+                            <td id="m"></td>
+                            <td id="a"></td>
+                            <td id="a"></td>
+                            <td id="a"></td>
+                            <td id="t"style="text-align: right;">Total</td>
+                            <td id="ftotal"></td>
+                            <td id="ftotal"></td>
+                            <td id="ftotal"></td>
+                            <td id="ftotal"></td>
+                            <td id="ftotal"></td>
+                            <td id="alltotal"></td>
+                          </tr>
+                          <tr style="display:none!important;">
+                           <td id="t" colspan="9" style="background-color: transparent!important;"></td>
+                           <td class="foot" id="t"></td>
+                           <td class="foot" id="etotal"></td>
+                           <td></td>
+                         </tr>
+                            <?php if ($r['repl_custodian'] == $user_id && $r['repl_status'] == 'returned') { ?>
+                            <tr>
+                              <td colspan="12"></td>
+                              <td><button style="width:60px;" class="btn btn-primary btn-mini" id="update_entry">Update</button></td>
+                            </tr>
+                            <?php } elseif($r['repl_custodian'] == $user_id && $r['repl_status'] == 'f-returned') { ?>
+                            <tr>
+                              <td colspan="12"></td>
+                              <td><button style="width:60px;" class="btn btn-primary btn-mini" id="updatefin_entry">Update</button></td>
+                            </tr>
+                            <?php } elseif($r['repl_custodian'] == $user_id && $r['repl_status'] == 'c-returned') { ?>
+                            <tr>
+                              <td colspan="12"></td>
+                              <td><button style="width:60px;" class="btn btn-primary btn-mini" id="updatec_entry">Update</button></td>
+                            </tr>
+                            <?php }elseif ($r['repl_status'] == 'submit' && $r['repl_custodian'] <> $user_id || $Mypos == 'SIC' ||  $Mypos == 'TL') { ?>
+                            <tr>
+                            <td colspan="11" style="background-color: transparent!important;"></td>
+                            <td style="text-align: center;">
+                            <button style="width:60px;" class="btn btn-danger btn-mini" id="return_entry">Return</button>
+                            </td>
+                            <td style="text-align: center;">
+                            <button style="width:60px;" class="btn btn-primary btn-mini" id="approve-modal">Approve</button>
+                            </td>
+                            </tr>
+                            <?php } ?>
+                       </tfoot>
+                       <tfoot>
+                       </tfoot>
+                     </table>
+                   </div>
+                   <div class="table-container">
+                     <div style="gap: 10px; flex-wrap: unwrap;">
+                        <?php require_once($pcf_root."/pages/request_summary.php"); ?>
+                        <?php require_once($pcf_root."/pages/adjustment_summary.php"); ?>  
+                     </div>
+                     <div style="display: none;">
+                        <?php require_once($pcf_root."/pages/request_change.php"); ?>  
+                     </div> 
+                   </div>
+                 </div>
+                 <?php if (!empty($sign_owner)) { ?>
+                 <div class="fourth">
+                  <?php foreach ($sign_owner as $so) { ?>
+                  <?php if (!empty($so['cust_name'])) { ?>
+                  <div class="sign-card">
+                    <div class="app-detail">
+                      <h4 class="prep">Prepared by:</h4>
+                      <h5><?php echo htmlspecialchars($so['cust_name'] ?? ''); ?></h5>
+                    </div>
+                    <div class="app-sign">
+                      <p class="sign">Signature: </p>
+                      <img src="<?php echo htmlspecialchars($so['cust_signature']); ?>" width="100" height="50">
+                    </div>
+                    <div class="app-sign">
+                      <p>Date: </p>
+                      <p class="dt"><?= !empty($so['cust_date']) ? date('m/d/Y', strtotime($so['cust_date'])) : 'N/A'; ?></p>
+                    </div>
+                  </div>
+                  <?php } ?>
+                  <?php if (!empty($so['approve_name'])) { ?>
+                  <div class="sign-card">
+                    <div class="app-detail">
+                      <h4 class="prep">Approved by:</h4>
+                      <h5><?php echo htmlspecialchars($so['approve_name'] ?? 'Not Approved'); ?></h5>
+                    </div>
+                    <div class="app-sign">
+                      <p class="sign">Signature: </p>
+                      <img src="<?php echo htmlspecialchars($so['approve_sign']); ?>" width="100" height="50">
+                    </div>
+                    <div class="app-sign">
+                      <p>Date: </p>
+                      <p class="dt"><?= !empty($so['approve_date']) ? date('m/d/Y', strtotime($so['approve_date'])) : 'N/A'; ?></p>
+                    </div>
+                  </div>
+                  <?php } ?>
+                  <?php if (!empty($so['checker_name'])) { ?>
+                  <div class="sign-card">
+                    <div class="app-detail">
+                      <h4 class="prep">Checked by:</h4>
+                      <h5><?php echo htmlspecialchars($so['checker_name'] ?? 'Checker Name'); ?></h5>
+                    </div>
+                    <div class="app-sign">
+                      <p class="sign">Signature: </p>
+                      <div id="signature-container"><img src="<?php echo htmlspecialchars($so['check_sign']); ?>" width="100" height="50"></div>
+                    </div>
+                    <div class="app-sign">
+                      <p>Date: </p>
+                      <p class="dt"><?= !empty($so['check_date']) ? date('m/d/Y', strtotime($so['check_date'])) : 'N/A'; ?></p>
+                    </div>
+                  </div>
+                  <?php } ?>
+                  <?php if (!empty($so['director_name'])) { ?>
+                  <div class="sign-card">
+                    <div class="app-detail">
+                      <h4 class="prep">Finance Director:</h4>
+                      <h5><?php echo htmlspecialchars($so['director_name'] ?? 'Director Name'); ?></h5>
+                    </div>
+                    <div class="app-sign">
+                      <p class="sign">Signature: </p>
+                      <div id="signature-container"><img src="<?php echo htmlspecialchars($so['fin_sign']); ?>" width="100" height="50"></div>
+                    </div>
+                    <div class="app-sign">
+                      <p>Date: </p>
+                      <p class="dt"><?= !empty($so['check_date']) ? date('m/d/Y', strtotime($so['fin_date'])) : 'N/A'; ?></p>
+                    </div>
+                  </div>
+                  <?php } ?>
+                </div>
+                <?php } }?>
               </div>
-              <div class="app-sign">
-                  <p class="sign">Signature: </p>
-                  <img src="<?php echo htmlspecialchars($so['cust_signature']); ?>" width="100" height="50">
+            </div>
+          </div>
+          <div id="signature-approve-modal" class="sign-modal">
+            <div class="modal-content">
+              <canvas id="signature-approve-pad" width="400" height="200"></canvas>
+              <br>
+              <div style="display: flex;flex-wrap: wrap;gap: 10px;">
+                <button class="btn btn-danger btn-mini" id="approve-cancel-btn">Cancel</button>
+                <button class="btn btn-default btn-mini" id="approve-clear-btn">Clear</button>
+                <button class="btn btn-primary btn-mini" id="approve-confirm-btn">Confirm</button>
               </div>
-              <div class="app-sign">
-                  <p>Date: </p>
-                  <p class="dt"><?= !empty($so['cust_date']) ? date('m/d/Y', strtotime($so['cust_date'])) : 'N/A'; ?></p>
-              </div>
-          </div>
-      <?php } ?>
-      <?php if (!empty($so['approve_name'])) { ?>
-          <div class="sign-card">
-            <div class="app-detail">
-              <h4 class="prep">Approved by:</h4>
-              <h5><?php echo htmlspecialchars($so['approve_name'] ?? 'Not Approved'); ?></h5>
-          </div>
-          <div class="app-sign">
-              <p class="sign">Signature: </p>
-              <img src="<?php echo htmlspecialchars($so['approve_sign']); ?>" width="100" height="50">
-          </div>
-          <div class="app-sign">
-              <p>Date: </p>
-              <p class="dt"><?= !empty($so['approve_date']) ? date('m/d/Y', strtotime($so['approve_date'])) : 'N/A'; ?></p>
-          </div>
-      </div>
-  <?php } ?>
-  <?php if (!empty($so['checker_name'])) { ?>
-      <div class="sign-card">
-        <div class="app-detail">
-          <h4 class="prep">Checked by:</h4>
-          <h5><?php echo htmlspecialchars($so['checker_name'] ?? 'Checker Name'); ?></h5>
-      </div>
-      <div class="app-sign">
-          <p class="sign">Signature: </p>
-          <div id="signature-container"><img src="<?php echo htmlspecialchars($so['check_sign']); ?>" width="100" height="50"></div>
-      </div>
-      <div class="app-sign">
-          <p>Date: </p>
-          <p class="dt"><?= !empty($so['check_date']) ? date('m/d/Y', strtotime($so['check_date'])) : 'N/A'; ?></p>
-      </div>
-  </div>
-<?php } ?>
-<?php if (!empty($so['director_name'])) { ?>
-  <div class="sign-card">
-    <div class="app-detail">
-      <h4 class="prep">Finance Director:</h4>
-      <h5><?php echo htmlspecialchars($so['director_name'] ?? 'Director Name'); ?></h5>
-  </div>
-  <div class="app-sign">
-      <p class="sign">Signature: </p>
-      <div id="signature-container"><img src="<?php echo htmlspecialchars($so['fin_sign']); ?>" width="100" height="50"></div>
-  </div>
-  <div class="app-sign">
-      <p>Date: </p>
-      <p class="dt"><?= !empty($so['check_date']) ? date('m/d/Y', strtotime($so['fin_date'])) : 'N/A'; ?></p>
-  </div>
-</div>
-<?php } ?>
-</div>
-<?php } }?>
-</div>
-</div>
-</div>
-<div id="signature-approve-modal" class="sign-modal">
-    <div class="modal-content">
-      <canvas id="signature-approve-pad" width="400" height="200"></canvas>
-      <br>
-      <div style="display: flex;flex-wrap: wrap;gap: 10px;">
-        <button class="btn btn-danger btn-mini" id="approve-cancel-btn">Cancel</button>
-        <button class="btn btn-default btn-mini" id="approve-clear-btn">Clear</button>
-        <button class="btn btn-primary btn-mini" id="approve-confirm-btn">Confirm</button>
-    </div>
-</div>
-</div>
-<?php if (!empty($replenish)) { 
-    foreach ($replenish as $dd) {
-      $disbNo = $dd['dis_no'];
-      $custodian = $dd['dis_empno'];
-      $attachment = PCF::GetAttachment($disbNo);
-      $comment = PCF::GetComment($disbNo); 
-      ?>
-      <div class="right-side" id="<?= $dd['dis_no'] ?>">
-        <input type="hidden" name="entryID" value="<?= $dd['dis_no'] ?>">
-        <div class="comm-card">
-          <?php if ($dd['dis_status'] == 'returned' || $dd['dis_status'] == 'f-returned' || $dd['dis_status'] == 'c-returned' || $dd['dis_status'] == 'cancelled') { ?>
-              <!-- File upload section for returned status -->
-              <input type="hidden" name="disbur_no" value="<?= $disbNo ?>">
-              <input type="hidden" name="disburNum" value="<?= $disbNo ?>">
-              <div style="display: flex; margin-bottom: 5px; width: 95%;">
-                <p style="width: 70px; margin-right: 5px;">PCV | OR</p>
-                <input type="file" name="attachment[]" class="form-control" multiple>
             </div>
-            <div id="proofApproval" style="display: none; width: 95%;">
-                <p style="width: 70px; margin-right: 5px;">Approval</p>
-                <input type="file" name="screenshot[]" class="form-control" multiple>
-            </div>
-            <div style="text-align: right; width: 95%;">
-                <button class="btn btn-primary btn-mini" id="updateFile">Save</button>
-            </div>
-            <div class="alert alert-success" style="display: none; width: 95%;">
-                <strong>Attachment added!</strong>
-            </div>
-        <?php } ?>
+          </div>
+          <?php if (!empty($replenish)) { 
+            foreach ($replenish as $dd) {
+              $disbNo = $dd['dis_no'];
+              $custodian = $dd['dis_empno'];
+              $attachment = PCF::GetAttachment($disbNo);
+              $comment = PCF::GetComment($disbNo); 
+              ?>
+              <div class="right-side" id="<?= $dd['dis_no'] ?>">
+                <input type="hidden" name="entryID" value="<?= $dd['dis_no'] ?>">
+                <div class="comm-card">
+                  <?php if ($dd['dis_status'] == 'returned' || $dd['dis_status'] == 'f-returned' || $dd['dis_status'] == 'c-returned' || $dd['dis_status'] == 'cancelled') { ?>
+                  <!-- File upload section for returned status -->
+                  <input type="hidden" name="disbur_no" value="<?= $disbNo ?>">
+                  <input type="hidden" name="disburNum" value="<?= $disbNo ?>">
+                  <div style="display: flex; margin-bottom: 5px; width: 95%;">
+                    <p style="width: 70px; margin-right: 5px;">PCV | OR</p>
+                    <input type="file" name="attachment[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.jfif">
+                  </div>
+                  <div id="proofApproval" style="display: none; width: 95%;">
+                    <p style="width: 70px; margin-right: 5px;">Approval</p>
+                    <input type="file" name="screenshot[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.jfif">
+                  </div>
+                  <div style="text-align: right; width: 95%;">
+                    <button class="btn btn-primary btn-mini" id="updateFile">Save</button>
+                  </div>
+                  <div class="alert alert-success" style="display: none; width: 95%;">
+                    <strong>Attachment added!</strong>
+                  </div>
+                  <?php } ?>
 
-        <input type="hidden" id="status" value="<?= $dd['dis_status'] ?>">
+                  <input type="hidden" id="status" value="<?= $dd['dis_status'] ?>">
 
-        <!-- Attachment display section -->
-        <div class="attachment-card">
-            <div class="image-container">
-                <!-- <img src=""  width="200" height="90" style="cursor:pointer; margin:5px;"> -->
-                <?php
-                if (!empty($attachment)) {
-                    foreach ($attachment as $at) {
-                        if (!empty($at['file'])) {
-                            $files = explode(',', $at['file']);
+                  <!-- Attachment display section -->
+                  <div class="attachment-card">
+                    <div class="image-container">
+                        <!-- <img src=""  width="200" height="90" style="cursor:pointer; margin:5px;"> -->
+                            <?php
+                                if (!empty($attachment)) {
+                                    foreach ($attachment as $at) {
+                                        if (!empty($at['file'])) {
+                                        $files = explode(',', $at['file']);
                                         $index = 0; // Initialize index counter
                                         foreach ($files as $file) {
                                         $file = trim($file); // Remove extra spaces
                                         if (!empty($file)) { ?>
-                                            <!-- Clickable Image Thumbnail -->
-                                            <a><i class="fa fa-times-circle"></i></a>
-                                            <img src="https://e-classtngcacademy.s3.ap-southeast-1.amazonaws.com/pcf/attachments/<?= htmlspecialchars($file) ?>" id="thumbnail" data-toggle="modal" data-target="#imageModal<?=$disbNo?>">
-                                            <?php  
+                                        <!-- Clickable Image Thumbnail -->
+                                        <a><i class="fa fa-times-circle"></i></a>
+                                        <img src="https://e-classtngcacademy.s3.ap-southeast-1.amazonaws.com/pcf/attachments/<?= htmlspecialchars($file) ?>" id="thumbnail" data-toggle="modal" data-target="#imageModal<?=$disbNo?>">
+                                        <?php  
                                     $index++; // Increment index for next modal
+                                  }
                                 }
+                              }
                             }
-                        }
-                    }
-                } else {
-                    echo '<p>No attachments uploaded.</p>';
-                }
-                ?>
-            </div>
-        </div>
-        <?php if ($dd['dis_status'] == 'cancelled') { ?>
-                      <p style="color:red;">Cancellation Reason: <?=$dd['dis_reason']?></p>
-                      <?php } ?>
-        <!-- Comment section -->
-        <div class="comment-card">
-            <p>Comments</p>
-            <div class="message-container" id="message-container-<?= $dd['dis_no'] ?>">
-              <?php if (!empty($comment)) { 
-                foreach ($comment as $com) { ?>
-                    <?php if ($com['com_sender'] != $user_id) { ?>
-                        <div class="message-card">
-                          <h6 style="font-size:10px!important;font-weight: 700;"><?= $com['cust_name'] ?></h6>
-                          <div class="message received"><?= $com['com_content'] ?></div>
+                          } else {
+                            echo '<p>No attachments uploaded.</p>';
+                          }
+                          ?>
+                        </div>
                       </div>
-                  <?php } elseif ($com['com_sender'] == $user_id) { ?>
-                    <div class="received-card">
-                      <h6 style="font-size:10px!important;font-weight: 700;text-align:right;"><?=$com['cust_name']?></h6>
-                      <div class="message sent"><?=$com['com_content']?></div>
+
+                      <!-- Comment section -->
+                      <div class="comment-card">
+                        <p>Comments</p>
+                        <div class="message-container" id="message-container-<?= $dd['dis_no'] ?>">
+                          <?php if (!empty($comment)) { 
+                            foreach ($comment as $com) { ?>
+                            <?php if ($com['com_sender'] != $user_id) { ?>
+                            <div class="message-card">
+                              <h6 style="font-size:10px!important;font-weight: 700;"><?= $com['cust_name'] ?></h6>
+                              <div class="message received"><?= $com['com_content'] ?></div>
+                            </div>
+                            <?php } elseif ($com['com_sender'] == $user_id) { ?>
+                            <div class="received-card">
+                              <h6 style="font-size:10px!important;font-weight: 700;text-align:right;"><?=$com['cust_name']?></h6>
+                              <div class="message sent"><?=$com['com_content']?></div>
+                            </div>
+                            <?php } ?>
+                            <?php } 
+                          } ?>
+
+                          <?php if ($dd['dis_status'] == 'returned') { ?>
+                          <div class="message-card">
+                            <div class="message received">Returned</div>
+                          </div>
+                          <?php } elseif ($dd['dis_status'] == 'updated') { ?>
+                          <div class="message sent">Updated</div>
+                          <?php } ?>
+                        </div>
+                        <div id="message-message" class="alert alert-success alert-dismissible fade show d-none mt-2" role="alert">
+                          <span id="alert-mess"></span>
+                          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+
+                        <div class="message-input">
+                          <input type="hidden" name="disbNo" value="<?= $disbNo ?>" placeholder="Type a message...">
+                          <input type="text" id="commentRep-<?= $dd['dis_no'] ?>" value="" placeholder="Type a message...">
+                          <a class="sendMessage" data-disbno="<?= $dd['dis_no'] ?>"><i class='bx bxs-send'></i></a>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-              <?php } ?>
-          <?php } 
-      } ?>
-
-      <?php if ($dd['dis_status'] == 'returned') { ?>
-          <div class="message-card">
-            <div class="message received">Returned</div>
+                  <?php 
+                } 
+              } ?>
+            </div>
+          </div>
         </div>
-    <?php } elseif ($dd['dis_status'] == 'updated') { ?>
-      <div class="message sent">Updated</div>
-  <?php } ?>
-</div>
-<div id="message-message" class="alert alert-success alert-dismissible fade show d-none mt-2" role="alert">
-  <span id="alert-mess"></span>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-
-<div class="message-input">
-  <input type="hidden" name="disbNo" value="<?= $disbNo ?>" placeholder="Type a message...">
-  <input type="text" id="commentRep-<?= $dd['dis_no'] ?>" value="" placeholder="Type a message...">
-  <a class="sendMessage" data-disbno="<?= $dd['dis_no'] ?>"><i class='bx bxs-send'></i></a>
-</div>
-</div>
-</div>
-</div>
-<?php 
-} 
-} ?>
-</div>
-</div>
-</div>
-<div class="modal fade" id="imageModal" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document" style="float:right;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h4 class="modal-title" style="text-align: left !important;">Attachment</h4>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-      </button>
-  </div>
-  <div class="modal-body" style="padding: 10px !important;">
-    <img id="modalImage" src="" class="img-fluid rounded" alt="Full Preview">
-</div>
-<div class="modal-footer">
-    <button type="button" class="btn btn-danger waves-effect btn-mini" data-dismiss="modal">Close</button>
-</div>
-</div>
-</div>
-</div>
-<div id="alert-message" class="alert alert-success alert-dismissible fade show d-none mt-2" role="alert">
-  <span id="alert-text"></span>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
+        <div class="modal fade" id="imageModal" tabindex="-1" role="dialog">
+          <div class="modal-dialog" role="document" style="float:right;">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h4 class="modal-title" style="text-align: left !important;">Attachment</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body" style="padding: 10px !important;">
+                <img id="modalImage" src="" class="img-fluid rounded" alt="Full Preview">
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-danger waves-effect btn-mini" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="alert-message" class="alert alert-success alert-dismissible fade show d-none mt-2" role="alert">
+          <span id="alert-text"></span>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
 <script type="text/javascript">
+$(document).on("click", "#receiveDeposit", function () {
+    console.log("Update clicked");
 
-    $(document).on("click", "#receiveDeposit", function () {
-        console.log("Update clicked");
-
-        $.ajax({
-            url: "receive_deposit",
-            type: "POST",
-            data: {
-                pcfID: $("#replenishNum").val()
-            },
-            success: function (response) {
-                console.log("Server Response:", response);
-                alert("Received successfully!");
-                location.reload();
-            },
-            error: function (xhr, status, error) {
-                console.error("AJAX Error:", status, error);
-            }
-        });
+    $.ajax({
+        url: "receive_deposit",
+        type: "POST",
+        data: {
+            pcfID: $("#replenishNum").val()
+        },
+        success: function (response) {
+            console.log("Server Response:", response);
+            alert("Received successfully!");
+            location.reload();
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", status, error);
+        }
     });
+});
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
 <script src="../assets/js/replenish.js"></script>
 <script src="../assets/js/pcf.js"></script>

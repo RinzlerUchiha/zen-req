@@ -11,7 +11,7 @@ if (substr_count($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip')) {
     // ob_start();
 }
 
-require_once($sr_root . "/db/HR.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/HR.php");
 
 $db_hr = new HR();
 
@@ -70,7 +70,9 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
     }
 
     // $empinfo = $trans->getemplist($company_arr, $from);
+
     $timekeeping = new TimeKeeping($db_hr->getConnection(), $from);
+    
     if ($emp != "") {
         $timekeeping->empinfo = $timekeeping->getemplist_e($emp, $from);
     } else {
@@ -106,7 +108,7 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
     // echo json_encode($arr_dtr);
     // exit;
     $dtr_ot = $timekeeping->getot($emp_arr, $from, $to);
-    $targets = $timekeeping->gettarget(date("Y-m-d", strtotime($from . " -10 days")), date("Y-m-d", strtotime($to)));
+    // $targets = $timekeeping->gettarget(date("Y-m-d", strtotime($from . " -10 days")), date("Y-m-d", strtotime($to)));
     $leavearr = $timekeeping->getleave($emp_arr, date("Y-m-d", strtotime($from . " -10 days")), $to); // reminder: check pending LEAVE
     $travelarr = $timekeeping->gettraveltraining($emp_arr, date("Y-m-d", strtotime($from . " -10 days")), $to, 'travel');
     $trainingarr = $timekeeping->gettraveltraining($emp_arr, date("Y-m-d", strtotime($from . " -10 days")), $to, 'training');
@@ -293,6 +295,21 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
     $emplasthrs = [];
 
     foreach ($timekeeping->empinfo as $k => $v) {
+
+        $jobrecByDate = $timekeeping->getEmpPositionByDate($timekeeping->jobrec_list[$k] ?? [], $from);
+        if(!empty($jobrecByDate)){
+            $v["job_code"] = $jobrecByDate['jd_code'];
+            $v["job_title"] = $jobrecByDate['jd_title'];
+            $v["dept_code"] = $jobrecByDate['Dept_Code'];
+            $v["dept_name"] = $jobrecByDate['Dept_Name'];
+            $v["c_code"] = $jobrecByDate['C_Code'];
+            $v["c_name"] = $jobrecByDate['C_Name'];
+            $v["outlet"] = $jobrecByDate['jrec_outlet'];
+            $v["emprank"] = $jobrecByDate['jrec_jobgrade'];
+            $v["area"] = $jobrecByDate['jrec_area'];
+            $v["saltype"] = $jobrecByDate['jrec_saltype'];
+            $v["position_type"] = $jobrecByDate['position_type'];
+        }
         
 	    $validator = $user_empno != $k && strpos(HR::check_auth($user_empno,"DTR"), $k) !== false ? true : false;
 
@@ -303,6 +320,21 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
         $payrolldata['summary'][$k]['additional_from_hday']['LegalSpecial'] = 0;
 
         for ($dtcur = $from; $dtcur <= $to; $dtcur = date("Y-m-d", strtotime($dtcur . " +1 day"))) {
+
+            $jobrecByDate = $timekeeping->getEmpPositionByDate($timekeeping->jobrec_list[$k] ?? [], $dtcur);
+            if(!empty($jobrecByDate)){
+                $v["job_code"] = $jobrecByDate['jd_code'];
+                $v["job_title"] = $jobrecByDate['jd_title'];
+                $v["dept_code"] = $jobrecByDate['Dept_Code'];
+                $v["dept_name"] = $jobrecByDate['Dept_Name'];
+                $v["c_code"] = $jobrecByDate['C_Code'];
+                $v["c_name"] = $jobrecByDate['C_Name'];
+                $v["outlet"] = $jobrecByDate['jrec_outlet'];
+                $v["emprank"] = $jobrecByDate['jrec_jobgrade'];
+                $v["area"] = $jobrecByDate['jrec_area'];
+                $v["saltype"] = $jobrecByDate['jrec_saltype'];
+                $v["position_type"] = $jobrecByDate['position_type'];
+            }
 
             // if($user_dept == "MIS" || in_array($user_empno, $distlist) || HR::get_assign('timedist','view', $user_empno)){
             //     $showdist = 1;
@@ -321,10 +353,10 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
                 $for_disp .= "<td class=\"text-center left-sticky\" style=\"height: 10px; width: 20px; min-width: 20px;\"><input type='checkbox' class='chk-validate-emp' style='height: 100%; width: 100%;".(($validator == false || $approver == false || empty($arr_dtr[$k][$dtcur]['time']) || !empty($arr_dtr[$k][$dtcur]['validation'])) ? ' display: none;' : '')."'></td>";
             }
             // $for_disp .= "<td class=\"align-middle text-center text-nowrap\" style=\"\">" . $k . "</td>";
-            // $for_disp .= "<td class=\"align-middle\" style=\"min-width: 150px; max-width: 150px;\">" . $timekeeping->empinfo[$k]['c_name'] . "</td>";
-            $for_disp .= "<td class=\"align-middle left-sticky\" style=\"min-width: 150px; max-width: 150px;\">" . $timekeeping->empinfo[$k]['name'][0] . ", " . trim($timekeeping->empinfo[$k]['name'][1] . " " . $timekeeping->empinfo[$k]['name'][3]) . "</td>";
-            // $for_disp .= "<td class=\"align-middle\" style=\"min-width: 150px; max-width: 150px;\">" . $timekeeping->empinfo[$k]['job_title'] . "</td>";
-            // $for_disp .= "<td class=\"align-middle left-sticky\" style=\"min-width: 100px; max-width: 100px;\">" . $timekeeping->empinfo[$k]['dept_code'] . "</td>";
+            // $for_disp .= "<td class=\"align-middle\" style=\"min-width: 150px; max-width: 150px;\">" . $v['c_name'] . "</td>";
+            $for_disp .= "<td class=\"align-middle left-sticky\" style=\"min-width: 150px; max-width: 150px;\">" . $v['name'][0] . ", " . trim($v['name'][1] . " " . $v['name'][3]) . "</td>";
+            // $for_disp .= "<td class=\"align-middle\" style=\"min-width: 150px; max-width: 150px;\">" . $v['job_title'] . "</td>";
+            // $for_disp .= "<td class=\"align-middle left-sticky\" style=\"min-width: 100px; max-width: 100px;\">" . $v['dept_code'] . "</td>";
             $for_disp .= "<td class=\"align-middle text-center left-sticky\" style=\"min-width: 100px; max-width: 100px;\">" . date("m/d/Y", strtotime($dtcur)) . "</td>";
             $for_disp .= "<td class=\"align-middle left-sticky\" style=\"min-width: 100px; max-width: 100px; border-right: 1px solid black;\">" . $day_type . "</td>";
 
@@ -347,7 +379,7 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
                             schedtime='" . ($tv['time'] != '' ? (($tk == 0 && !empty($arr_dtr[$k][$dtcur]['schedfix_in'])) ? date("h:i A", strtotime($arr_dtr[$k][$dtcur]['schedfix_in'])) : (!empty($arr_dtr[$k][$dtcur]['schedfix_out']) && ($tk + 1) == count($arr_dtr[$k][$dtcur]['time']) && (count($arr_dtr[$k][$dtcur]['time']) % 2) == 0 ? date("h:i A", strtotime($arr_dtr[$k][$dtcur]['schedfix_out'])) : "")) : "") . "'
                             gpexcess='" . ($tv['src'] == 'gp' && $tv['stat'] == "OUT" && !empty($arr_dtr[$k][$dtcur]['gpexcess']) ? "excess: " . $timekeeping->SecToTime($arr_dtr[$k][$dtcur]['gpexcess'], 1) : "") . "'
                             data-search='" . (!empty($arr_dtr[$k][$dtcur]['schedfix_total']) && $tv['time'] != '' ? "//correction " . (($tk == 0 && !empty($arr_dtr[$k][$dtcur]['schedfix_in'])) ? date("h:i A", strtotime($arr_dtr[$k][$dtcur]['schedfix_in'])) : (!empty($arr_dtr[$k][$dtcur]['schedfix_out']) && ($tk + 1) == count($arr_dtr[$k][$dtcur]['time']) && (count($arr_dtr[$k][$dtcur]['time']) % 2) == 0 ? date("h:i A", strtotime($arr_dtr[$k][$dtcur]['schedfix_out'])) : "")) : "") . " " . ($tv['time'] != '' ? date("h:i A", strtotime($tv['time'])) : "!MISSING") . "'
-                            outlet='" . (!empty($tv['outlet']) && $tv['outlet'] != 'ADMIN' ? $tv['outlet'] : '') . "'>";
+                            outlet='" . (!empty($tv['outlet']) && $tv['outlet'] != (getenv('ZEN_DB_USERNAME') ?: "") ? $tv['outlet'] : '') . "'>";
                         
                         $for_disp .= "<span class=\"d-block timeval disptime mb-1\">" . ($tv['time'] != '' ? date("h:i A", strtotime($tv['time'])) : "!MISSING") . "</span>";
 
@@ -615,7 +647,7 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
 
                 }else{
 
-                    $for_disp .= "<td style=\"min-width: 170px; max-width: 170px;\" class=\"py-3 align-middle\">";
+                    $for_disp .= "<td style=\"min-width: 170px; max-width: 170px;\" class=\"py-3 align-bottom\">";
                     foreach ($timekeeping->arr_company as $ck => $cv) {
                         $distval = isset($tdist[$cv]) ? $tdist[$cv] : "";
                         $defaultdist[$cv] = isset($defaultdist[$cv]) ? $defaultdist[$cv] : "";
@@ -708,7 +740,7 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
                         $for_disp .= "</td>";
                     }else{
 
-                        $for_disp .= "<td style=\"min-width: 170px; max-width: 170px;\" class=\"align-middle\">";
+                        $for_disp .= "<td style=\"min-width: 170px; max-width: 170px;\" class=\"py-3 align-bottom\">";
                         foreach ($timekeeping->arr_company as $ck => $cv) {
                             $distval = isset($tdist[$cv]) ? $tdist[$cv] : "";
                             $defaultdist[$cv] = isset($defaultdist[$cv]) ? $defaultdist[$cv] : "";
@@ -732,7 +764,7 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
 
                 }else{
 
-                    $for_disp .= "<td style=\"min-width: 170px; max-width: 170px;\" class=\"align-middle\">";
+                    $for_disp .= "<td style=\"min-width: 170px; max-width: 170px;\" class=\"py-3 align-bottom\">";
                     foreach ($timekeeping->arr_company as $ck => $cv) {
                         $distval = isset($tdist[$cv]) ? $tdist[$cv] : "";
                         $defaultdist[$cv] = isset($defaultdist[$cv]) ? $defaultdist[$cv] : "";
@@ -971,7 +1003,37 @@ if (isset($_POST['from']) && isset($_POST['to']) && (isset($_POST['company']) ||
         $conflict = 0;
         $timedisp = "";
 
+        $jobrecByDate = $timekeeping->getEmpPositionByDate($timekeeping->jobrec_list[$k] ?? [], $from);
+        if(!empty($jobrecByDate)){
+            $v["job_code"] = $jobrecByDate['jd_code'];
+            $v["job_title"] = $jobrecByDate['jd_title'];
+            $v["dept_code"] = $jobrecByDate['Dept_Code'];
+            $v["dept_name"] = $jobrecByDate['Dept_Name'];
+            $v["c_code"] = $jobrecByDate['C_Code'];
+            $v["c_name"] = $jobrecByDate['C_Name'];
+            $v["outlet"] = $jobrecByDate['jrec_outlet'];
+            $v["emprank"] = $jobrecByDate['jrec_jobgrade'];
+            $v["area"] = $jobrecByDate['jrec_area'];
+            $v["saltype"] = $jobrecByDate['jrec_saltype'];
+            $v["position_type"] = $jobrecByDate['position_type'];
+        }
+
         for ($dtcur = date("Y-m-d", strtotime($from . " -10 days")); $dtcur <= $to; $dtcur = date("Y-m-d", strtotime($dtcur . " +1 day"))) {
+
+            $jobrecByDate = $timekeeping->getEmpPositionByDate($timekeeping->jobrec_list[$k] ?? [], $dtcur);
+            if(!empty($jobrecByDate)){
+                $v["job_code"] = $jobrecByDate['jd_code'];
+                $v["job_title"] = $jobrecByDate['jd_title'];
+                $v["dept_code"] = $jobrecByDate['Dept_Code'];
+                $v["dept_name"] = $jobrecByDate['Dept_Name'];
+                $v["c_code"] = $jobrecByDate['C_Code'];
+                $v["c_name"] = $jobrecByDate['C_Name'];
+                $v["outlet"] = $jobrecByDate['jrec_outlet'];
+                $v["emprank"] = $jobrecByDate['jrec_jobgrade'];
+                $v["area"] = $jobrecByDate['jrec_area'];
+                $v["saltype"] = $jobrecByDate['jrec_saltype'];
+                $v["position_type"] = $jobrecByDate['position_type'];
+            }
 
             $superflexi = $timekeeping->superflexi($k, $v['dept_code'], $v['c_code'], $dtcur);
             $day_type = implode('/', $arr_dtr[$k][$dtcur]['daytype'] ?? []);

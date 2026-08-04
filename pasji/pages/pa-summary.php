@@ -1,8 +1,8 @@
 <?php
 	if(isset($_POST["year"])){
-		// require_once($pa_root."/db/database.php");
-		require_once($pa_root."/db/db.php");
-		require_once($pa_root."/db/core.php");
+		// require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
 		require_once($pa_root."/actions/get_person.php");
 		// $hr_db = Database::connect();
 		// $hr_db = Database::connect();
@@ -563,9 +563,9 @@
 	}else if(isset($_POST["get_pa"])){ ?>
 	<?php
 		
-		// require_once($pa_root."/db/database.php");
-		require_once($pa_root."/db/db.php");
-		require_once($pa_root."/db/core.php");
+		// require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
 		require_once($pa_root."/actions/get_person.php");
 		// $pdo = Database::connect();
 		// $hr_db = HRDatabase::connect();
@@ -1021,9 +1021,9 @@
 	}else if(isset($_POST['pa_sji']) && $_POST['pa_sji'] != ''){
 
 		
-		// require_once($pa_root."/db/database.php");
-		require_once($pa_root."/db/db.php");
-		require_once($pa_root."/db/core.php");
+		// require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+		require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
 		require_once($pa_root."/actions/get_person.php");
 		// $pdo = Database::connect();
 		// $hr_db = HRDatabase::connect();

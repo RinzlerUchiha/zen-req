@@ -1,6 +1,11 @@
 <?php
 // Database connection
-require_once($sr_root . "/db/HR.php");
+
+use function PHPUnit\Framework\fileExists;
+
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/HR.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/helper.php");
+
 try {
     $db_hr = new HR();
 
@@ -54,16 +59,6 @@ try {
             $viewall = (HR::get_assign('manualdtr', 'viewall', $user_empno) ? 1 : 0);
 
             if ($status == 'request') {
-                // $sql = "SELECT tbl_dtr_update.*, tbl201_basicinfo.*, IF(du_stat = 'pending', 1, 0) AS rnk, tbl_dtr_reason.reason AS reasonval, tbl_dtr_reason.id AS reasonid
-				// 		FROM tbl_dtr_update 
-				// 		LEFT JOIN tbl201_basicinfo ON bi_empno = du_empno AND datastat = 'current' 
-				// 		LEFT JOIN tbl_dtr_reason ON tbl_dtr_reason.id = tbl_dtr_update.reason
-				// 		WHERE ((DATE_FORMAT(du_timestamp, '%Y-%m-%d') BETWEEN :from AND :to) OR (du_date BETWEEN :from AND :to) OR du_stat = 'pending') AND (FIND_IN_SET(du_empno, :empnolist) > 0 OR :viewall = 1 OR du_empno = :empno)
-				// 		ORDER BY rnk DESC, du_timestamp DESC";
-
-                // $query = $db_hr->getConnection()->prepare($sql);
-                // $query->execute([':from' => $from, ':to' => $to, ':empnolist' => $user_assign_list, ':viewall' => (HR::get_assign('manualdtr', 'viewall', $user_empno) ? 1 : 0), ':empno' => $user_empno]);
-
                 $sql = "SELECT tbl_dtr_update.*, tbl201_basicinfo.*, IF(du_stat = 'pending', 1, 0) AS rnk, tbl_dtr_reason.reason AS reasonval, tbl_dtr_reason.id AS reasonid
 						FROM tbl_dtr_update 
 						LEFT JOIN tbl201_basicinfo ON bi_empno = du_empno AND datastat = 'current' 
@@ -75,9 +70,6 @@ try {
                 $query->execute([':empnolist' => $user_assign_list, ':viewall' => (HR::get_assign('manualdtr', 'viewall', $user_empno) ? 1 : 0), ':empno' => $user_empno]);
                 foreach ($query->fetchall(PDO::FETCH_ASSOC) as $k => $v) {
                     $arr[] = $v;
-                    // if ($v['du_stat'] == 'pending') {
-                    // 	$reqlist[$v['du_table'] . "/" . $v['du_empno'] . "/" . $v['du_dtrid']] = $v['du_action'];
-                    // }
                 }
 
                 echo "<span class='text-muted h5'>All Time</span>";
@@ -210,9 +202,9 @@ try {
 						LEFT JOIN tbl_dtr_update ON du_table = 'sti' AND du_dtrid = id AND du_stat = 'pending'
                         LEFT JOIN tbl201_jobrec ON jrec_empno = emp_no AND jrec_status = 'Primary'
 						WHERE
-							LOWER(dtr_stat) = 'pending' AND YEAR(date_dtr) >= '2023' AND (FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
+							LOWER(dtr_stat) = 'pending' AND YEAR(date_dtr) >= '2023' AND (emp_no = ? OR FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
 						ORDER BY date_dtr DESC, time_in_out DESC");
-                    $sql->execute([$user_assign_list, $viewall]);
+                    $sql->execute([$user_empno, $user_assign_list, $viewall]);
                 } else {
                     echo "<span class='text-muted h5'>" . date("F d, Y", strtotime($from)) . "-" . date("F d, Y", strtotime($to)) . "</span>";
                     $sql = $db_hr->getConnection()->prepare("SELECT
@@ -226,9 +218,9 @@ try {
 						LEFT JOIN tbl_dtr_update ON du_table = 'sti' AND du_dtrid = id AND du_stat = 'pending'
                         LEFT JOIN tbl201_jobrec ON jrec_empno = emp_no AND jrec_status = 'Primary'
 						WHERE
-							LOWER(dtr_stat) = ? AND date_dtr BETWEEN ? AND ? AND (FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
+							LOWER(dtr_stat) = ? AND date_dtr BETWEEN ? AND ? AND (emp_no = ? OR FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
 						ORDER BY date_dtr DESC, time_in_out DESC");
-                    $sql->execute([$status, $from, $to, $user_assign_list, $viewall]);
+                    $sql->execute([$status, $from, $to, $user_empno, $user_assign_list, $viewall]);
                 }
 
                 foreach ($sql->fetchall(PDO::FETCH_ASSOC) as $k => $v) {
@@ -248,9 +240,9 @@ try {
 						LEFT JOIN tbl_dtr_update ON du_table = 'sji' AND du_dtrid = id AND du_stat = 'pending'
                         LEFT JOIN tbl201_jobrec ON jrec_empno = emp_no AND jrec_status = 'Primary'
 						WHERE
-							LOWER(dtr_stat) = 'pending' AND YEAR(date_dtr) >= '2023' AND (FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
+							LOWER(dtr_stat) = 'pending' AND YEAR(date_dtr) >= '2023' AND (emp_no = ? OR FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
 						ORDER BY date_dtr DESC, time_in_out DESC");
-                    $sql->execute([$user_assign_list, $viewall]);
+                    $sql->execute([$user_empno, $user_assign_list, $viewall]);
                 } else {
                     $sql = $db_hr->getConnection()->prepare("SELECT
 							tbl_edtr_sji.*, 
@@ -263,9 +255,9 @@ try {
 						LEFT JOIN tbl_dtr_update ON du_table = 'sji' AND du_dtrid = id AND du_stat = 'pending'
                         LEFT JOIN tbl201_jobrec ON jrec_empno = emp_no AND jrec_status = 'Primary'
 						WHERE
-							LOWER(dtr_stat) = ? AND date_dtr BETWEEN ? AND ? AND (FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
+							LOWER(dtr_stat) = ? AND date_dtr BETWEEN ? AND ? AND (emp_no = ? OR FIND_IN_SET(emp_no, ?) > 0 OR ? = 1)
 						ORDER BY date_dtr DESC, time_in_out DESC");
-                    $sql->execute([$status, $from, $to, $user_assign_list, $viewall]);
+                    $sql->execute([$status, $from, $to, $user_empno, $user_assign_list, $viewall]);
                 }
                 foreach ($sql->fetchall(PDO::FETCH_ASSOC) as $k => $v) {
                     $v['dtrtype'] = "sji";
@@ -283,6 +275,7 @@ try {
                 echo "<th>Time</th>";
                 echo "<th>Status</th>";
                 echo "<th>Outlet</th>";
+                echo "<th>Attachment</th>";
                 echo "<th>Date Filed</th>";
                 echo "<th></th>";
                 echo "</tr>";
@@ -311,7 +304,7 @@ try {
                         echo "<td>" . date("h:i A", strtotime($v['time_in_out'])) . "</td>";
                         echo "<td>" . $v['status'] . "</td>";
                         echo "<td>" . $v['ass_outlet'] . "</td>";
-                        // echo "<td>" . (file_exists("/hris2/img/dtr_attachment/".$v['dtr_attachment']) ? "<a href='/hris2/img/dtr_attachment/".$v['dtr_attachment']."' target='_blank'>View Attachment</a>" : "") . "</td>";
+                        echo "<td>" . (!empty($v['dtr_attachment']) && file_exists("{$FILES_DIR}/dtr_attachment/" . $v['dtr_attachment']) ? "<img src='/zen/files/dtr_attachment/" . $v['dtr_attachment'] . "' style='min-height: 200px; max-height: 200px;'>" : "") . "</td>";
                         echo "<td>" . date("Y-m-d", strtotime($v['date_added'])) . "</td>";
                         echo "<td>";
                         if ($status == 'pending') {
@@ -409,7 +402,7 @@ try {
                 echo "<td>" . date("h:i A", strtotime($v['time_in'])) . "</td>";
                 echo "<td>" . $v['type'] . "</td>";
                 echo "<td>" . nl2br($v['purpose']) . "</td>";
-                echo "<td>" . (!empty($v['gp_attachment']) && file_exists("{$_SERVER['DOCUMENT_ROOT']}/hris2/img/gp_attachment/" . $v['gp_attachment']) ? "<!-- <a href='/hris2/img/gp_attachment/" . $v['gp_attachment'] . "' target='_blank'>View Attachment</a> --><img src='/hris2/img/gp_attachment/" . $v['gp_attachment'] . "' style='min-height: 200px; max-height: 200px;'>" : "") . "</td>";
+                echo "<td>" . (!empty($v['gp_attachment']) && file_exists("{$FILES_DIR}/gp_attachment/" . $v['gp_attachment']) ? "<img src='/zen/files/gp_attachment/" . $v['gp_attachment'] . "' style='min-height: 200px; max-height: 200px;'>" : "") . "</td>";
                 echo "<td>" . date("Y-m-d", strtotime($v['date_created'])) . "</td>";
                 if ($status != 'cancelled') {
                     echo "<td>";
@@ -574,7 +567,8 @@ try {
                 echo "alert(\"" . $err . "\");";
             } else {
 
-                $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/dtr_attachment/";
+                // $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/dtr_attachment/";
+                $uploadDir = $FILES_DIR . "/dtr_attachment/";
 
                 foreach ($execute as $k => $v) {
                     if($v[0] != '#wfh'){
@@ -613,6 +607,7 @@ try {
                         if (isset($v[4]) && !empty($files)) {
                             // Generate a unique filename to prevent overwriting existing files
                             $uniqueFileName = getUniqueFileName($uploadDir, $v[4]);
+                            $uniqueFileName = basename(convertAndCompressImage($v[3], $uniqueFileName, $uploadDir));
                             $targetFilePath = $uploadDir . $uniqueFileName;
                             $v[2][12] = $uniqueFileName;
                         }
@@ -622,7 +617,7 @@ try {
 
                     if ($sql->execute($v[2])) {
 
-                        if ($v[0] != '#wfh' && !empty($files)) {
+                        if ($v[0] != '#wfh' && !empty($files) && !file_exists($targetFilePath)) {
                             move_uploaded_file($v[3], $targetFilePath);
                         }
 
@@ -762,7 +757,8 @@ try {
             else {
 
                 if (!empty($file)) {
-                    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/dtr_attachment/";
+                    // $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/dtr_attachment/";
+                    $uploadDir = $FILES_DIR . "/dtr_attachment/";
                     $fileInfo = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $extension = $fileInfo;
                     $tmpFilePath = $file['tmp_name']; // Getting the temporary file path
@@ -770,6 +766,7 @@ try {
 
                     // Generate a unique filename to prevent overwriting existing files
                     $uniqueFileName = getUniqueFileName($uploadDir, $fileName);
+                    $uniqueFileName = basename(convertAndCompressImage($tmpFilePath, $uniqueFileName, $uploadDir));
                     $targetFilePath = $uploadDir . $uniqueFileName;
                 }
 
@@ -832,7 +829,7 @@ try {
                         $sql_del->execute([$dtr_t_id, $empno, $dtr_date]);
                     }
 
-                    if (!empty($file)) {
+                    if (!empty($file) && !file_exists($targetFilePath)) {
                         move_uploaded_file($tmpFilePath, $targetFilePath);
                     }
 
@@ -1448,7 +1445,8 @@ try {
                 }
 
                 if (!empty($file)) {
-                    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/gp_attachment/";
+                    // $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/gp_attachment/";
+                    $uploadDir = $FILES_DIR . "/gp_attachment/";
                     $fileInfo = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $extension = $fileInfo;
                     $tmpFilePath = $file['tmp_name']; // Getting the temporary file path
@@ -1456,13 +1454,14 @@ try {
 
                     // Generate a unique filename to prevent overwriting existing files
                     $uniqueFileName = getUniqueFileName($uploadDir, $fileName);
+                    $uniqueFileName = basename(convertAndCompressImage($tmpFilePath, $uniqueFileName, $uploadDir));
                     $targetFilePath = $uploadDir . $uniqueFileName;
                 }
 
                 $sql = $db_hr->getConnection()->prepare("INSERT INTO tbl_edtr_gatepass(emp_no, time_out, time_in, total_hrs, time_to_deduct, type, purpose, date_gatepass, status, gp_latefile, date_created, gp_attachment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 if ($sql->execute([$empno, $gp_out, $gp_in, $total, $deduction, $gp_type, $gp_reason, $gp_date, 'PENDING', $latefile, $timestamp, (!empty($file) ? $uniqueFileName : "")])) {
 
-                    if (!empty($file)) {
+                    if (!empty($file) && !file_exists($targetFilePath)) {
                         move_uploaded_file($tmpFilePath, $targetFilePath);
                     }
 
@@ -1541,7 +1540,8 @@ try {
                 }
 
                 if (!empty($file)) {
-                    $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/gp_attachment/";
+                    // $uploadDir = $_SERVER['DOCUMENT_ROOT'] . "/hris2/img/gp_attachment/";
+                    $uploadDir = $FILES_DIR . "/gp_attachment/";
                     $fileInfo = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $extension = $fileInfo;
                     $tmpFilePath = $file['tmp_name']; // Getting the temporary file path
@@ -1549,6 +1549,7 @@ try {
 
                     // Generate a unique filename to prevent overwriting existing files
                     $uniqueFileName = getUniqueFileName($uploadDir, $fileName);
+                    $uniqueFileName = basename(convertAndCompressImage($tmpFilePath, $uniqueFileName, $uploadDir));
                     $targetFilePath = $uploadDir . $uniqueFileName;
                 }
 
@@ -1562,7 +1563,7 @@ try {
 
                 if ($sql->execute($arr1)) {
 
-                    if (!empty($file)) {
+                    if (!empty($file) && !fileExists($targetFilePath)) {
                         move_uploaded_file($tmpFilePath, $targetFilePath);
                     }
 

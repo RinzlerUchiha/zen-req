@@ -19,7 +19,7 @@ $approvers = FLIGHT::GetApprovernum($department);
   <!-- Page header start -->
   <div class="page-header">
     <div class="page-header-title">
-      <h4>Flight Rebooking</h4>
+      <h4>Rebook Flight</h4>
       <!-- <span>Lorem ipsum dolor sit amet, consectetur adipisicing elit</span> -->
     </div>
     <div class="page-header-breadcrumb">

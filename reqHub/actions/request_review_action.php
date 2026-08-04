@@ -4,7 +4,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 header('Content-Type: application/json');
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 require_once (__DIR__ . '/../includes/notifications.php');
 require_once (__DIR__ . '/../includes/sms.php');
 
@@ -26,7 +27,7 @@ if (!$id) {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
 
     $stmt = $pdo->prepare("SELECT id, user_id, system_id FROM requests WHERE id = ? AND status = 'pending'");
     $stmt->execute([$id]);

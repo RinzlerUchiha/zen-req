@@ -66,39 +66,39 @@ input:checked + .slider:before {
             <div id="moods" class="moods">
                 <div class="mood-content">
                    <div class="mood-list">
-                       <a href="#" class="mood-option" data-mood="happy" style="text-align: center!important;"><img src="/zen/assets/reactions/happy.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="happy" style="text-align: center!important;"><img src="/zen/assets/reactions/happy.gif"/><br>
                         <p>Happy</p></a>
                        <a href="#" class="mood-option" data-mood="weird" style="text-align: center!important;"><img src="https://i.pinimg.com/originals/ff/62/60/ff626067889357dad925e54e44a134c9.gif"/><br>
                         <p>Cheesy</p></a>
                        <a href="#" class="mood-option" data-mood="playful" style="text-align: center!important;"><img src="https://i.pinimg.com/originals/c0/a6/fa/c0a6fade93a7299e3e48b6b3d0623092.gif"/><br>
                         <p>Playful</p></a>
-                       <a href="#" class="mood-option" data-mood="haha" style="text-align: center!important;"><img src="/zen/assets/reactions/hahaha.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="haha" style="text-align: center!important;"><img src="/zen/assets/reactions/hahaha.gif"/><br>
                         <p>Laughter</p></a>
                        <a href="#" class="mood-option" data-mood="hug" style="text-align: center!important;"><img src="https://i.pinimg.com/originals/0e/3e/e5/0e3ee551876e1ad2a39f89e4adf9168a.gif"/><br>
                         <p>Excitement</p></a>
                        <a href="#" class="mood-option" data-mood="relieved" style="text-align: center!important;"><img src="https://i.pinimg.com/originals/df/9f/60/df9f60f39ab6034922babb20cdde15e8.gif"/><br>
                         <p>Calm</p></a>
-                       <a href="#" class="mood-option" data-mood="inlove" style="text-align: center!important;"><img src="/zen/assets/reactions/inlove.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="inlove" style="text-align: center!important;"><img src="/zen/assets/reactions/inlove.gif"/><br>
                         <p>Inlove</p></a>
-                       <a href="#" class="mood-option" data-mood="hehe" style="text-align: center!important;"><img src="/zen/assets/reactions/hehe.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="hehe" style="text-align: center!important;"><img src="/zen/assets/reactions/hehe.gif"/><br>
                         <p>Awkward</p></a>
                    </div>
                    <div class="mood-list">
-                       <a href="#" class="mood-option" data-mood="unamused" style="text-align: center!important;"><img src="/zen/assets/reactions/unamused.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="unamused" style="text-align: center!important;"><img src="/zen/assets/reactions/unamused.gif"/><br>
                         <p>Annoyed</p></a>
-                       <a href="#" class="mood-option" data-mood="smirk" style="text-align: center!important;"><img src="/zen/assets/reactions/smirk.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="smirk" style="text-align: center!important;"><img src="/zen/assets/reactions/smirk.gif"/><br>
                         <p>Sly</p></a>
-                       <a href="#" class="mood-option" data-mood="vomit" style="text-align: center!important;"><img src="/zen/assets/reactions/vom.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="vomit" style="text-align: center!important;"><img src="/zen/assets/reactions/vom.gif"/><br>
                         <p>Disgust</p></a>
-                       <a href="#" class="mood-option" data-mood="crying" style="text-align: center!important;"><img src="/zen/assets/reactions/crying.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="crying" style="text-align: center!important;"><img src="/zen/assets/reactions/crying.gif"/><br>
                         <p>Cry</p></a>
-                       <a href="#" class="mood-option" data-mood="anger" style="text-align: center!important;"><img src="/zen/assets/reactions/anger.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="anger" style="text-align: center!important;"><img src="/zen/assets/reactions/anger.gif"/><br>
                         <p>Angry</p></a>
-                       <a href="#" class="mood-option" data-mood="eyeroll" style="text-align: center!important;"><img src="/zen/assets/reactions/eyeroll.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="eyeroll" style="text-align: center!important;"><img src="/zen/assets/reactions/eyeroll.gif"/><br>
                         <p>Boredom</p></a>
-                       <a href="#" class="mood-option" data-mood="sleepy" style="text-align: center!important;"><img src="/zen/assets/reactions/sleepy.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="sleepy" style="text-align: center!important;"><img src="/zen/assets/reactions/sleepy.gif"/><br>
                         <p>Sleepy</p></a>
-                       <a href="#" class="mood-option" data-mood="tired" style="text-align: center!important;"><img src="/zen/assets/reactions/tired.GIF"/><br>
+                       <a href="#" class="mood-option" data-mood="tired" style="text-align: center!important;"><img src="/zen/assets/reactions/tired.gif"/><br>
                         <p>Frustrated</p></a>
                         
                    </div>

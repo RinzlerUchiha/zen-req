@@ -1,7 +1,10 @@
 <?php
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+
 error_reporting(E_ALL); // Report all errors
 ini_set('display_errors', 1); // Display errors
-$pdo = new PDO("mysql:host=localhost;dbname=tngc_hrd2", "root", "");
+
+$pdo = Database::getConnection('hr');
 
 if (isset($_POST['query'])) {
     $query = "%" . $_POST['query'] . "%";

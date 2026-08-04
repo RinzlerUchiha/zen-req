@@ -1,148 +1,183 @@
-<div style="margin-top: 20px; flex: 1; max-width: 100%; margin-left:10px;">
-  <table style="width: 100%; border-collapse: collapse;">
-    <?php if (!empty($repl)) { foreach ($repl as $r) { ?>
-    <thead>
-      <tr style="color: black;">
-        <th colspan="5"><?= !empty($r['repl_date']) ? date('m/d/Y', strtotime($r['repl_date'])) : 'N/A'; ?> - Submitted Replenishment Request</th>
-      </tr>
-    </thead>
-    <?php }} ?>
-    <tbody>
-    <?php 
-      if (!empty($coh)) {
-        foreach ($coh as $c) {
-          $outlet = $c['outlet_dept'];
-          ?>
-      <tr style="background-color: antiquewhite;">
-            <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;text-align: left;">Approved PCF: </td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;width: 100px;" id="<?= in_array($rr['repl_status'] ?? '', ['returned','c-returned','f-returned']) ? 'appPCF' : 'n' ?>">
-              <i class="icofont icofont-cur-peso" style="font-size: 18px;"></i><?= number_format($c['cash_on_hand'], 2) ?>
-            </td>
-      </tr>
-      <tr>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;text-align: left;">Less: </td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-        </tr>
-          <!-- PENDING REPLENISHMENT REQUESTS -->
-          <?php 
-          if (!empty($repl)) {
-            foreach ($repl as $r) {
-              $replIDs = explode(',', $r['repl_pending']);
-              $firstRowPrinted = false;
-
-              foreach ($replIDs as $replID) {
-                $replID = trim($replID);
-                if (!empty($replID)) {
-                  $pending_requests = PCF::GetPendingRR($replID);
-                  if (!empty($pending_requests)) {
-                    foreach ($pending_requests as $pr) {
-                      ?>
-                      <tr style="background-color:#f2bc96;">
-                        <?php if (!$firstRowPrinted): ?>
-                          <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;"></td>
-                          <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;">Pending Replenishment Request:</td>
-                          <?php $firstRowPrinted = true; ?>
-                        <?php else: ?>
-                          <td style="border: 1px solid #ddd; padding: 5px;"></td>
-                          <td style="border: 1px solid #ddd; padding: 5px;"></td>
-                        <?php endif; ?>
-                        <td style="border: 1px solid #ddd; padding: 5px;font-size:12px;"><?= htmlspecialchars($pr['repl_no']) ?></td>
-                        <td id="n" style="border: 1px solid #ddd; padding: 5px;"><?= number_format($pr['repl_expense'], 2) ?></td>
+<div style="border: 1px solid #ccc; float: right; margin-left: 20px;">
+    <table style="width: 100%;">
+        <tbody>
+            <?php 
+            if (!empty($coh)) {
+                foreach ($coh as $c) {
+                    $outlet = $c['outlet_dept'];
+                    ?>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">Approved PCF:</td>
                         <td style="border: 1px solid #ddd; padding: 5px;"></td>
-                      </tr>
-                      <?php
-                    }
-                  }
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 100px;" id="appPCF">
+                            <i class="icofont icofont-cur-peso" style="font-size: 18px;"></i><?= number_format($c['cash_on_hand'], 2) ?>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                    </tr>
+                    <?php
                 }
-              }
+            } 
+            ?>
 
-              if (!$firstRowPrinted) {
-                ?>
-                <tr style="background-color:#f2bc96;">
-                  <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;"></td>
-                  <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;white-space: wrap!important;">Pending Replenishment Request:</td>
-                  <td style="border: 1px solid #ddd; padding: 5px;"></td>
-                  <td style="border: 1px solid #ddd; padding: 5px;"></td>
-                  <td style="border: 1px solid #ddd; padding: 5px;"></td>
-                </tr>
-                <?php
-              }
+            <?php 
+            $firstRowShown = false;
+            if (!empty($repl)) {
+                foreach ($repl as $r) {
+                    $replIDs = explode(',', $r['repl_pending']);
+                    foreach ($replIDs as $replID) {
+                        $replID = trim($replID);
+                        if (!empty($replID)) {
+                            $pending_requests = PCF::GetPendingRR($replID);
+                            if (!empty($pending_requests)) {
+                                foreach ($pending_requests as $pr) {
+                                    ?>
+                                    <tr>
+                                        <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">
+                                            <?php if (!$firstRowShown) { echo 'Less:'; } ?>
+                                        </td>
+                                        <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">
+                                            <?php if (!$firstRowShown) { echo 'Pending Replenishment Request:'; } ?>
+                                        </td>
+                                        <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;" id="replNo">
+                                            <?= htmlspecialchars($pr['repl_no']) ?>
+                                        </td>
+                                        <td style="border: 1px solid #ddd; padding: 5px;" id="expns">
+                                            <?= number_format($pr['repl_new_expense'], 2) ?>
+                                        </td>
+                                        <td style="border: 1px solid #ddd; padding: 5px; width: 100px;"></td>
+                                        <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                                    </tr>
+                                    <?php
+                                    $firstRowShown = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
-          }
-        }
-      }
 
-      // OUTSTANDING PCF + REPLENISHMENT REQUEST DETAILS
-      if (!empty($repl_request)) {
-        foreach ($repl_request as $rr) {
-          $outlet = $rr['repl_outlet'];
-          $requested = $rr['repl_expense'];
-          $unreplenished = $rr['repl_unrepl'];
-          $cohValue = $rr['repl_cash_on_hand'];
-          $cashonhandrecord = $rr['repl_end_balance'];
-          $approvedPCF = $coh[0]['cash_on_hand'] ?? 0;
+            if (!$firstRowShown) {
+                ?>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">Less:</td>
+                    <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">Pending Replenishment Request:</td>
+                    <td style="border: 1px solid #ddd; padding: 5px; font-size:12px;"></td>
+                    <td style="border: 1px solid #ddd; padding: 5px;" id="expns"></td>
+                    <td style="border: 1px solid #ddd; padding: 5px; width: 100px;"></td>
+                    <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                </tr>
+                <?php 
+            } 
+            ?>
 
-          $totalExpense = $requested + $unreplenished;
-          $endBalance = $approvedPCF - $totalExpense;
-          $variance = $cohValue - $cashonhandrecord;
+            <?php 
+            if (!empty($repl_request)) {
+                foreach ($repl_request as $rr) {
+                  if (in_array($rr['repl_status'], ['c-returned','f-returned','returned'])) {
+                    $totallabel = 'gtotal';
+                    $variancelabel = 'variances';
+                    $balancelabel = 'balances';
+                  }else{
+                    $totallabel = '';
+                    $variancelabel = '';
+                    $balancelabel = '';
+                  }
+                    ?>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">Replenishment Request:</td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px;" id="rtotal">
+                            <?= number_format($rr['repl_new_expense'], 2) ?>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 100px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">Unreplenished:</td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; border-bottom: 1px solid;" id="ototal">
+                            <?= number_format($rr['repl_unrepl'], 2) ?>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 100px; border-bottom: 1px solid;" id="<?=$totallabel?>">
+                            <i class="icofont icofont-cur-peso" style="font-size: 18px;"></i>
+                            <?= number_format($rr['repl_new_expense'] + $rr['repl_unrepl'], 2) ?>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                    </tr>
+                    <tr>
+                        <!-- <td style="border: 1px solid #ddd; padding: 5px;"></td> -->
+                        <td colspan="2" style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">
+                            End PCF Balance as of (<?= !empty($rr['repl_date']) ? date('m/d/Y', strtotime($rr['repl_date'])) : 'N/A' ?>):
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 100px;" id="<?=$balancelabel?>">
+                            <i class="icofont icofont-cur-peso" style="font-size: 18px;"></i>
+                            <?= number_format($rr['repl_end_balance'], 2) ?>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                    </tr>
+                    <tr>
+                        <!-- <td style="border: 1px solid #ddd; padding: 5px;"></td> -->
+                        <td colspan="2" style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">
+                            Cash on hand as of (<?= !empty($rr['repl_date']) ? date('m/d/Y', strtotime($rr['repl_date'])) : 'N/A' ?>):
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 100px; border-bottom: 1px solid;" id="cashhand">
+                            <i class="icofont icofont-cur-peso" style="font-size: 18px;"></i>
+                            <?php if ($rr['repl_cash_on_hand'] != $rr['repl_end_balance']) {
+                                  echo number_format($rr['cc_end_balance'], 2);
+                            }else{
+                                  echo number_format($rr['repl_cash_on_hand'], 2);
+                            }  ?>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px; font-size:12px; text-align: left;">Variance:</td>
+                        <td style="border: 1px solid #ddd; padding: 5px;"></td>
+                        <td style="border: 1px solid #ddd; padding: 5px;">
+                            <!-- <label class="label label-warning" style="color:black!important;" id="variance-danger">
+                                <?php 
+                                $cohValue = $rr['repl_cash_on_hand'] ?? 0;
+                                $cashonhandrecord = $rr['repl_end_balance'] ?? 0;
+                                $variance = $cohValue - $cashonhandrecord;
+                                echo ($variance == 0) ? 'No variance' : 'Update your cash on hand';
+                                ?>
+                            </label> -->
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 100px; border-bottom: 1px solid;" id="<?=$variancelabel?>">
+                            <i class="icofont icofont-cur-peso" style="font-size: 18px;"></i>
+                            <?= number_format($variance, 2) ?>
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 5px; width: 50px"></td>
+                    </tr>
+                    <?php
+                }
+            }
+            ?>
 
-          // Determine IDs based on status
-          $statusIds = ['returned', 'c-returned', 'f-returned'];
-          $tdId = in_array($rr['repl_status'], $statusIds) ? [
-              'rtotal' => 'rtotal',
-              'ototal' => 'ototal',
-              'gtotal' => 'gtotal',
-              'balances' => 'balances',
-              'cashhand' => 'cashhand',
-              'variances' => 'variances'
-          ] : [
-              'rtotal' => 'n',
-              'ototal' => 'n',
-              'gtotal' => 'n',
-              'balances' => 'n',
-              'cashhand' => 'n',
-              'variances' => 'n'
-          ];
-
-          ?>
-      <tr style="background-color:#b7f4c7;">
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td id="p" style="border: 1px solid #ddd; padding: 5px;">Replenishment Request: </td>
-            <td style="border: 1px solid #ddd; padding: 5px;" id="<?= $tdId['rtotal'] ?>"><?= number_format($requested, 2) ?></td>
-            <td style="border: 1px solid #ddd; padding: 5px;" id="<?= $tdId['ototal'] ?>"><?= number_format($unreplenished, 2) ?></td>
-            <td style="border: 1px solid #ddd; padding: 5px;" id="<?= $tdId['gtotal'] ?>"><i class="icofont icofont-cur-peso" style="font-size: 18px;"></i><?= number_format($totalExpense, 2) ?></td>
-      </tr>
-      <tr style="background-color:#b7d6f4;">
-            <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;text-align: left;">End PCF Balance as of (<?= !empty($rr['repl_date']) ? date('m/d/Y', strtotime($rr['repl_date'])) : 'N/A' ?>): </td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;width: 100px;" id="<?= $tdId['balances'] ?>"><i class="icofont icofont-cur-peso" style="font-size: 18px;"></i><?= number_format($cashonhandrecord, 2) ?></td>
-      </tr>
-      <tr style="background-color:#d6c0f6;">
-            <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;text-align: left;">Cash on hand as of (<?= !empty($rr['repl_date']) ? date('m/d/Y', strtotime($rr['repl_date'])) : 'N/A' ?>): </td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;width: 100px;" id="<?= $tdId['cashhand'] ?>"><i class="icofont icofont-cur-peso" style="font-size: 18px;"></i><?= number_format($cohValue, 2) ?></td>
-      </tr>
-      <tr style="background-color:#f6c0c0;">
-            <td id="p" style="border: 1px solid #ddd; padding: 5px;font-size:12px;text-align: left;">Variance: </td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;"></td>
-            <td style="border: 1px solid #ddd; padding: 5px;width: 100px;" id="<?= $tdId['variances'] ?>"><i class="icofont icofont-cur-peso" style="font-size: 18px;"></i><?= number_format($variance, 2) ?></td>
-      </tr>
-        <?php
-       }
-     }
-     ?>
-    </tbody>
-  </table>
+            <!-- Submission Row -->
+           <!--  <tr id="submission">
+                <td colspan="4" style="background-color: transparent!important; text-align: right; color: red;" id="countalert"></td>
+                <td style="text-align: right;">
+                    <button style="width:50px;" class="btn btn-primary btn-mini" id="open-modal">Submit</button>
+                </td>
+                <td></td>
+            </tr> -->
+            <!-- <tr id="errormess">
+                <td colspan="4" style="background-color: transparent!important; text-align: right; color: red;" id="countalert">
+                    <label class="label label-danger">unable to send request</label>
+                </td>
+                <td style="text-align: right;"></td>
+                <td></td>
+            </tr> -->
+        </tbody>
+    </table>
 </div>

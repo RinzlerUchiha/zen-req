@@ -162,10 +162,10 @@ function calculateRtotal() {
     let rtotal = 0;
     let etotal = getNumber("#etotal");
 
-    // Calculate rtotal from all non-cancelled rows (regardless of checkbox state)
-    document.querySelectorAll('#myTable tr').forEach(row => {
+    // Calculate rtotal from all non-cancelled rows
+    document.querySelectorAll('#myTable tr.clickable-row').forEach(row => {
         const rowStatus = row.getAttribute('data-stat');
-        if (!rowStatus || rowStatus.toLowerCase() !== 'cancelled') {
+        if (rowStatus && !['cancelled', 'returned', 'f-returned', 'c-returned'].includes(rowStatus.toLowerCase())) {
             const totalCell = row.querySelector('td[id="total"]');
             const rowValue = parseFloat(totalCell?.innerText.replace(/,/g, '') || 0);
             rtotal += rowValue;
@@ -177,6 +177,7 @@ function calculateRtotal() {
 
     const ototalCell = document.querySelector('tfoot td[id="ototal"]');
     if (ototalCell) {
+        // This should be the difference between total expenses and replenishment
         let ototal = etotal - rtotal;
         ototalCell.innerText = (ototal < 0 ? 0 : ototal).toFixed(2);
     }
@@ -195,36 +196,85 @@ function handleCheckboxChange() {
     updateGrandTotalAndBalance();
 }
 
-function updateGrandTotalAndBalance() {
-    const appPCF = getNumber("#appPCF");
-    const alltotal = getNumber("#alltotal");
-    const rtotal = getNumber("#rtotal");
-    const ototal = getNumber("#ototal");
-    const cashOnhand = getNumber("#cashhand");
+// function updateGrandTotalAndBalance() {
+//     const appPCF = getNumber("#appPCF");
+//     const alltotal = getNumber("#alltotal");
+//     const rtotal = getNumber("#rtotal");
+//     const ototal = getNumber("#ototal");
+//     const cashOnhand = getNumber("#cashhand");
 
-    let expns = 0;
-    document.querySelectorAll("#expns").forEach(el => {
-        expns += getNumberFromText(el.textContent);
-    });
+//     let expns = 0;
+//     document.querySelectorAll("#expns").forEach(el => {
+//         expns += getNumberFromText(el.textContent);
+//     });
 
-    const reptotal = alltotal;
-    document.getElementById("rtotal").textContent = reptotal.toLocaleString(undefined, { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-    });
-
-
-    const gtotal = expns + reptotal + ototal;
-    document.getElementById("gtotal").innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${gtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+//     const reptotal = alltotal;
+//     document.getElementById("rtotal").textContent = reptotal.toLocaleString(undefined, { 
+//         minimumFractionDigits: 2, 
+//         maximumFractionDigits: 2 
+//     });
 
 
-    const balances = appPCF - gtotal;
-    document.getElementById("balances").innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${balances.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+//     const gtotal = expns + reptotal + ototal;
+//     document.getElementById("gtotal").innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${gtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    const variance = cashOnhand - balances;
-    document.getElementById("variances").innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${variance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+//     const balances = appPCF - gtotal;
+//     document.getElementById("balances").innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${balances.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+//     const variance = cashOnhand - balances;
+//     document.getElementById("variances").innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${variance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     
+// }
+
+function updateGrandTotalAndBalance() {
+    const appPCF = getNumber("#appPCF");
+    const cashOnhand = getNumber("#cashhand");
+
+    // Get alltotal from the footer (this is the total of all amounts from first table)
+    let alltotal = 0;
+    const alltotalElement = document.querySelector("tfoot td[id='alltotal']");
+    if (alltotalElement) {
+        alltotal = parseFloat(alltotalElement.innerText.replace(/,/g, '')) || 0;
+    }
+
+    // Get rtotal (replenishment request)
+    let rtotal = 0;
+    const rtotalElement = document.querySelector("tfoot td[id='rtotal']");
+    if (rtotalElement) {
+        rtotal = parseFloat(rtotalElement.innerText.replace(/,/g, '')) || 0;
+    }
+
+    // Get ototal (unreplenished)
+    let ototal = 0;
+    const ototalElement = document.querySelector("tfoot td[id='ototal']");
+    if (ototalElement) {
+        ototal = parseFloat(ototalElement.innerText.replace(/,/g, '')) || 0;
+    }
+
+    // Calculate grand total
+    const gtotal = alltotal + rtotal + ototal;
+
+    // Update gtotal display
+    const gtotalElement = document.querySelector("#gtotal");
+    if (gtotalElement) {
+        gtotalElement.innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${gtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    // Calculate balance
+    const balances = appPCF - gtotal;
+    const balancesElement = document.querySelector("#balances");
+    if (balancesElement) {
+        balancesElement.innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${balances.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    // Calculate variance
+    const variance = cashOnhand - balances;
+    const variancesElement = document.querySelector("#variances");
+    if (variancesElement) {
+        variancesElement.innerHTML = `<i class="icofont icofont-cur-peso" style="font-size: 18px;"></i> ${variance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
 }
 // Utility functions
 function getNumber(selector) {

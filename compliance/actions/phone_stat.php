@@ -1,5 +1,5 @@
 <?php
-require_once($com_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_POST['acca_ids']) || !isset($_POST['status'])) {
     echo "Invalid request";

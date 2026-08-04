@@ -11,7 +11,10 @@ $routes = [
 	'/process' => '/actions/dtr.php',
 	'/prs-data' => '/actions/prs-data.php',
 	'/permission_slip' => '/actions/permission-slip.php',
-	'/tk' => '/actions/tk.php'
+	'/tk' => '/actions/tk.php',
+
+	'/dtr-file' => '/pages/dtr-file.php',
+	'/gp-file' => '/pages/gp-file.php'
 ];
 
 // Get the current request URI (remove the base URL if needed)
@@ -19,7 +22,7 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $uri = rtrim(str_replace("/zen/dtr", "", $uri), "#");
 
 // top
-if(isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false) include_once($portal_root."/layout/dtr_top.php");
+if(isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false && !in_array($uri, ['/dtr-file', '/gp-file'])) include_once($portal_root."/layout/dtr_top.php");
 
 // Check if the requested URI exists in the routes array
 if (array_key_exists($uri, $routes)) {
@@ -40,4 +43,4 @@ if (array_key_exists($uri, $routes)) {
 }
 
 // bottom
-if(isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false) include_once($portal_root."/layout/bottom.php");
+if(isset($routes[$uri]) && strpos($routes[$uri], "pages/") !== false && !in_array($uri, ['/dtr-file', '/gp-file'])) include_once($portal_root."/layout/bottom.php");

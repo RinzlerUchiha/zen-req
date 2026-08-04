@@ -2,9 +2,9 @@
 // require_once '../db/database.php';
 // require_once "../db/core.php";
 // require_once('../db/mysqlhelper.php');
-require_once($main_root."/db/database.php");
-require_once($main_root."/db/core.php");
-require_once($main_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 if (!isset($user_id)) {
   $user_id = fn_get_user_details('U_ID');
 }
@@ -663,12 +663,14 @@ $total_notifications = $atd_pending + $atd_checked + $atd_reviewed + $atd_approv
 <script>
 function closeNotif() {
   document.getElementById("notifPanel").classList.remove("show");
-  document.getElementById("notifToggleBtn").style.display = "block";
+  // document.getElementById("notifToggleBtn").style.display = "block";
+  document.getElementById("notifToggleBtn")?.style && (document.getElementById("notifToggleBtn").style.display = "block");
 }
 
 function openNotif() {
   document.getElementById("notifPanel").classList.add("show");
-  document.getElementById("notifToggleBtn").style.display = "none";
+  // document.getElementById("notifToggleBtn").style.display = "none";
+  document.getElementById("notifToggleBtn")?.style && (document.getElementById("notifToggleBtn").style.display = "none");
 }
 </script>
 <script>

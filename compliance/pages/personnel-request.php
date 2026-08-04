@@ -1,9 +1,9 @@
 <?php
 // api-personnel-requests.php
-require_once($com_root."/db/database.php"); 
-require_once($com_root."/db/core.php"); 
-require_once($com_root."/db/mysqlhelper.php");
-require_once($com_root."/db/db_functions.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
 
 $hr_pdo = HRDatabase::connect();
 $_SESSION['csrf_token1'] = getToken2(50);

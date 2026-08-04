@@ -1,7 +1,7 @@
 <?php
-require_once($com_root."/db/database.php"); 
-require_once($com_root."/db/core.php"); 
-require_once($com_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 
 date_default_timezone_set('Asia/Manila');
 // $user_empno=fn_get_user_info('bi_empno');
@@ -332,11 +332,11 @@ switch ($countthis) {
 
 		/*
 			$sql="SELECT ecf_id, ecf_reqby, cat_priority, ecf_id
-			FROM demo_db_ecf2.tbl_request LEFT JOIN demo_db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND ( ecf_reqby='$empno' OR ( catstat_emp='$empno' AND (catstat_sign='' OR catstat_sign IS NULL) AND catstat_stat='pending' ) ) GROUP BY ecf_id ORDER BY ecf_lastday ASC";
+			FROM db_ecf2.tbl_request LEFT JOIN db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND ( ecf_reqby='$empno' OR ( catstat_emp='$empno' AND (catstat_sign='' OR catstat_sign IS NULL) AND catstat_stat='pending' ) ) GROUP BY ecf_id ORDER BY ecf_lastday ASC";
 			foreach ($hr_pdo->query($sql) as $ecfr) {
 
-				foreach ($hr_pdo->query("SELECT (SELECT COUNT(catstat_ecfid) as cnt1 FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$ecfr["ecf_id"]."' AND cat_priority<'".$ecfr["cat_priority"]."') as cnt1,
-					(SELECT COUNT(catstat_ecfid) as cnt1 FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$ecfr["ecf_id"]."' AND cat_priority<'".$ecfr["cat_priority"]."' AND NOT(catstat_sign='' OR catstat_sign IS NULL)) as cnt2") as $rcnt1) {
+				foreach ($hr_pdo->query("SELECT (SELECT COUNT(catstat_ecfid) as cnt1 FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$ecfr["ecf_id"]."' AND cat_priority<'".$ecfr["cat_priority"]."') as cnt1,
+					(SELECT COUNT(catstat_ecfid) as cnt1 FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='".$ecfr["ecf_id"]."' AND cat_priority<'".$ecfr["cat_priority"]."' AND NOT(catstat_sign='' OR catstat_sign IS NULL)) as cnt2") as $rcnt1) {
 					$cnthipri=$rcnt1["cnt1"];
 					$cnthipriclr=$rcnt1["cnt2"];
 				}
@@ -366,9 +366,9 @@ switch ($countthis) {
 					ecf_dtcleared,
 					b.cat_priority,
 					a.catstat_stat
-			FROM demo_db_ecf2.tbl_request 
-			LEFT JOIN demo_db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
-			LEFT JOIN demo_db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
+			FROM db_ecf2.tbl_request 
+			LEFT JOIN db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
+			LEFT JOIN db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
 			WHERE ecf_status='pending' AND ( ecf_reqby='$empno' OR ( (a.catstat_emp='$empno' OR FIND_IN_SET('$empno', b.cat_checker) > 0) AND (a.catstat_sign='' OR a.catstat_sign IS NULL) AND a.catstat_stat='pending' ) ) 
 			GROUP BY ecf_id 
 			ORDER BY ecf_lastday ASC";
@@ -393,9 +393,9 @@ switch ($countthis) {
 						ecf_dtcleared,
 						b.cat_priority,
 						a.catstat_stat
-				FROM demo_db_ecf2.tbl_request 
-				LEFT JOIN demo_db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
-				LEFT JOIN demo_db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
+				FROM db_ecf2.tbl_request 
+				LEFT JOIN db_ecf2.tbl_req_category a ON a.catstat_ecfid=ecf_id 
+				LEFT JOIN db_ecf2.tbl_category b ON b.cat_id=a.catstat_cat 
 				WHERE ecf_status='pending' 
 				GROUP BY ecf_id 
 				ORDER BY ecf_lastday ASC";
@@ -405,15 +405,15 @@ switch ($countthis) {
 		$r1 = $q1->fetchall(PDO::FETCH_ASSOC);
 
 		$q2 = $hr_pdo->prepare("SELECT c.catstat_ecfid, d.cat_priority
-								FROM demo_db_ecf2.tbl_req_category c 
-							  	LEFT JOIN demo_db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
+								FROM db_ecf2.tbl_req_category c 
+							  	LEFT JOIN db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
 							  	WHERE FIND_IN_SET(c.catstat_ecfid, ?) > 0");
 		$q2->execute([implode(",", array_column($r1, "ecf_id"))]);
 		$req_cat_res = $q2->fetchall(PDO::FETCH_ASSOC);
 
 		$q2 = $hr_pdo->prepare("SELECT c.catstat_ecfid, d.cat_priority
-								FROM demo_db_ecf2.tbl_req_category c 
-							  	LEFT JOIN demo_db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
+								FROM db_ecf2.tbl_req_category c 
+							  	LEFT JOIN db_ecf2.tbl_category d ON d.cat_id = c.catstat_cat
 							  	WHERE FIND_IN_SET(c.catstat_ecfid, ?) > 0 AND (NOT(c.catstat_sign='' OR c.catstat_sign IS NULL) OR c.catstat_stat = 'uncleared')");
 		$q2->execute([implode(",", array_column($r1, "ecf_id"))]);
 		$req_cat_clr_res = $q2->fetchall(PDO::FETCH_ASSOC);
@@ -458,7 +458,7 @@ switch ($countthis) {
 		if (get_assign('ecfreq', 'viewitems', $empno, 'ECF')) {
 
 			$sql = "SELECT ecf_id, ecf_status
-				FROM demo_db_ecf2.tbl_request ORDER BY ecf_lastday ASC";
+				FROM db_ecf2.tbl_request ORDER BY ecf_lastday ASC";
 			foreach ($hr_pdo->query($sql) as $ecfr) {
 				if ($ecfr['ecf_status'] == 'draft') {
 					$ecfdraft++;
@@ -470,24 +470,24 @@ switch ($countthis) {
 			}
 
 			$sql = "SELECT COUNT(DISTINCT(ecf_id)) as cnt
-				FROM demo_db_ecf2.tbl_request LEFT JOIN demo_db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND catstat_emp='$empno' AND (NOT(catstat_sign='' OR catstat_sign IS NULL) OR catstat_stat!='pending') ORDER BY ecf_lastday ASC, catstat_dtchecked DESC";
+				FROM db_ecf2.tbl_request LEFT JOIN db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND catstat_emp='$empno' AND (NOT(catstat_sign='' OR catstat_sign IS NULL) OR catstat_stat!='pending') ORDER BY ecf_lastday ASC, catstat_dtchecked DESC";
 			foreach ($hr_pdo->query($sql) as $ecfr) {
 				$ecfchecked = $ecfr["cnt"];
 			}
 		} else {
 
 			$sql = "SELECT COUNT(DISTINCT(ecf_id)) as cnt
-				FROM demo_db_ecf2.tbl_request LEFT JOIN demo_db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='draft' AND ecf_reqby='$empno' ORDER BY ecf_lastday ASC";
+				FROM db_ecf2.tbl_request LEFT JOIN db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='draft' AND ecf_reqby='$empno' ORDER BY ecf_lastday ASC";
 			foreach ($hr_pdo->query($sql) as $ecfr) {
 				$ecfdraft = $ecfr["cnt"];
 			}
 
 			$sql = "SELECT ecf_id, ecf_reqby, cat_priority, ecf_id
-				FROM demo_db_ecf2.tbl_request LEFT JOIN demo_db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND ( ecf_reqby='$empno' OR ( catstat_emp='$empno' AND (catstat_sign='' OR catstat_sign IS NULL) AND catstat_stat='pending' ) ) GROUP BY ecf_id ORDER BY ecf_lastday ASC";
+				FROM db_ecf2.tbl_request LEFT JOIN db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND ( ecf_reqby='$empno' OR ( catstat_emp='$empno' AND (catstat_sign='' OR catstat_sign IS NULL) AND catstat_stat='pending' ) ) GROUP BY ecf_id ORDER BY ecf_lastday ASC";
 			foreach ($hr_pdo->query($sql) as $ecfr) {
 
-				foreach ($hr_pdo->query("SELECT (SELECT COUNT(catstat_ecfid) as cnt1 FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='" . $ecfr["ecf_id"] . "' AND cat_priority<'" . $ecfr["cat_priority"] . "') as cnt1,
-						(SELECT COUNT(catstat_ecfid) as cnt1 FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='" . $ecfr["ecf_id"] . "' AND cat_priority<'" . $ecfr["cat_priority"] . "' AND NOT(catstat_sign='' OR catstat_sign IS NULL)) as cnt2") as $rcnt1) {
+				foreach ($hr_pdo->query("SELECT (SELECT COUNT(catstat_ecfid) as cnt1 FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='" . $ecfr["ecf_id"] . "' AND cat_priority<'" . $ecfr["cat_priority"] . "') as cnt1,
+						(SELECT COUNT(catstat_ecfid) as cnt1 FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='" . $ecfr["ecf_id"] . "' AND cat_priority<'" . $ecfr["cat_priority"] . "' AND NOT(catstat_sign='' OR catstat_sign IS NULL)) as cnt2") as $rcnt1) {
 					$cnthipri = $rcnt1["cnt1"];
 					$cnthipriclr = $rcnt1["cnt2"];
 				}
@@ -498,13 +498,13 @@ switch ($countthis) {
 			}
 
 			$sql = "SELECT COUNT(DISTINCT(ecf_id)) as cnt
-				FROM demo_db_ecf2.tbl_request LEFT JOIN demo_db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND catstat_emp='$empno' AND (NOT(catstat_sign='' OR catstat_sign IS NULL) OR catstat_stat!='pending') ORDER BY ecf_lastday ASC, catstat_dtchecked DESC";
+				FROM db_ecf2.tbl_request LEFT JOIN db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='pending' AND catstat_emp='$empno' AND (NOT(catstat_sign='' OR catstat_sign IS NULL) OR catstat_stat!='pending') ORDER BY ecf_lastday ASC, catstat_dtchecked DESC";
 			foreach ($hr_pdo->query($sql) as $ecfr) {
 				$ecfchecked = $ecfr["cnt"];
 			}
 
 			$sql = "SELECT COUNT(DISTINCT(ecf_id)) as cnt
-				FROM demo_db_ecf2.tbl_request LEFT JOIN demo_db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='cleared' AND ( ecf_reqby='$empno' OR catstat_emp='$empno' ) AND catstat_stat='cleared' ORDER BY ecf_lastday ASC";
+				FROM db_ecf2.tbl_request LEFT JOIN db_ecf2.tbl_req_category ON catstat_ecfid=ecf_id LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE ecf_status='cleared' AND ( ecf_reqby='$empno' OR catstat_emp='$empno' ) AND catstat_stat='cleared' ORDER BY ecf_lastday ASC";
 			foreach ($hr_pdo->query($sql) as $ecfr) {
 				$ecfcleared = $ecfr["cnt"];
 			}

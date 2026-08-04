@@ -65,49 +65,125 @@ $(document).ready(function() {
     }
 });
 
-  $(document).on('click', '.sendMessage', function() {
+// $(document).on('click', '.sendMessage', function() {
+//     const disbNo = $(this).data('disbno');
+//     const comment = $('#commentRep-' + disbNo).val();
+
+//     const formData = new FormData();
+//     formData.append('disbur_no', disbNo);
+//     formData.append('comments', comment);
+
+//     // Send AJAX request
+//     $.ajax({
+//         url: 'save_comment', // PHP script to handle file upload
+//         type: 'POST',
+//         data: formData,
+//         processData: false,
+//         contentType: false,
+//         success: function(response) {
+//             // Clear the input field
+//             $('#commentRep-' + disbNo).val('');
+        
+//             // Append the new message to the message container
+//             const newMessage = `
+//             <div class="message sent">${comment}</div>
+//             `;
+//             $('#message-container-' + disbNo).append(newMessage);
+        
+//             // Scroll to the bottom of the message container
+//             $('#message-container-' + disbNo).scrollTop($('#message-container-' + disbNo)[0].scrollHeight);
+        
+//             // Show success message in the alert box
+//             // $('#alert-mess').text('Message sent successfully!');
+//             $('#message-message').removeClass('d-none');
+        
+//             // Auto-hide the alert after 3 seconds
+//             setTimeout(function() {
+//                 $('#message-message').addClass('d-none');
+//             }, 3000);
+//         },
+
+//           error: function(xhr, status, error) {
+//             console.error('Error:', error);
+//           }
+//         });
+// });
+$(document).on('click', '.sendMessage', function() {
+
     const disbNo = $(this).data('disbno');
     const comment = $('#commentRep-' + disbNo).val();
+
+    if(comment.trim() === '') {
+        return;
+    }
 
     const formData = new FormData();
     formData.append('disbur_no', disbNo);
     formData.append('comments', comment);
 
-    // Send AJAX request
     $.ajax({
-        url: 'save_comment', // PHP script to handle file upload
+        url: 'save_comment',
         type: 'POST',
         data: formData,
         processData: false,
         contentType: false,
+
         success: function(response) {
-            // Clear the input field
-            $('#commentRep-' + disbNo).val('');
-        
-            // Append the new message to the message container
-            const newMessage = `
-            <div class="message sent">${comment}</div>
-            `;
-            $('#message-container-' + disbNo).append(newMessage);
-        
-            // Scroll to the bottom of the message container
-            $('#message-container-' + disbNo).scrollTop($('#message-container-' + disbNo)[0].scrollHeight);
-        
-            // Show success message in the alert box
-            // $('#alert-mess').text('Message sent successfully!');
-            $('#message-message').removeClass('d-none');
-        
-            // Auto-hide the alert after 3 seconds
-            setTimeout(function() {
-                $('#message-message').addClass('d-none');
-            }, 3000);
+
+            response = response.trim();
+
+            // SUCCESS
+            if(response === 'success') {
+
+                $('#commentRep-' + disbNo).val('');
+
+                const newMessage = `
+                    <div class="received-card">
+                        <div class="message sent">${comment}</div>
+                    </div>
+                `;
+
+                $('#message-container-' + disbNo).append(newMessage);
+
+                $('#message-container-' + disbNo)
+                    .scrollTop($('#message-container-' + disbNo)[0].scrollHeight);
+
+            } else {
+
+                // FAILED SAVE
+                const failedMessage = `
+                    <div class="received-card failed-msg">
+                        <div class="message sent">
+                            ${comment}
+                            <br>
+                            <small style="color:red;">Message not sent</small>
+                        </div>
+                    </div>
+                `;
+
+                $('#message-container-' + disbNo).append(failedMessage);
+            }
         },
 
-          error: function(xhr, status, error) {
+        error: function(xhr, status, error) {
+
+            // AJAX ERROR
+            const failedMessage = `
+                <div class="received-card failed-msg">
+                    <div class="message sent">
+                        ${comment}
+                        <br>
+                        <small style="color:red;">Message not sent</small>
+                    </div>
+                </div>
+            `;
+
+            $('#message-container-' + disbNo).append(failedMessage);
+
             console.error('Error:', error);
-          }
-        });
-  });
+        }
+    });
+});
 
 //IMAGES 
 $(document).ready(function() {
@@ -154,8 +230,6 @@ function displayAllImages(container, status) {
         $('#imageModal').modal('show');
     });
 }
-
-
 
 
 

@@ -2,7 +2,7 @@
 
 if(isset($_POST['empno']) && isset($_POST['dtresign']) && $_POST['dtresign']!='0000-00-00' && $_POST['empno']!='') {
 	date_default_timezone_set('Asia/Manila');
-    require_once($sr_root . '/db/HR.php');
+    require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/HR.php");
     $db_hr = new HR();
 
 

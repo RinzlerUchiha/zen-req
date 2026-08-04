@@ -1,6 +1,6 @@
 <?php
-require_once($pa_root."/db/db.php");
-require_once($pa_root."/db/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
 require_once($pa_root."/actions/get_person.php");
 
 if (!isset($_SESSION['csrf_token1'])) {
@@ -223,7 +223,7 @@ if (!isset($_SESSION['csrf_token1'])) {
 							</div>
 							<div class="form-group" style="display:flex;font-size: 12px;">
 								<label class="col-md-4" align="left">Current Job Title:</label>
-								<div class="col-md-8">
+								<div class="col-md-8" style="text-align:left;">
 									<?php if(($paf_empno==$empno && ($paf_deptheadsign=="" && $paf_ratersign=="")) || (((strpos(check_auth($empno,"PA"), $paf_empno)!==false && $paf_deptheadsign == '') || $paf_depthead == $empno) && get_assign("pa","hedit",$empno) && isset($_SESSION['edit']))){ ?>
 									<select id="pa-job" class="selectpicker form-control form-control-sm" data-live-search="true" title="Select">
 										<?php
@@ -246,7 +246,7 @@ if (!isset($_SESSION['csrf_token1'])) {
 						<div class="col-md-6">
 							<div class="form-group" style="display:flex;font-size: 12px;">
 								<label class="col-md-3" align="left">Unit/Department:</label>
-								<div class="col-md-8">
+								<div class="col-md-8" style="text-align:left;">
 									<?php if(($paf_empno==$empno && ($paf_deptheadsign=="" && $paf_ratersign=="")) || (((strpos(check_auth($empno,"PA"), $paf_empno)!==false && $paf_deptheadsign == '') || $paf_depthead == $empno) && get_assign("pa","hedit",$empno) && isset($_SESSION['edit']))){ ?>
 									<select id="pa-dept" class="selectpicker form-control form-control-sm" data-live-search="true" title="Select">
 										<?php
@@ -261,7 +261,7 @@ if (!isset($_SESSION['csrf_token1'])) {
 							</div>
 							<div class="form-group" style="display:flex;font-size: 12px;">
 								<label class="col-md-3" align="left">Appraisal Period:</label>
-								<div class="col-md-8">
+								<div class="col-md-8" style="text-align:left;">
 									<?php if(($paf_empno==$empno && ($paf_deptheadsign=="" && $paf_ratersign=="")) || (((strpos(check_auth($empno,"PA"), $paf_empno)!==false && $paf_deptheadsign == '') || $paf_depthead == $empno) && get_assign("pa","hedit",$empno) && isset($_SESSION['edit']))){ ?>
 									<input type="month" id="pa-period" class="form-control form-control-sm" value="<?=$paf_period?>">
 									<?php }else{ ?>

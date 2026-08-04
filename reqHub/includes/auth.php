@@ -46,7 +46,8 @@ error_log("Session started. Session contents: " . json_encode($_SESSION));
 
 // Load required classes
 // Note: Uses ReqHubDatabase from parent ZenHub folder
-require_once __DIR__ . '/../database/db.php';
+// require_once __DIR__ . '/../database/db.php';
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 require_once __DIR__ . '/zenHub_integration.php';
 require_once __DIR__ . '/user_manager.php';
 
@@ -54,8 +55,8 @@ error_log("Classes loaded");
 
 // Get database connections via ReqHubDatabase (parent system)
 try {
-    $zenHubDb = ReqHubDatabase::getConnection('hr');      // ZenHub/HR database
-    $reqHubDb = ReqHubDatabase::getConnection('reqhub');  // ReqHub database
+    $zenHubDb = Database::getConnection('hr');      // ZenHub/HR database
+    $reqHubDb = Database::getConnection('reqhub');  // ReqHub database
     error_log("Database connections successful");
 } catch (Exception $e) {
     error_log("Database connection failed: " . $e->getMessage());

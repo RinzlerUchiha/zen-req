@@ -6,7 +6,7 @@
     $yearMonth = date("Y-m");
 
     try {
-        $hr_db = PADatabase::getConnection('hr');
+        $hr_db = Database::getConnection('hr');
     } catch (\PDOException $e) {
         throw new \PDOException($e->getMessage(), (int)$e->getCode());
     }

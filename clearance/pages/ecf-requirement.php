@@ -1,8 +1,8 @@
 <?php
 if(isset($_POST["getreq"])){
-	require_once "../db/core.php";
-	require_once "../db/mysqlhelper.php";
-	require_once '../db/database.php';
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/core.php');
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/mysqlhelper.php');
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/database.php');
 	date_default_timezone_set('Asia/Manila');
 	$hr_pdo = HRDatabase::connect();
 

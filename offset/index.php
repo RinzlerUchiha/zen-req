@@ -1,7 +1,8 @@
 <?php 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/config.php"); 
 error_reporting(E_ALL ^ E_DEPRECATED);
 if(session_status() === PHP_SESSION_NONE) session_start();
-if(empty($_SESSION['user_id']) && !in_array($_SERVER['REQUEST_URI'], ['/zen/login', '/zen/signIn', '/zen/signOut'])){
+if(empty($_SESSION[SESSION_KEY]) && !in_array($_SERVER['REQUEST_URI'], ['/zen/login', '/zen/signIn', '/zen/signOut'])){
     header("LOCATION: /zen/login");
 }
 

@@ -9,7 +9,7 @@
       <canvas id="polarChart" height="400" width="400"></canvas>
     </div>
     <div style="float: right;">
-        <img src="/zen/assets/img/ennea.PNG" width="350" height="300">
+        <img src="/zen/assets/img/ennea.png" width="350" height="300">
     </div>
   </div>  
 </div>

@@ -1,5 +1,5 @@
 <?php
-require_once($lv_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 class Profile
 {

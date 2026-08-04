@@ -1,232 +1,255 @@
 <?php
-//Connect to my database
-class Database
-{
-    private static $dbName = 'db_hr';
-    private static $dbHost = 'localhost';
-    private static $dbUsername = 'admin';
-    private static $dbUserPassword = 'Administr@t0r';
-    private static $cont  = null;
+  //Connect to my database
+  class Database
+  {
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
+      private static $cont  = null;
+      
+      public function __construct() {
+          die('Init function is not allowed');
+      }
 
-    public function __construct()
-    {
-        die('Init function is not allowed');
-    }
+      public static function connect()
+      {
+         // One connection through whole application
+         if ( null == self::$cont )
+         {     
+          try
+          {
+            self::$cont =  new PDO( "mysql:host=".self::$dbHost.";"."dbname=".self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+          }
+          catch(PDOException $e)
+          {
+            die($e->getMessage()); 
+          }
+         }
+         return self::$cont;
+      }
+       
+      public static function disconnect()
+      {
+          self::$cont = null;
+      }
 
-    public static function connect()
-    {
-        // One connection through whole application
-        if (null == self::$cont) {
-            try {
-                self::$cont =  new PDO("mysql:host=" . self::$dbHost . ";" . "dbname=" . self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-            } catch (PDOException $e) {
-                die($e->getMessage());
-            }
-        }
-        return self::$cont;
-    }
+      public static function mysqli()
+      {
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "db_hr");
+          return $cont;
+      }
+  }
 
-    public static function disconnect()
-    {
-        self::$cont = null;
-    }
+  //Connect to HR Database
+  class HRDatabase
+  {
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = 'misadmin';
+      private static $dbUserPassword = '88224646abxy@';
 
-    public static function mysqli()
-    {
-        $cont = new mysqli("localhost", "admin", "Administr@t0r", "db_hr");
-        return $cont;
-    }
-}
+      private static $cont  = null;
 
-//Connect to HR Database
-class HRDatabase
-{
-    private static $dbName = 'tngc_hrd2';
-    private static $dbHost = 'localhost';
-    private static $dbUsername = 'misadmin';
-    private static $dbUserPassword = '88224646abxy@';
+      public function __construct() {
+          die('Init function is not allowed');
+      }
+      
+      public static function connect()
+      {
+         // One connection through whole application
+         if ( null == self::$cont )
+         {     
+          try
+          {
+            self::$cont =  new PDO( "mysql:host=".self::$dbHost.";"."dbname=".self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+            
+          }
+          catch(PDOException $e)
+          {
+            die($e->getMessage()); 
+          }
+         }
+         return self::$cont;
+      }
+       
+      public static function disconnect()
+      {
+          self::$cont = null;
+      }
+      public static function mysqli()
+      {
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", (getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
+          return $cont;
+      }
+  }
 
-    private static $cont  = null;
+  //Connect to db_main database
+  class MainDatabase
+  {
+      private static $dbName = 'db_main' ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
+      private static $cont  = null;
+      
+      public function __construct() {
+          die('Init function is not allowed');
+      }
 
-    public function __construct()
-    {
-        die('Init function is not allowed');
-    }
+      public static function connect()
+      {
+         // One connection through whole application
+         if ( null == self::$cont )
+         {     
+          try
+          {
+            self::$cont =  new PDO( "mysql:host=".self::$dbHost.";"."dbname=".self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+          }
+          catch(PDOException $e)
+          {
+            die($e->getMessage()); 
+          }
+         }
+         return self::$cont;
+      }
+       
+      public static function disconnect()
+      {
+          self::$cont = null;
+      }
 
-    public static function connect()
-    {
-        // One connection through whole application
-        if (null == self::$cont) {
-            try {
-                self::$cont =  new PDO("mysql:host=" . self::$dbHost . ";" . "dbname=" . self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-            } catch (PDOException $e) {
-                die($e->getMessage());
-            }
-        }
-        return self::$cont;
-    }
+      public static function mysqli()
+      {
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "", "db_main");
+          return $cont;
+      }
+  }
 
-    public static function disconnect()
-    {
-        self::$cont = null;
-    }
-    public static function mysqli()
-    {
-        $cont = new mysqli("localhost", "admin", "Administr@t0r", "tngc_hrd2");
-        return $cont;
-    }
-}
+  //Connect to HR1 Database
+  class HR1Database
+  {
+      private static $dbName = 'tngc_hrd' ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
-//Connect to db_main database
-class MainDatabase
-{
-    private static $dbName = 'db_main';
-    private static $dbHost = 'localhost';
-    private static $dbUsername = 'admin';
-    private static $dbUserPassword = 'Administr@t0r';
-    private static $cont  = null;
+      private static $cont  = null;
 
-    public function __construct()
-    {
-        die('Init function is not allowed');
-    }
+      public function __construct() {
+          die('Init function is not allowed');
+      }
+      
+      public static function connect()
+      {
+         // One connection through whole application
+         if ( null == self::$cont )
+         {     
+          try
+          {
+            self::$cont =  new PDO( "mysql:host=".self::$dbHost.";"."dbname=".self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+            
+          }
+          catch(PDOException $e)
+          {
+            die($e->getMessage()); 
+          }
+         }
+         return self::$cont;
+      }
+       
+      public static function disconnect()
+      {
+          self::$cont = null;
+      }
+      public static function mysqli()
+      {
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "tngc_hrd");
+          return $cont;
+      }
+  }
+   class DTRDatabase
+  {
+      private static $dbName = 'db_dtr' ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
-    public static function connect()
-    {
-        // One connection through whole application
-        if (null == self::$cont) {
-            try {
-                self::$cont =  new PDO("mysql:host=" . self::$dbHost . ";" . "dbname=" . self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-            } catch (PDOException $e) {
-                die($e->getMessage());
-            }
-        }
-        return self::$cont;
-    }
+      private static $cont  = null;
 
-    public static function disconnect()
-    {
-        self::$cont = null;
-    }
+      public function __construct() {
+          die('Init function is not allowed');
+      }
+      
+      public static function connect()
+      {
+         // One connection through whole application
+         if ( null == self::$cont )
+         {     
+          try
+          {
+            self::$cont =  new PDO( "mysql:host=".self::$dbHost.";"."dbname=".self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+            
+          }
+          catch(PDOException $e)
+          {
+            die($e->getMessage()); 
+          }
+         }
+         return self::$cont;
+      }
+       
+      public static function disconnect()
+      {
+          self::$cont = null;
+      }
+      public static function mysqli()
+      {
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "db_dtr");
+          return $cont;
+      }
+  }
 
-    public static function mysqli()
-    {
-        $cont = new mysqli("localhost", "admin", "", "db_main");
-        return $cont;
-    }
-}
+  class APPDatabase
+  {
+      private static $dbName = 'db_applicants' ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
-//Connect to HR1 Database
-class HR1Database
-{
-    private static $dbName = 'tngc_hrd';
-    private static $dbHost = 'localhost';
-    private static $dbUsername = 'admin';
-    private static $dbUserPassword = 'Administr@t0r';
+      private static $cont  = null;
 
-    private static $cont  = null;
-
-    public function __construct()
-    {
-        die('Init function is not allowed');
-    }
-
-    public static function connect()
-    {
-        // One connection through whole application
-        if (null == self::$cont) {
-            try {
-                self::$cont =  new PDO("mysql:host=" . self::$dbHost . ";" . "dbname=" . self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-            } catch (PDOException $e) {
-                die($e->getMessage());
-            }
-        }
-        return self::$cont;
-    }
-
-    public static function disconnect()
-    {
-        self::$cont = null;
-    }
-    public static function mysqli()
-    {
-        $cont = new mysqli("localhost", "admin", "Administr@t0r", "tngc_hrd");
-        return $cont;
-    }
-}
-class DTRDatabase
-{
-    private static $dbName = 'db_dtr';
-    private static $dbHost = 'localhost';
-    private static $dbUsername = 'admin';
-    private static $dbUserPassword = 'Administr@t0r';
-
-    private static $cont  = null;
-
-    public function __construct()
-    {
-        die('Init function is not allowed');
-    }
-
-    public static function connect()
-    {
-        // One connection through whole application
-        if (null == self::$cont) {
-            try {
-                self::$cont =  new PDO("mysql:host=" . self::$dbHost . ";" . "dbname=" . self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-            } catch (PDOException $e) {
-                die($e->getMessage());
-            }
-        }
-        return self::$cont;
-    }
-
-    public static function disconnect()
-    {
-        self::$cont = null;
-    }
-    public static function mysqli()
-    {
-        $cont = new mysqli("localhost", "admin", "Administr@t0r", "db_dtr");
-        return $cont;
-    }
-}
-
-class APPDatabase
-{
-    private static $dbName = 'db_applicants';
-    private static $dbHost = 'localhost';
-    private static $dbUsername = 'admin';
-    private static $dbUserPassword = 'Administr@t0r';
-
-    private static $cont  = null;
-
-    public function __construct()
-    {
-        die('Init function is not allowed');
-    }
-
-    public static function connect()
-    {
-        // One connection through whole application
-        if (null == self::$cont) {
-            try {
-                self::$cont =  new PDO("mysql:host=" . self::$dbHost . ";" . "dbname=" . self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
-            } catch (PDOException $e) {
-                die($e->getMessage());
-            }
-        }
-        return self::$cont;
-    }
-
-    public static function disconnect()
-    {
-        self::$cont = null;
-    }
-    public static function mysqli()
-    {
-        $cont = new mysqli("localhost", "admin", "Administr@t0r", "db_applicants");
-        return $cont;
-    }
-}
+      public function __construct() {
+          die('Init function is not allowed');
+      }
+      
+      public static function connect()
+      {
+         // One connection through whole application
+         if ( null == self::$cont )
+         {     
+          try
+          {
+            self::$cont =  new PDO( "mysql:host=".self::$dbHost.";"."dbname=".self::$dbName, self::$dbUsername, self::$dbUserPassword, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+            
+          }
+          catch(PDOException $e)
+          {
+            die($e->getMessage()); 
+          }
+         }
+         return self::$cont;
+      }
+       
+      public static function disconnect()
+      {
+          self::$cont = null;
+      }
+      public static function mysqli()
+      {
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), "admin", "Administr@t0r", "db_applicants");
+          return $cont;
+      }
+  }
 //------------------------------------------NEW------------------------------//
+?>

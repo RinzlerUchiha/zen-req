@@ -1,6 +1,7 @@
 <?php
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 // Only Requestors can revise their own requests
 if (!userHasRoleIn('Requestor', 'Reviewer')) {
@@ -8,7 +9,7 @@ if (!userHasRoleIn('Requestor', 'Reviewer')) {
     die('Access denied: Only requestors and reviewers can revise requests');
 }
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
+$pdo = Database::getConnection('reqhub');
 $currentUser = getCurrentUser();
 $emp_no = $currentUser['emp_no'];
 

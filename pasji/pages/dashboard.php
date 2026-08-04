@@ -1,6 +1,6 @@
 <?php
-require_once($pa_root."/db/db.php");
-require_once($pa_root."/db/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
 require_once($pa_root."/actions/get_person.php");
 
 // if (!isset($_SESSION['csrf_token1'])) {

@@ -1,5 +1,5 @@
 <?php
-require_once($pcf_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {

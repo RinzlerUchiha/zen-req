@@ -1,6 +1,7 @@
 <?php
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isAuthenticated()) {
     die('Not authenticated');
@@ -11,7 +12,7 @@ if ($currentUser['reqhub_role'] !== 'Admin') {
     die('Access denied: Admin only');
 }
 
-$pdo = ReqHubDatabase::getConnection('reqhub');
+$pdo = Database::getConnection('reqhub');
 
 echo "<h2>Table Structure Debug</h2>";
 

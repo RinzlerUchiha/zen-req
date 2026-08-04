@@ -1,11 +1,11 @@
 <?php
-require_once($com_root."/db/db_functions.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
 $trans = new Transactions;
 $con1 = $trans->connect();
 if (isset($_SESSION['user_id'])) {	
 	$empno = $_SESSION['user_id'];
 }
-// $empno = $trans->getUser($_SESSION['DEMOHR_UID'], 'Emp_No');
+// $empno = $trans->getUser($_SESSION[SESSION_KEY], 'Emp_No');
 // $position = getjobinfo($empno, "jrec_position");
 
 $user_assign_list = $trans->check_auth($empno, 'DTR');

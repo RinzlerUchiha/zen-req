@@ -8,9 +8,10 @@
 ?>
 <style>
 #sidenav {
-  width: 250px;
+  width: 220px;
   transition: width 0.3s ease;
   overflow-x: hidden!important;
+  /*margin-left: 10px !important;*/
 }
 
 #sidenav.collapsed {
@@ -114,8 +115,8 @@ if ($isCustodian) { ?>
     </a>
   </li>
 
-  <?php if ($empno == '') { ?>
-  <li class="<?= (strpos($current_path, '/feedback') !== false) ? 'active' : '' ?>">
+  <?php //if ($empno == '045-2022-013') { ?>
+  <li class="<?= (strpos($current_path, '/pcfrequest') !== false) ? 'active' : '' ?>">
     <a href="pcfrequest">
       <p>
         <img src="assets/img/request.png" width="40" height="40" style="margin-right: 5px;">
@@ -123,7 +124,15 @@ if ($isCustodian) { ?>
       </p>
     </a>
   </li>
-  <?php } ?>
+  <!-- <li class="<?= (strpos($current_path, '/change_custodian') !== false) ? 'active' : '' ?>">
+    <a href="change_custodian">
+      <p>
+        <img src="assets/img/request.png" width="40" height="40" style="margin-right: 5px;">
+        <span class="menu-text">Change Custodian</span>
+      </p>
+    </a>
+  </li> -->
+  <?php //} ?>
   <li class="<?= (strpos($current_path, '/feedback') !== false) ? 'active' : '' ?>">
     <a href="feedback">
       <p>

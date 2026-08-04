@@ -8,6 +8,7 @@
     try {
         $hr_db = Database::getConnection('hr');
         $scms_db = Database::getConnection('scms');
+        $pcf_db = Database::getConnection('pcf');
 
     } catch (\PDOException $e) {
         throw new \PDOException($e->getMessage(), (int)$e->getCode());
@@ -75,15 +76,17 @@
 
             $myoutlet = [];
             if ($Mypos == 'SIC' || $Mypos == 'TL') {
-                $stmt_sic = $scms_db->prepare("SELECT a.`hr_id`, c.`abb` FROM pos_user a
-                LEFT JOIN pos_user_branch_access b
-                ON b.`user_id` = a.`id`
-                JOIN tblbranch c
-                ON c.`id` = b.`branch_id`
-                WHERE a.`status` = '1'
-                AND a.`hr_id` = :empno
-                AND a.`group_id` IN ('3','2')
-                AND date_disabled = ''");
+                $stmt_sic = $pcf_db->prepare("SELECT * FROM tbl_assign WHERE approver_empno = :empno
+                --     SELECT a.`hr_id`, c.`abb` FROM pos_user a
+                -- LEFT JOIN pos_user_branch_access b
+                -- ON b.`user_id` = a.`id`
+                -- JOIN tblbranch c
+                -- ON c.`id` = b.`branch_id`
+                -- WHERE a.`status` = '1'
+                -- AND a.`hr_id` = :empno
+                -- AND a.`group_id` IN ('3','2')
+                -- AND date_disabled = ''"
+            );
                 $stmt_sic->bindParam(':empno', $empno);
                 $stmt_sic->execute();
 
@@ -91,7 +94,7 @@
 
                 if ($sicData) {
                     foreach ($sicData as $row) {
-                        $myoutlet[] = $row['abb']; // collect all branch abbreviations
+                        $myoutlet[] = $row['outlet']; // collect all branch abbreviations
                     }
                     // Debug output
                      //echo "SCMS Outlets: " . implode(', ', $myoutlet);

@@ -1,5 +1,5 @@
 <?php
-require_once($fl_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'User not authenticated']);
@@ -19,25 +19,36 @@ try {
         case 'saveBooking':
             $passengers = json_decode($_POST['passengers'], true);
             $flights = json_decode($_POST['flights'], true);
-        
+            $signature = $_POST['signature'] ?? '';
+
             if (empty($passengers) || empty($flights) || empty($employee)) {
                 echo json_encode(['status' => 'error', 'message' => 'Missing required booking information.']);
                 exit;
             }
 
-        
-            $stmt = $flight_db->prepare("INSERT INTO tbl_flights 
+            // Prepare flight insert statement
+            $stmtFlight = $flight_db->prepare("INSERT INTO tbl_flights 
                 (f_no, f_empno, f_fname, f_mname, f_lname, f_dept, f_sex, f_bday, f_contact, f_type, f_departure, f_arrival, f_date, f_time, f_airline, f_price, f_baggage, f_reason, f_status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        
-            foreach ($passengers as $passenger) {
-                foreach ($flights as $index => $flight) {
+
+            // Keep track of first flight for approval
+            $flightIdForApproval = '';
+
+            foreach ($passengers as $passengerIndex => $passenger) {
+                foreach ($flights as $flightIndex => $flight) {
                     $flightId = $flight['flight_id'] ?? ('FLIGHT-' . strtoupper($flight['dep']) . '-' . uniqid());
-                    $baggage = isset($passenger['baggage'][$index]) ? $passenger['baggage'][$index] : 'No baggage';
+
+                    // Use the first flight for tbl_approval
+                    if ($passengerIndex === 0 && $flightIndex === 0) {
+                        $flightIdForApproval = $flightId;
+                    }
+
+                    $baggage = $passenger['baggage'][$flightIndex] ?? 'No baggage';
+                    $price = is_numeric($flight['prices']) ? $flight['prices'] : '0.00';
                     $price = is_numeric($flight['prices']) ? $flight['prices'] : '0.00';
 
                     try {
-                        $stmt->execute([
+                        $stmtFlight->execute([
                             $flightId,
                             $employee,
                             $passenger['fname'],
@@ -64,9 +75,16 @@ try {
                     }
                 }
             }
-        
-            echo json_encode('Booking saved successfully.');
 
+            // Insert single approval record with signature
+            if (!empty($flightIdForApproval)) {
+                $stmtApproval = $flight_db->prepare("INSERT INTO tbl_approval (ap_f_no, ap_requestsign) VALUES (?, ?)");
+                $stmtApproval->execute([$flightIdForApproval, $signature]);
+            }
+
+            echo json_encode(['status' => 'success', 'message' => 'Booking saved successfully.']);
+
+            // Optional: send notification
             if (!empty($employee)) {
                 try {
                     $numsql = $hr_db->prepare("SELECT jrec_department FROM tbl201_jobrec WHERE jrec_empno = :user_id");
@@ -88,20 +106,16 @@ try {
 
                             if ($receiver && !empty($receiver['cont_person_num'])) {
                                 $contact = $receiver['cont_person_num']; 
-                            
-                                $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: Flight booking request awaiting your review and approval. Thank you.";
+                                $msgText = "FLIGHT BOOKING: Flight booking request awaiting your review and approval. Thank you.";
+
                                 $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
-                            
                                 if ($sql->execute([$msgText])) {
                                     $msg_id = $sms_db->lastInsertId();
                                     $sql1 = $sms_db->prepare("INSERT INTO recipients (msg, recipient, status, r_created_at) VALUES (?, ?, 'pending', NOW())");
                                     $sql1->execute([$msg_id, $contact]);
                                 }
                             }
-
                         }
-
-                        
                     }
                 } catch (PDOException $e) {
                     error_log("SMS Error: " . $e->getMessage());
@@ -146,8 +160,8 @@ try {
                     $price = is_numeric($cleanPrice) ? $cleanPrice : '0.00';
 
                     // Get the passenger's flight-specific ID if available
-                    $fID = is_array($passenger['fID']) ? ($passenger['fID'][$index] ?? null) : $passenger['fID'];
-                    
+                    // $fID = is_array($passenger['fID']) ? ($passenger['fID'][$index] ?? null) : $passenger['fID'];
+                    $fID = isset($passenger['fID']) ? (is_array($passenger['fID']) ? ($passenger['fID'][$index] ?? null) : $passenger['fID']) : null;
                     // Check if this passenger-flight combination already exists
                     $checkStmt = $flight_db->prepare("SELECT f_id FROM tbl_flights 
                         WHERE f_no = ? AND f_fname = ? AND f_lname = ? AND f_departure = ?");
@@ -451,7 +465,7 @@ try {
                             if ($number && !empty($number['pi_cmobileno'])) {
                                 $contact = $user['pi_cmobileno'];
 
-                                $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: Your flight rebooking request has been declined by your immediate head. Thank you.";
+                                $msgText = "FLIGHT BOOKING: Your flight rebooking request has been declined by your immediate head. Thank you.";
                                 $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
                                 if ($sql->execute([$msgText])) {
@@ -616,9 +630,10 @@ try {
 
         case 'approvebooking':
             $flightID = $_POST['flightID'] ?? '';
-            $signature = $_POST['signature'] ?? '';
-            $requesterNo = $_POST['employeenum'] ?? '';     // Ensure this comes from your front-end
-            $finance = '09501432700';
+            $signature = $_POST['signature_dh'] ?? '';
+            $requesterNo = $_POST['employeenum'] ?? '';  
+            $finance = '9177220361';
+            // $finance = '09501432700';
             if (empty($flightID)) {
                 echo json_encode(['status' => 'error', 'message' => 'Missing flight No. ']);
                 exit;
@@ -633,14 +648,23 @@ try {
                     ':flightID' => $flightID
                 ]);
 
-                $stmt = $flight_db->prepare("INSERT INTO tbl_approval (ap_f_no,ap_confirmedby,ap_confirmeddt) VALUES (?,?,CURRENT_TIMESTAMP)
+                $stmt = $flight_db->prepare("UPDATE tbl_approval 
+                    SET ap_confirmedby = :employee,
+                    ap_confirmsign = :sign,
+                    ap_confirmeddt = :datesign
+                    WHERE ap_f_no = :flightID
                 ");
-                $stmt->execute([$flightID,$employee]);
+                $stmt->execute([
+                    ':employee' => $employee,
+                    ':sign' => $signature,
+                    ':datesign' => date('Y-m-d H:i:s'),
+                    ':flightID' => $flightID
+                ]);
 
                 if ($stmt->rowCount() > 0) {
-                    echo json_encode(['status' => 'success', 'message' => 'Flight booking confirmed.']);
+                    echo json_encode(['status' => 'success', 'message' => 'Flight booking reviewed.']);
                     if (!empty($finance)) {
-                            $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: New flight booking request is ready for your review and approval. Thank you.";
+                            $msgText = "FLIGHT BOOKING: New flight booking request reviewed please check and update actual price. Thank you.";
                             $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
                             if ($sql->execute([$msgText])) {
@@ -652,33 +676,33 @@ try {
                             
                         }
                 } else {
-                    echo json_encode(['status' => 'warning', 'message' => 'No matching flight found or already confirmed.']);
+                    echo json_encode(['status' => 'warning', 'message' => 'No matching flight found or already reviewed.']);
                 }
 
             // Optional SMS Notification
-            // if (!empty($requesterNo)) {
-            //     try {
-            //         $numsql = $hr_db->prepare("SELECT pi_mobileno FROM tbl201_persinfo WHERE pi_empno = :user_id");
-            //         $numsql->bindParam(':user_id', $requesterNo);
-            //         $numsql->execute();
-            //         $user = $numsql->fetch(PDO::FETCH_ASSOC);
+            if (!empty($requesterNo)) {
+                try {
+                    $numsql = $hr_db->prepare("SELECT pi_mobileno FROM tbl201_persinfo WHERE pi_empno = :user_id");
+                    $numsql->bindParam(':user_id', $requesterNo);
+                    $numsql->execute();
+                    $user = $numsql->fetch(PDO::FETCH_ASSOC);
 
-            //         if ($user && !empty($user['pi_mobileno'])) {
-            //             $contact = $user['pi_mobileno'];
+                    if ($user && !empty($user['pi_mobileno'])) {
+                        $contact = $user['pi_mobileno'];
 
-            //             $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: Your flight has been checked by your immediate head. Thank you.";
-            //             $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
+                        $msgText = "FLIGHT BOOKING: Your flight has been reviewed by your immediate head. Thank you.";
+                        $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
-            //             if ($sql->execute([$msgText])) {
-            //                 $msg_id = $sms_db->lastInsertId();
-            //                 $sql1 = $sms_db->prepare("INSERT INTO recipients (msg, recipient, status, r_created_at) VALUES (?, ?, 'pending', NOW())");
-            //                 $sql1->execute([$msg_id, $contact]);
-            //             }
-            //         }
-            //     } catch (PDOException $e) {
-            //         error_log("SMS Error: " . $e->getMessage());
-            //     }
-            // }
+                        if ($sql->execute([$msgText])) {
+                            $msg_id = $sms_db->lastInsertId();
+                            $sql1 = $sms_db->prepare("INSERT INTO recipients (msg, recipient, status, r_created_at) VALUES (?, ?, 'pending', NOW())");
+                            $sql1->execute([$msg_id, $contact]);
+                        }
+                    }
+                } catch (PDOException $e) {
+                    error_log("SMS Error: " . $e->getMessage());
+                }
+            }
 
             break;
 
@@ -717,7 +741,7 @@ try {
                     if ($user && !empty($user['pi_mobileno'])) {
                         $contact = $user['pi_mobileno'];
 
-                        $msgText = "[TEST NOTIFICATION] FLIGHT BOOKING: Your flight has been returned. Please review and update. Thank you.";
+                        $msgText = "FLIGHT BOOKING: Your flight has been returned. Please review and update. Thank you.";
                         $sql = $sms_db->prepare("INSERT INTO messages (message, msg_created_at, tag, msg_schedule) VALUES (?, NOW(), 'cp', '')");
 
                         if ($sql->execute([$msgText])) {

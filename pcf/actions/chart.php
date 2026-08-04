@@ -1,5 +1,5 @@
 <?php
-require_once($pcf_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'User not authenticated']);
@@ -18,8 +18,8 @@ try {
         FROM 
             (
                 SELECT SUM(cash_on_hand) AS budget, outlet_dept 
-                FROM tbl_issuance 
-                WHERE (custodian = ? OR FIND_IN_SET(?, rrr_approver))
+                FROM tbl_issuance a LEFT JOIN tbl_assign b ON b.outlet = a.department
+                WHERE (custodian = ? OR (prepared_by = ? && custodian != prepared_by && requested_by != prepared_by) OR approver_empno = ?)
                 AND status = '1'
                 GROUP BY outlet_dept
             ) AS a
@@ -33,7 +33,7 @@ try {
         ON a.outlet_dept = b.dis_outdept
     ");
 
-    $query->execute([$user_id, $user_id]);
+    $query->execute([$user_id, $user_id, $user_id]);
     $results = $query->fetchAll(PDO::FETCH_ASSOC);
 
     $data = [];

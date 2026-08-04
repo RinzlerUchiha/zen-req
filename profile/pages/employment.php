@@ -48,7 +48,7 @@ $pic = Profile::GetProfile($empno);
                     </div>
                     <!-- PREVIOUS EMPLOYMENT -->
                     <?php
-                    require_once($sr_root . "/db/db.php");
+                    require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
                     
                     if (!isset($_SESSION['user_id'])) {
                         echo json_encode(['error' => 'User not authenticated']);
@@ -245,7 +245,7 @@ $pic = Profile::GetProfile($empno);
                     ?>
                     <!-- PREVIOUS EMPLOYMENT -->
                     <?php
-                    require_once($sr_root . "/db/db.php");
+                    require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
                     
                     if (!isset($_SESSION['user_id'])) {
                         echo json_encode(['error' => 'User not authenticated']);

@@ -1,7 +1,7 @@
 <?php
-	include '../db/database.php';
-	require"../db/core.php";
-	include('../db/mysqlhelper.php');
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/database.php');
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/core.php');
+	require_once($_SERVER['DOCUMENT_ROOT'].'/zen/config/mysqlhelper.php'); 
 	$hr_pdo = HRDatabase::connect();
 	if(isset($_POST["get_sig"])){
 		$user_empno=fn_get_user_info('bi_empno');

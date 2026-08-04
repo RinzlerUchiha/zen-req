@@ -5,7 +5,8 @@
  */
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 header('Content-Type: application/json');
 
@@ -22,8 +23,8 @@ if ($currentUser['reqhub_role'] !== 'Admin') {
 }
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
-    $hrPdo = ReqHubDatabase::getConnection('hr');
+    $pdo = Database::getConnection('reqhub');
+    $hrPdo = Database::getConnection('hr');
 } catch (Exception $e) {
     die(json_encode(['success' => false, 'message' => 'Database connection failed']));
 }

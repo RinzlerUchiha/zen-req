@@ -1,10 +1,10 @@
 <?php
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
-// $user_id = $trans->getUser($_SESSION['user_id'], 'Emp_No');
-if (isset($_SESSION['user_id'])) {
-        $user_id = $_SESSION['user_id'];
+// $user_id = $trans->getUser($_SESSION[SESSION_KEY], 'Emp_No');
+if (isset($_SESSION[SESSION_KEY])) {
+        $user_id = $_SESSION[SESSION_KEY];
 }
 function get_leave_no(){
 	global $con1;
@@ -184,7 +184,7 @@ switch ($action) {
 		    $emps = $_POST['emps'] ?? '';
 		    $signature = $_POST['signature'] ?? '';
 		    $req_type = $_POST['req_type'] ?? '';
-		    $user_id = $_SESSION['user_id'];
+		    $user_id = $_SESSION[SESSION_KEY];
 		    $count = 0;
 		
 		    if (!$ids || !$emps || !$signature) {

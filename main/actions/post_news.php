@@ -1,5 +1,5 @@
 <?php
-require_once($sr_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 header('Content-Type: application/json');
 error_reporting(E_ALL);
@@ -17,7 +17,8 @@ try {
 
         // Handle multiple image uploads
         if (!empty($_FILES['postsimg']['name'][0])) {
-            $targetDir = "assets/announcement/";
+            // $targetDir = "assets/announcement/";
+            $targetDir = $FILES_DIR."/announcements/";
 
             foreach ($_FILES['postsimg']['tmp_name'] as $key => $tmp_name) {
                 $fileName = basename($_FILES['postsimg']['name'][$key]);

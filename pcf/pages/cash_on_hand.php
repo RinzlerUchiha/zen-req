@@ -79,7 +79,7 @@
                     					FROM tbl_replenish
                     					WHERE 
                     					repl_outlet = :outlet
-                    					AND repl_status IN ('submit','f-approved','checked','updated','f-returned','returned','h-approved')");
+                    					AND repl_status IN ('submit','f-approved','checked','updated','f-returned','returned','h-approved','c-returned')");
 			            // $stmt2->bindParam(':empno', $user_id);
                     				$stmt2->bindParam(':outlet', $selectedUnit);
                     				$stmt2->execute();

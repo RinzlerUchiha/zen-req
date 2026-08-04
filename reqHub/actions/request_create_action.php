@@ -1,6 +1,7 @@
 <?php
 require_once ($reqhub_root . '/includes/auth.php');
-require_once ($reqhub_root . '/database/db.php');
+// require_once ($reqhub_root . '/database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 require_once ($reqhub_root . '/includes/notifications.php');
 require_once ($reqhub_root . '/includes/sms.php');
 
@@ -30,8 +31,8 @@ if (!$system_id || !$department_id || !$request_for || empty($access_types)) {
     die(json_encode(['success' => false, 'message' => 'All required fields must be filled out.']));
 }
 
-$pdo      = ReqHubDatabase::getConnection('reqhub');
-$zenHubDb = ReqHubDatabase::getConnection('hr');
+$pdo      = Database::getConnection('reqhub');
+$zenHubDb = Database::getConnection('hr');
 
 $stmt = $zenHubDb->prepare("SELECT Emp_No, U_Name FROM tbl_user2 WHERE U_ID = ?");
 $stmt->execute([$request_for]);

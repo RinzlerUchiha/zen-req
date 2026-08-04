@@ -1,5 +1,5 @@
 <?php
-require_once($com_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['accountnos']) || !isset($_POST['action'])) {

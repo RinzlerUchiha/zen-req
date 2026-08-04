@@ -1,8 +1,8 @@
 <?php
-include '../db/database.php';
-require"../db/core.php";
-require"../db/db.php";
-include('../db/mysqlhelper.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $hr_pdo = HRDatabase::connect();
 
 date_default_timezone_set('Asia/Manila');

@@ -1,9 +1,9 @@
 <?php
 // session_start();
-// $dbName = 'tngc_hrd2';
-$dbName = 'portal_db';
-$dbHost = 'localhost';
-$dbUsername = 'root';
+// $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "");
+$dbName = (getenv('ZEN_DB_DATABASE_PORTAL') ?: "");
+$dbHost = (getenv('ZEN_DB_HOST') ?: "");
+$dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
 $dbUserPassword = '';
 
 $dsn = 'mysql:host=' . $dbHost . ';dbname=' . $dbName;
@@ -13,7 +13,7 @@ $cont->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 // $sql = "SELECT Emp_No FROM tbl_user2 LEFT JOIN tbl201_basicinfo ON bi_empno = Emp_No AND datastat = 'current' WHERE U_ID = ?";
 // $stmt = $cont->prepare($sql);
 // $stmt->execute([ isset($_SESSION['user_id']) ? $_SESSION['user_id'] : "" ]);
-// // $stmt->execute([ isset($_SESSION['DEMOHR_UID']) ? $_SESSION['DEMOHR_UID'] : "" ]);
+// // $stmt->execute([ isset($_SESSION[SESSION_KEY]) ? $_SESSION[SESSION_KEY] : "" ]);
 
 // $results = $stmt->fetchall();
 
@@ -156,8 +156,8 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
 
 
     // $sql1 = $cont->prepare("SELECT COUNT(t1.tlo_id) AS cnt1
-    //         FROM demo_tngc_hrd2.tbl_tl_outlet t1
-    //         LEFT JOIN demo_tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
+    //         FROM tngc_hrd2.tbl_tl_outlet t1
+    //         LEFT JOIN tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
     //         ". ($where != '' ? "WHERE ".$where : "") ."
     //         ORDER BY t1.`tlo_todt` DESC, t1.`tlo_fromdt` DESC, t2.`bi_emplname` ASC, t2.`bi_empfname` ASC");
     // $sql1->execute($arr);
@@ -169,12 +169,12 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
                 t1.*,
                 t3.cnt1
 
-            FROM demo_tngc_hrd2.tbl_tl_outlet t1
-            LEFT JOIN demo_tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
+            FROM tngc_hrd2.tbl_tl_outlet t1
+            LEFT JOIN tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
 
             CROSS JOIN (SELECT COUNT(t1.tlo_id) AS cnt1
-            FROM demo_tngc_hrd2.tbl_tl_outlet t1
-            LEFT JOIN demo_tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
+            FROM tngc_hrd2.tbl_tl_outlet t1
+            LEFT JOIN tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
             ". ($where != '' ? "WHERE ".$where : "") ."
             ORDER BY t1.`tlo_todt` DESC, t1.`tlo_fromdt` DESC, t2.`bi_emplname` ASC, t2.`bi_empfname` ASC) t3
 
@@ -211,8 +211,8 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
     // echo vsprintf(str_replace("?", "'%s'", "SELECT
     //             CONCAT(t2.`bi_emplname`, ', ', t2.`bi_empfname`, ' ') AS empname,
     //             t1.*
-    //         FROM demo_tngc_hrd2.tbl_tl_outlet t1
-    //         LEFT JOIN demo_tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
+    //         FROM tngc_hrd2.tbl_tl_outlet t1
+    //         LEFT JOIN tngc_hrd2.tbl201_basicinfo t2 ON t2.`bi_empno` = t1.`tlo_empno` AND t2.`datastat` = 'current'
     //         ". ($where != '' ? "WHERE ".$where : "") ."
     //         ORDER BY t1.`tlo_todt` DESC, t1.`tlo_fromdt` DESC, t2.`bi_emplname` ASC, t2.`bi_empfname` ASC
     //         limit ?, ?"), $arr);
@@ -306,12 +306,12 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
             a.tlo_todt AS todt,
             m.mobileno AS MOBILE_NO
 
-            FROM demo_tngc_hrd2.tbl_tl_outlet a
+            FROM tngc_hrd2.tbl_tl_outlet a
 
             /* get the latest record <= date filter */
             JOIN (SELECT tlo_empno, MAX(tlo_todt) AS tlo_todt
-                    FROM demo_tngc_hrd2.tbl_tl_outlet
-                    JOIN demo_tngc_hrd2.tbl_outlet ON OL_Code = tlo_outlet AND LOWER(OL_stat) = 'active'
+                    FROM tngc_hrd2.tbl_tl_outlet
+                    JOIN tngc_hrd2.tbl_outlet ON OL_Code = tlo_outlet AND LOWER(OL_stat) = 'active'
                     WHERE 
                         tlo_fromdt <= ? 
                         OR tlo_todt <= ?
@@ -320,11 +320,11 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
             ) x ON x.tlo_empno = a.tlo_empno AND x.tlo_todt = a.tlo_todt
             
 
-            JOIN demo_tngc_hrd2.`tbl201_basicinfo` b ON b.bi_empno = a.tlo_empno AND b.`datastat` = 'current'
+            JOIN tngc_hrd2.`tbl201_basicinfo` b ON b.bi_empno = a.tlo_empno AND b.`datastat` = 'current'
 
-            JOIN demo_tngc_hrd2.`tbl201_jobinfo` c ON c.`ji_empno` = b.`bi_empno` AND LOWER(c.`ji_remarks`) = 'active'
+            JOIN tngc_hrd2.`tbl201_jobinfo` c ON c.`ji_empno` = b.`bi_empno` AND LOWER(c.`ji_remarks`) = 'active'
 
-            LEFT JOIN demo_tngc_hrd2.`tbl201_persinfo` d ON d.`pi_empno` = c.`ji_empno` AND LOWER(d.`datastat`) = 'current'
+            LEFT JOIN tngc_hrd2.`tbl201_persinfo` d ON d.`pi_empno` = c.`ji_empno` AND LOWER(d.`datastat`) = 'current'
 
             LEFT JOIN (
                 SELECT DISTINCT
@@ -333,23 +333,23 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
 
                 FROM (
                     SELECT p1.pi_empno AS empno, IF(LENGTH(p1.pi_mobileno) < 11 AND LEFT(p1.pi_mobileno, 1) = '9', CONCAT('0', p1.pi_mobileno), p1.pi_mobileno) AS mobileno, 'personal' AS mtype 
-                    FROM demo_tngc_hrd2.tbl201_persinfo p1
+                    FROM tngc_hrd2.tbl201_persinfo p1
                     WHERE p1.datastat = 'current' AND IFNULL(p1.pi_mobileno, '') != '' 
                     
                     UNION ALL 
                     
                     SELECT p2.pi_empno AS empno, IF(LENGTH(p2.pi_cmobileno) < 11 AND LEFT(p2.pi_cmobileno, 1) = '9', CONCAT('0', p2.pi_cmobileno), p2.pi_cmobileno) AS mobileno, 'company' AS mtype 
-                    FROM demo_tngc_hrd2.tbl201_persinfo p2
+                    FROM tngc_hrd2.tbl201_persinfo p2
                     WHERE p2.datastat = 'current' AND IFNULL(p2.pi_cmobileno, '') != ''
                     
                     UNION ALL
                     
                     SELECT p5.acca_empno AS empno, IF(LENGTH(p5.acca_sim) < 11 AND LEFT(p5.acca_sim, 1) = '9', CONCAT('0', p5.acca_sim), p5.acca_sim) AS mobileno, 'company' AS mtype
-                    FROM demo_tngc_hrd2.tbl_account_agreement p5
+                    FROM tngc_hrd2.tbl_account_agreement p5
                     WHERE NOT( p5.acca_dtissued IS NULL OR p5.acca_dtissued='' OR p5.acca_dtissued='0000-00-00' )
                     AND ( p5.acca_dtreturned IS NULL OR p5.acca_dtreturned='' OR p5.acca_dtreturned='0000-00-00' )
                 ) a
-                JOIN demo_tngc_hrd2.tbl201_jobinfo ON ji_empno = a.empno AND LOWER(ji_remarks) = 'active'
+                JOIN tngc_hrd2.tbl201_jobinfo ON ji_empno = a.empno AND LOWER(ji_remarks) = 'active'
 
                 WHERE 
                 IFNULL(mobileno, '') != '' AND mtype = 'company'
@@ -463,26 +463,26 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
             h.`pi_emailaddress` AS 'EMAIL',
             MAX(i.auth_id) AS auth_id
 
-            FROM demo_tngc_hrd2.`tbl201_basicinfo` a
+            FROM tngc_hrd2.`tbl201_basicinfo` a
 
-            JOIN demo_tngc_hrd2.`tbl201_jobinfo` b ON b.`ji_empno` = a.`bi_empno` AND LOWER(b.`ji_remarks`) = 'active'
+            JOIN tngc_hrd2.`tbl201_jobinfo` b ON b.`ji_empno` = a.`bi_empno` AND LOWER(b.`ji_remarks`) = 'active'
                 
-            LEFT JOIN demo_tngc_hrd2.`tbl201_jobrec` c ON c.`jrec_empno` = a.`bi_empno` AND LOWER(c.`jrec_status`) = 'primary'
+            LEFT JOIN tngc_hrd2.`tbl201_jobrec` c ON c.`jrec_empno` = a.`bi_empno` AND LOWER(c.`jrec_status`) = 'primary'
                 
-            LEFT JOIN demo_tngc_hrd2.`tbl201_emplstatus` d ON d.`estat_empno` = a.`bi_empno` AND LOWER(d.`estat_stat`) = 'active'
+            LEFT JOIN tngc_hrd2.`tbl201_emplstatus` d ON d.`estat_empno` = a.`bi_empno` AND LOWER(d.`estat_stat`) = 'active'
                 
-            LEFT JOIN demo_tngc_hrd2.`tbl_jobdescription` e ON e.`jd_code` = c.`jrec_position`
+            LEFT JOIN tngc_hrd2.`tbl_jobdescription` e ON e.`jd_code` = c.`jrec_position`
                 
-            LEFT JOIN demo_tngc_hrd2.`tbl_empstatus` f ON f.`es_code` = d.`estat_empstat`
+            LEFT JOIN tngc_hrd2.`tbl_empstatus` f ON f.`es_code` = d.`estat_empstat`
 
-            /*LEFT JOIN demo_db_ecf2.`tbl_request` g ON g.`ecf_empno` = a.`bi_empno`*/
+            /*LEFT JOIN db_ecf2.`tbl_request` g ON g.`ecf_empno` = a.`bi_empno`*/
 
-            LEFT JOIN demo_tngc_hrd2.`tbl201_persinfo` h ON h.`pi_empno` = a.`bi_empno` AND LOWER(h.`datastat`) = 'current'
+            LEFT JOIN tngc_hrd2.`tbl201_persinfo` h ON h.`pi_empno` = a.`bi_empno` AND LOWER(h.`datastat`) = 'current'
 
             LEFT JOIN (SELECT a.*
-                        FROM demo_tngc_hrd2.tbl_dept_authority a
-                        JOIN demo_tngc_hrd2.`tbl201_jobinfo` b ON b.`ji_empno` = a.`auth_emp` AND LOWER(b.`ji_remarks`) = 'active'
-                        JOIN demo_tngc_hrd2.`tbl201_jobrec` c ON c.`jrec_empno` = b.`ji_empno` AND LOWER(c.`jrec_status`) = 'primary' AND (c.`jrec_position` LIKE ('%EC%') OR c.`jrec_position` LIKE ('%SIC%') OR c.`jrec_position` LIKE ('%TL%'))
+                        FROM tngc_hrd2.tbl_dept_authority a
+                        JOIN tngc_hrd2.`tbl201_jobinfo` b ON b.`ji_empno` = a.`auth_emp` AND LOWER(b.`ji_remarks`) = 'active'
+                        JOIN tngc_hrd2.`tbl201_jobrec` c ON c.`jrec_empno` = b.`ji_empno` AND LOWER(c.`jrec_status`) = 'primary' AND (c.`jrec_position` LIKE ('%EC%') OR c.`jrec_position` LIKE ('%SIC%') OR c.`jrec_position` LIKE ('%TL%'))
                         WHERE auth_for IN ('DTR', 'GP')
             ) i ON FIND_IN_SET(a.bi_empno, REPLACE(i.auth_assignation, '|', ',')) > 0
 
@@ -506,30 +506,30 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
             a.`bi_empext` ASC
         ) e
 
-        LEFT JOIN demo_tngc_hrd2.tbl_dept_authority x ON x.auth_id = e.auth_id
-        LEFT JOIN demo_tngc_hrd2.tbl201_jobinfo x1 ON x1.ji_empno = x.auth_emp AND LOWER(x1.ji_remarks) = 'active'
-        LEFT JOIN demo_tngc_hrd2.tbl201_jobrec x2 ON x2.jrec_empno = x1.ji_empno AND LOWER(x2.jrec_status) = 'primary' AND (x2.jrec_position LIKE 'TL%' OR x2.jrec_position LIKE 'SIC%')
-        LEFT JOIN demo_tngc_hrd2.tbl201_basicinfo x3 ON x3.bi_empno = x2.jrec_empno AND x3.datastat = 'current'
+        LEFT JOIN tngc_hrd2.tbl_dept_authority x ON x.auth_id = e.auth_id
+        LEFT JOIN tngc_hrd2.tbl201_jobinfo x1 ON x1.ji_empno = x.auth_emp AND LOWER(x1.ji_remarks) = 'active'
+        LEFT JOIN tngc_hrd2.tbl201_jobrec x2 ON x2.jrec_empno = x1.ji_empno AND LOWER(x2.jrec_status) = 'primary' AND (x2.jrec_position LIKE 'TL%' OR x2.jrec_position LIKE 'SIC%')
+        LEFT JOIN tngc_hrd2.tbl201_basicinfo x3 ON x3.bi_empno = x2.jrec_empno AND x3.datastat = 'current'
 
 
-        LEFT JOIN demo_tngc_hrd2.`tbl_restday` rd ON rd.rd_date = dt.date_column AND rd.rd_emp = e.EMPNO AND LOWER(rd.rd_stat) = 'approved'
-        LEFT JOIN demo_tngc_hrd2.`tbl201_sched` s1 ON dt.date_column BETWEEN s1.from_date AND s1.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s1.sched_days) > 0 AND s1.sched_type = 'regular' AND s1.sched_empno = e.EMPNO
-        LEFT JOIN demo_tngc_hrd2.`tbl201_sched` s2 ON dt.date_column BETWEEN s2.from_date AND s2.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s2.sched_days) > 0 AND s2.sched_type = 'shift' AND s2.sched_empno = e.EMPNO
+        LEFT JOIN tngc_hrd2.`tbl_restday` rd ON rd.rd_date = dt.date_column AND rd.rd_emp = e.EMPNO AND LOWER(rd.rd_stat) = 'approved'
+        LEFT JOIN tngc_hrd2.`tbl201_sched` s1 ON dt.date_column BETWEEN s1.from_date AND s1.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s1.sched_days) > 0 AND s1.sched_type = 'regular' AND s1.sched_empno = e.EMPNO
+        LEFT JOIN tngc_hrd2.`tbl201_sched` s2 ON dt.date_column BETWEEN s2.from_date AND s2.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s2.sched_days) > 0 AND s2.sched_type = 'shift' AND s2.sched_empno = e.EMPNO
 
         LEFT JOIN (SELECT sched_empno, MAX(to_date) AS dt
-                    FROM demo_tngc_hrd2.tbl201_sched
+                    FROM tngc_hrd2.tbl201_sched
                     WHERE sched_type = 'regular' AND to_date <= ?
                     GROUP BY sched_empno) max1 ON max1.sched_empno = e.EMPNO
-        LEFT JOIN demo_tngc_hrd2.`tbl201_sched` s3 ON s3.to_date = max1.dt AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s3.sched_days) > 0 AND s3.sched_type = 'regular' AND s3.sched_empno = e.EMPNO
+        LEFT JOIN tngc_hrd2.`tbl201_sched` s3 ON s3.to_date = max1.dt AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s3.sched_days) > 0 AND s3.sched_type = 'regular' AND s3.sched_empno = e.EMPNO
 
 
         LEFT JOIN (
             SELECT emp_no, date_dtr, ass_outlet
             FROM
             (
-                SELECT emp_no, date_dtr, 'ADMIN' AS ass_outlet FROM demo_tngc_hrd2.`tbl_edtr_sti` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND ass_outlet != 'ADMIN' AND date_dtr BETWEEN ? AND ?
+                SELECT emp_no, date_dtr, 'ADMIN' AS ass_outlet FROM tngc_hrd2.`tbl_edtr_sti` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND ass_outlet != 'ADMIN' AND date_dtr BETWEEN ? AND ?
                 UNION ALL
-                SELECT emp_no, date_dtr, ass_outlet FROM demo_tngc_hrd2.`tbl_edtr_sji` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND ass_outlet != 'ADMIN' AND date_dtr BETWEEN ? AND ?
+                SELECT emp_no, date_dtr, ass_outlet FROM tngc_hrd2.`tbl_edtr_sji` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND ass_outlet != 'ADMIN' AND date_dtr BETWEEN ? AND ?
             ) dtr
 
             GROUP BY emp_no, date_dtr, ass_outlet
@@ -542,23 +542,23 @@ if(isset($_POST['a']) && $_POST['a'] == 'del'){
 
             FROM (
                 SELECT p1.pi_empno AS empno, IF(LENGTH(p1.pi_mobileno) < 11 AND LEFT(p1.pi_mobileno, 1) = '9', CONCAT('0', p1.pi_mobileno), p1.pi_mobileno) AS mobileno, 'personal' AS mtype 
-                FROM demo_tngc_hrd2.tbl201_persinfo p1
+                FROM tngc_hrd2.tbl201_persinfo p1
                 WHERE p1.datastat = 'current' AND IFNULL(p1.pi_mobileno, '') != '' 
                 
                 UNION ALL 
                 
                 SELECT p2.pi_empno AS empno, IF(LENGTH(p2.pi_cmobileno) < 11 AND LEFT(p2.pi_cmobileno, 1) = '9', CONCAT('0', p2.pi_cmobileno), p2.pi_cmobileno) AS mobileno, 'company' AS mtype 
-                FROM demo_tngc_hrd2.tbl201_persinfo p2
+                FROM tngc_hrd2.tbl201_persinfo p2
                 WHERE p2.datastat = 'current' AND IFNULL(p2.pi_cmobileno, '') != ''
                 
                 UNION ALL
                 
                 SELECT p5.acca_empno AS empno, IF(LENGTH(p5.acca_sim) < 11 AND LEFT(p5.acca_sim, 1) = '9', CONCAT('0', p5.acca_sim), p5.acca_sim) AS mobileno, 'company' AS mtype
-                FROM demo_tngc_hrd2.tbl_account_agreement p5
+                FROM tngc_hrd2.tbl_account_agreement p5
                 WHERE NOT( p5.acca_dtissued IS NULL OR p5.acca_dtissued='' OR p5.acca_dtissued='0000-00-00' )
                 AND ( p5.acca_dtreturned IS NULL OR p5.acca_dtreturned='' OR p5.acca_dtreturned='0000-00-00' )
             ) a
-            JOIN demo_tngc_hrd2.tbl201_jobinfo ON ji_empno = a.empno AND LOWER(ji_remarks) = 'active'
+            JOIN tngc_hrd2.tbl201_jobinfo ON ji_empno = a.empno AND LOWER(ji_remarks) = 'active'
 
             WHERE 
             IFNULL(mobileno, '') != '' AND mtype = 'company'

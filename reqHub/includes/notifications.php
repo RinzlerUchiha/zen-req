@@ -216,35 +216,18 @@ function notifyChatParticipants(PDO $pdo, $requestId, $senderUserId)
         }
 
         if ($status === 'pending') {
-        $stmt = $pdo->prepare("
-            SELECT DISTINCT u.id
-            FROM users u
-            INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
-            WHERE u.reqhub_role = 'Reviewer'
-            AND u.is_active = 1
-            AND uaa.department_id = ?
-        ");
-        $stmt->execute([$request['department_id']]);
-        $reviewerIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        foreach ($reviewerIds as $id) {
-            if ((int)$id !== $senderUserId) $recipientIds[] = (int)$id;
-        }
-
-        // No reviewer assigned — fall through to approvers (mirrors request_create_action logic)
-        if (empty($reviewerIds)) {
             $stmt = $pdo->prepare("
                 SELECT DISTINCT u.id
                 FROM users u
                 INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
-                WHERE u.reqhub_role = 'Approver'
-                AND u.is_active = 1
-                AND uaa.system_id = ?
+                WHERE u.reqhub_role = 'Reviewer'
+                  AND u.is_active = 1
+                  AND uaa.department_id = ?
             ");
-            $stmt->execute([$request['system_id']]);
+            $stmt->execute([$request['department_id']]);
             foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
                 if ((int)$id !== $senderUserId) $recipientIds[] = (int)$id;
             }
-        }
 
         } elseif (in_array($status, ['reviewed', 'needs_revision'])) {
             $stmt = $pdo->prepare("

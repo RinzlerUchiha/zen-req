@@ -1,13 +1,14 @@
 <?php
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!userHasRoleIn('Requestor', 'Approver', 'Reviewer')) {
     http_response_code(403);
     die('Access denied: Only Requestors, Approvers, and Reviewers can create requests');
 }
 
-$pdo         = ReqHubDatabase::getConnection('reqhub');
+$pdo         = Database::getConnection('reqhub');
 $currentUser = getCurrentUser();
 $emp_no      = $currentUser['emp_no'];
 $userRole    = $currentUser['reqhub_role'];

@@ -1,5 +1,5 @@
 <?php
-require_once($pcf_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 class PCF
 {
@@ -211,19 +211,19 @@ class PCF
         }
         return [];
     }
-    // public static function GetPCFPhone($approver) {
-    //     $conn = self::getDatabaseConnection('hr');
+    public static function GetPCFTL($outlet) {
+        $conn = self::getDatabaseConnection('pcf');
     
-    //     if ($conn) {
-    //         $stmt = $conn->prepare("SELECT * FROM tbl201_persinfo 
-    //             WHERE (pi_empno = ? AND datastat = 'current'
-    //         ");
-    //         $stmt->execute([$approver]);
+        if ($conn) {
+            $stmt = $conn->prepare("SELECT * FROM tbl_assign 
+                WHERE outlet = ?
+            ");
+            $stmt->execute([$outlet]);
     
-    //         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-    //     }
-    //     return [];
-    // }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+        return [];
+    }
     public static function GetPCFPhone($approver)
     {
         $conn = self::getDatabaseConnection('hr');
@@ -428,60 +428,69 @@ class PCF
         return [];
     }
 
-    public static function GetRRR($user_id) {
-        $conn = self::getDatabaseConnection('pcf');
-    
-        if ($conn) {
-            $stmt = $conn->prepare("SELECT * FROM tbl_replenish
-                LEFT JOIN tbl_issuance ON outlet_dept = repl_outlet
-                WHERE repl_status IN ('submit','passed','returned')
-                AND (FIND_IN_SET(?, rrr_approver) OR custodian = ?)
-                GROUP BY repl_no ASC");
-            
-            $stmt->execute([$user_id, $user_id]); // Pass it twice
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        }
-    
-        return [];
-    }
-    // public static function GetRRR($user_id, array $myoutlet) {
+    // public static function GetRRR($user_id) {
     //     $conn = self::getDatabaseConnection('pcf');
     
     //     if ($conn) {
-    //         $sql = "SELECT * FROM tbl_replenish
-    //                 LEFT JOIN tbl_issuance ON outlet_dept = repl_outlet
-    //                 WHERE repl_status IN ('submit','passed','returned')
-    //                 AND (
-    //                     rrr_approver = :user_id
-    //                     OR custodian = :user_id";
-    
-    //         if (!empty($myoutlet)) {
-    //             // Dynamically add placeholders
-    //             $placeholders = [];
-    //             foreach ($myoutlet as $index => $value) {
-    //                 $placeholders[] = ":outlet$index";
-    //             }
-    //             $inClause = implode(',', $placeholders);
-    //             $sql .= " OR outlet_dept IN ($inClause)";
-    //         }
-    
-    //         $sql .= ")";
-    
-    //         $stmt = $conn->prepare($sql);
-    //         $stmt->bindValue(':user_id', $user_id);
-    
-    //         if (!empty($myoutlet)) {
-    //             foreach ($myoutlet as $index => $value) {
-    //                 $stmt->bindValue(":outlet$index", $value);
-    //             }
-    //         }
-    
-    //         $stmt->execute();
+    //         $stmt = $conn->prepare("SELECT * FROM tbl_replenish
+    //             LEFT JOIN tbl_issuance ON outlet_dept = repl_outlet
+    //             LEFT JOIN tbl_assign c ON c.outlet = department
+    //             WHERE repl_status IN ('submit','passed','returned')
+    //             AND (FIND_IN_SET(?, rrr_approver) OR custodian = ? OR approver_empno = ?)
+    //             GROUP BY repl_no ASC");
+            
+    //         $stmt->execute([$user_id, $user_id, $user_id]); // Pass it twice
     //         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     //     }
     
     //     return [];
     // }
+    public static function GetRRR($user_id, $myoutlet = [])
+    {
+        $conn = self::getDatabaseConnection('pcf');
+
+        if ($conn) {
+
+            $params = [$user_id, $user_id, $user_id];
+
+            $sql = "
+                SELECT *
+                FROM tbl_replenish a
+                LEFT JOIN tbl_issuance b ON outlet_dept = repl_outlet
+                LEFT JOIN tbl_assign c ON c.outlet = b.department
+                WHERE repl_status IN ('submit','passed','returned')
+                 AND (
+                    (prepared_by = ? && custodian != prepared_by && requested_by != prepared_by)
+                    OR custodian = ? OR approver_empno = ?
+                -- AND (
+                --     FIND_IN_SET(?, rrr_approver)
+                --     OR custodian = ? OR approver_empno = ?
+            ";
+
+            // Add repl_outlet IN (...)
+            if (!empty($myoutlet)) {
+                $placeholders = [];
+
+                foreach ($myoutlet as $outlet) {
+                    $placeholders[] = '?';
+                    $params[] = $outlet;
+                }
+
+                $sql .= " OR repl_outlet IN (" . implode(',', $placeholders) . ")";
+            }
+
+            $sql .= ")
+                GROUP BY repl_no
+                ORDER BY repl_no ASC";
+
+            $stmt = $conn->prepare($sql);
+            $stmt->execute($params);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        return [];
+    }
 
     public static function GetReplenishRequest($ID) {
         $conn = self::getDatabaseConnection('pcf');
@@ -659,6 +668,20 @@ class PCF
         return [];
     }
 
+    public static function GetApprovedPCF($ID) {
+        $conn = self::getDatabaseConnection('pcf');
+
+        if ($conn) {
+            $stmt = $conn->prepare("SELECT repl_approved_pcf as cash_on_hand, repl_outlet as outlet_dept FROM tbl_replenish
+                WHERE repl_no = ?
+                ");
+            $stmt->execute([$ID]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+        return [];
+    }
+
     public static function GetEndPCF($outlet) {
         $conn = self::getDatabaseConnection('pcf');
 
@@ -830,51 +853,51 @@ class PCF
     }
 
     public static function GetSign($ID) {
-    $hr = self::getDatabaseConnection('hr');
-    $pcf = self::getDatabaseConnection('pcf');
+        $hr = self::getDatabaseConnection('hr');
+        $pcf = self::getDatabaseConnection('pcf');
 
-    $result = [];
+        $result = [];
 
-    if ($pcf) {
-        // Fetch records from `tbl_signatures`
-        $stmt = $pcf->prepare("SELECT * FROM tbl_signatures WHERE replenish_no = ?");
-        $stmt->execute([$ID]);
-        $signatures = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($pcf) {
+            // Fetch records from `tbl_signatures`
+            $stmt = $pcf->prepare("SELECT * FROM tbl_signatures WHERE replenish_no = ?");
+            $stmt->execute([$ID]);
+            $signatures = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-        foreach ($signatures as &$signature) {
-            $cust_empno = $signature['custodian'];
-            $approve_empno = $signature['approver'];
-            $check_empno = $signature['checker'];
-            $fin_empno = $signature['fin_diret'];
+            foreach ($signatures as &$signature) {
+                $cust_empno = $signature['custodian'];
+                $approve_empno = $signature['approver'];
+                $check_empno = $signature['checker'];
+                $fin_empno = $signature['fin_diret'];
 
-            if ($hr) {
-                // Fetch employee details from `hr_table`
-                $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno IN (?, ?, ?, ?)");
-                $stmt->execute([$cust_empno, $approve_empno, $check_empno, $fin_empno]);
-                $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                if ($hr) {
+                    // Fetch employee details from `hr_table`
+                    $stmt = $hr->prepare("SELECT bi_empno, bi_empfname, bi_emplname FROM tbl201_basicinfo WHERE bi_empno IN (?, ?, ?, ?)");
+                    $stmt->execute([$cust_empno, $approve_empno, $check_empno, $fin_empno]);
+                    $employees = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-                // Merge employee details
-                foreach ($employees as $emp) {
-                    if ($emp['bi_empno'] == $cust_empno) {
-                        $signature['cust_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
-                    }
-                    if ($emp['bi_empno'] == $approve_empno) {
-                        $signature['approve_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
-                    }
-                    if ($emp['bi_empno'] == $check_empno) {
-                        $signature['checker_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
-                    }
-                    if ($emp['bi_empno'] == $fin_empno) {
-                        $signature['director_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                    // Merge employee details
+                    foreach ($employees as $emp) {
+                        if ($emp['bi_empno'] == $cust_empno) {
+                            $signature['cust_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        }
+                        if ($emp['bi_empno'] == $approve_empno) {
+                            $signature['approve_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        }
+                        if ($emp['bi_empno'] == $check_empno) {
+                            $signature['checker_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        }
+                        if ($emp['bi_empno'] == $fin_empno) {
+                            $signature['director_name'] = $emp['bi_empfname'] . ' ' . $emp['bi_emplname'];
+                        }
                     }
                 }
             }
+            $result = $signatures;
         }
-        $result = $signatures;
-    }
 
-    return $result;
-}
+        return $result;
+    }
     public static function GetUsers($empno) {
         $conn = self::getDatabaseConnection('pcf');
 

@@ -2,10 +2,10 @@
   //Connect to my database
   class Database
   {
-      private static $dbName = 'db_hr' ;
-      private static $dbHost = 'mariadb' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
       private static $cont  = null;
       
       public function __construct() {
@@ -44,10 +44,10 @@
   //Connect to HR Database
   class HRDatabase
   {
-      private static $dbName = 'server_copy_tngc_hrd2' ;
-      private static $dbHost = 'mariadb' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 
@@ -87,9 +87,9 @@
   //Connect to PI Database
   class HRDatabase
   {
-      private static $dbName = 'pi_db' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbName = (getenv('ZEN_DB_DATABASE_PI') ?: "") ;
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -131,9 +131,9 @@
   class MainDatabase
   {
       private static $dbName = 'db_main' ;
-      private static $dbHost = 'mariadb' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
       private static $cont  = null;
       
       public function __construct() {
@@ -173,9 +173,9 @@
   class HR1Database
   {
       private static $dbName = 'tngc_hrd' ;
-      private static $dbHost = 'mariadb' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 
@@ -214,9 +214,9 @@
    class DTRDatabase
   {
       private static $dbName = 'db_dtr' ;
-      private static $dbHost = 'mariadb' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 
@@ -256,9 +256,9 @@
   class APPDatabase
   {
       private static $dbName = 'db_applicants' ;
-      private static $dbHost = 'mariadb' ;
-      private static $dbUsername = 'admin';
-      private static $dbUserPassword = 'Administr@t0r';
+      private static $dbHost = (getenv('ZEN_DB_HOST') ?: "") ;
+      private static $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
+      private static $dbUserPassword = (getenv('ZEN_DB_PASSWORD') ?: "");
 
       private static $cont  = null;
 

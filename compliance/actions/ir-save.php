@@ -1,7 +1,7 @@
 <?php
-require_once($com_root."/db/database.php"); 
-require_once($com_root."/db/core.php"); 
-require_once($com_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $hr_pdo = HRDatabase::connect();
 
 date_default_timezone_set('Asia/Manila');
@@ -47,7 +47,7 @@ function reArrayFiles($file_post) {
 // $ir_dept
 // $ir_signature
 
-if (empty($_SESSION['DEMOHR_UID'])) {
+if (empty($_SESSION[SESSION_KEY])) {
 	echo "Please Refresh Page";
 	exit;
 }

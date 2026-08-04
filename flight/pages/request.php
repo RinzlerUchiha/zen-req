@@ -1,5 +1,5 @@
 <?php
-require_once($fl_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 try {
     $flight_db = Database::getConnection('fb');
 // Assuming flight ID is numeric and stored in `flight_id`
@@ -31,7 +31,7 @@ $last_num = isset($row['last_num']) ? (int)$row['last_num'] : 0;
   <!-- Page header start -->
   <div class="page-header">
     <div class="page-header-title">
-      <h4>My Booking</h4>
+      <h4>Book Flight</h4>
       <!-- <span>Lorem ipsum dolor sit amet, consectetur adipisicing elit</span> -->
     </div>
     <div class="page-header-breadcrumb">
@@ -117,7 +117,6 @@ $last_num = isset($row['last_num']) ? (int)$row['last_num'] : 0;
                           <div class="form-group">
                             <label>Airline <span style="color:red;">*</span></label>
                             <select name="airline[]" required>
-                              <option>Select Airline</option>
                               <option>Cebu Pacific</option>
                               <option>Philippine Airlines</option>
                               <!-- <option>AirAsia</option> -->
@@ -140,7 +139,7 @@ $last_num = isset($row['last_num']) ? (int)$row['last_num'] : 0;
                     <h2>🛈 Reason</h2>
                     <p class="info-text">Provide reason of your travel.*</p>
                     <div class="form-group">
-                      <textarea class="form-control" required></textarea>
+                      <textarea class="form-control reason-travel" required ></textarea>
                     </div>
                   </div>
                   <div class="form-step">
@@ -172,7 +171,6 @@ $last_num = isset($row['last_num']) ? (int)$row['last_num'] : 0;
                             <label>Sex: <span style="color:red;">*</span></label>
                             <!-- <input type="text" name="sex" required> -->
                             <select name="sex">
-                              <option value="No Sex">Select Sex</option>
                               <option value="Male">Male</option>
                               <option value="Female">Female</option>
                             </select>
@@ -222,6 +220,24 @@ $last_num = isset($row['last_num']) ? (int)$row['last_num'] : 0;
                     <button type="button" id="prevBtn" disabled>Previous</button>
                     <button type="button" id="nextBtn">Next</button>
                   </div>
+                  <div class="modal fade" id="RequestorSignModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title">Draw Signature</h5>
+                          <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body text-center">
+                          <canvas id="RequestorCanvas" width="600" height="200" style="border:1px solid #ccc; touch-action:none;"></canvas>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="button" class="btn btn-danger btn-mini" id="cancel-btn">Cancel</button>
+                          <button type="button" class="btn btn-default btn-mini" id="clear-btn">Clear</button>
+                          <button type="button" class="btn btn-primary btn-mini" id="submitSignature">Confirm</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </form>
               </div>
             </div>
@@ -234,4 +250,8 @@ $last_num = isset($row['last_num']) ? (int)$row['last_num'] : 0;
   </div>
   <!-- Page body end -->
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="../assets/js/flight.js"></script>

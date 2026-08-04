@@ -1,5 +1,5 @@
 <?php
-require_once($com_root."/db/db_functions.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
 $trans = new Transactions;
 $con1 = $trans->connect();
 $filter['fltr_y'] = date("Y");
@@ -94,13 +94,13 @@ if(isset($month)){
 		f.`es_name` AS 'EMPLOYMENT_STATUS',
 		b.`ji_datehired` AS 'DATE_HIRED',
 		IFNULL(g.`ecf_lastday`, '') AS 'LAST_DAY'
-		FROM demo_tngc_hrd2.`tbl201_basicinfo` a
-		JOIN demo_tngc_hrd2.`tbl201_jobinfo` b ON b.`ji_empno` = a.`bi_empno` AND LOWER(b.`ji_remarks`) = 'active'
-		LEFT JOIN demo_tngc_hrd2.`tbl201_jobrec` c ON c.`jrec_empno` = a.`bi_empno` AND LOWER(c.`jrec_status`) = 'primary'
-		LEFT JOIN demo_tngc_hrd2.`tbl201_emplstatus` d ON d.`estat_empno` = a.`bi_empno` AND LOWER(d.`estat_stat`) = 'active'
-		LEFT JOIN demo_tngc_hrd2.`tbl_jobdescription` e ON e.`jd_code` = c.`jrec_position`
-		LEFT JOIN demo_tngc_hrd2.`tbl_empstatus` f ON f.`es_code` = d.`estat_empstat`
-		LEFT JOIN demo_db_ecf2.`tbl_request` g ON g.`ecf_empno` = a.`bi_empno`
+		FROM tngc_hrd2.`tbl201_basicinfo` a
+		JOIN tngc_hrd2.`tbl201_jobinfo` b ON b.`ji_empno` = a.`bi_empno` AND LOWER(b.`ji_remarks`) = 'active'
+		LEFT JOIN tngc_hrd2.`tbl201_jobrec` c ON c.`jrec_empno` = a.`bi_empno` AND LOWER(c.`jrec_status`) = 'primary'
+		LEFT JOIN tngc_hrd2.`tbl201_emplstatus` d ON d.`estat_empno` = a.`bi_empno` AND LOWER(d.`estat_stat`) = 'active'
+		LEFT JOIN tngc_hrd2.`tbl_jobdescription` e ON e.`jd_code` = c.`jrec_position`
+		LEFT JOIN tngc_hrd2.`tbl_empstatus` f ON f.`es_code` = d.`estat_empstat`
+		LEFT JOIN db_ecf2.`tbl_request` g ON g.`ecf_empno` = a.`bi_empno`
 		WHERE
 		a.`datastat` = 'current'
 		AND (LOWER(b.`ji_remarks`) = 'active'
@@ -115,27 +115,27 @@ if(isset($month)){
 		a.`bi_emplname` ASC,
 		a.`bi_empfname` ASC,
 		a.`bi_empext` ASC) e
-		LEFT JOIN demo_tngc_hrd2.`tbl_restday` rd ON rd.rd_date = dt.date_column AND rd.rd_emp = e.EMPNO AND LOWER(rd.rd_stat) = 'approved'
-		-- LEFT JOIN demo_tngc_hrd2.`tbl201_sched` s1 ON dt.date_column BETWEEN s1.from_date AND s1.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s1.sched_days) > 0 AND s1.sched_type = 'regular' AND s1.sched_empno = e.EMPNO
-		-- LEFT JOIN demo_tngc_hrd2.`tbl201_sched` s2 ON dt.date_column BETWEEN s2.from_date AND s2.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s2.sched_days) > 0 AND s2.sched_type = 'shift' AND s2.sched_empno = e.EMPNO
-		LEFT JOIN demo_tngc_hrd2.`tbl201_sched` s1 ON dt.date_column BETWEEN s1.from_date AND s1.to_date AND s1.sched_type = 'regular' AND s1.sched_empno = e.EMPNO
-		LEFT JOIN demo_tngc_hrd2.`tbl201_sched` s2 ON dt.date_column BETWEEN s2.from_date AND s2.to_date AND s2.sched_type = 'shift' AND s2.sched_empno = e.EMPNO
+		LEFT JOIN tngc_hrd2.`tbl_restday` rd ON rd.rd_date = dt.date_column AND rd.rd_emp = e.EMPNO AND LOWER(rd.rd_stat) = 'approved'
+		-- LEFT JOIN tngc_hrd2.`tbl201_sched` s1 ON dt.date_column BETWEEN s1.from_date AND s1.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s1.sched_days) > 0 AND s1.sched_type = 'regular' AND s1.sched_empno = e.EMPNO
+		-- LEFT JOIN tngc_hrd2.`tbl201_sched` s2 ON dt.date_column BETWEEN s2.from_date AND s2.to_date AND FIND_IN_SET(DATE_FORMAT(dt.date_column, '%W'), s2.sched_days) > 0 AND s2.sched_type = 'shift' AND s2.sched_empno = e.EMPNO
+		LEFT JOIN tngc_hrd2.`tbl201_sched` s1 ON dt.date_column BETWEEN s1.from_date AND s1.to_date AND s1.sched_type = 'regular' AND s1.sched_empno = e.EMPNO
+		LEFT JOIN tngc_hrd2.`tbl201_sched` s2 ON dt.date_column BETWEEN s2.from_date AND s2.to_date AND s2.sched_type = 'shift' AND s2.sched_empno = e.EMPNO
 		LEFT JOIN (
 		SELECT emp_no, date_dtr, GROUP_CONCAT(DISTINCT ass_outlet) AS ass_outlet, id
 		FROM
 		(
-		SELECT emp_no, date_dtr, IF(ass_outlet = 'ADMIN', 'STI', ass_outlet) AS ass_outlet, id, time_in_out FROM demo_tngc_hrd2.`tbl_edtr_sti` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND date_dtr BETWEEN ? AND LAST_DAY(?)
+		SELECT emp_no, date_dtr, IF(ass_outlet = 'ADMIN', 'STI', ass_outlet) AS ass_outlet, id, time_in_out FROM tngc_hrd2.`tbl_edtr_sti` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND date_dtr BETWEEN ? AND LAST_DAY(?)
 		UNION ALL
-		SELECT emp_no, date_dtr, IF(ass_outlet = 'ADMIN', 'STI', ass_outlet) AS ass_outlet, id, time_in_out FROM demo_tngc_hrd2.`tbl_edtr_sji` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND date_dtr BETWEEN ? AND LAST_DAY(?)
+		SELECT emp_no, date_dtr, IF(ass_outlet = 'ADMIN', 'STI', ass_outlet) AS ass_outlet, id, time_in_out FROM tngc_hrd2.`tbl_edtr_sji` WHERE LOWER(dtr_stat) IN ('approved', 'pending') AND date_dtr BETWEEN ? AND LAST_DAY(?)
 		) dtr
 		GROUP BY emp_no, date_dtr
 		ORDER BY date_dtr ASC, time_in_out ASC) dtr ON dtr.emp_no = e.EMPNO AND dtr.date_dtr = dt.date_column
-		LEFT JOIN demo_tngc_hrd2.`tbl_edtr_hours` trvl ON trvl.emp_no = e.EMPNO AND trvl.date_dtr = dt.date_column AND LOWER(trvl.day_type) LIKE '%travel%' AND LOWER(trvl.dtr_stat) IN ('approved','confirmed')
-		LEFT JOIN demo_tngc_hrd2.`tbl201_leave` l ON l.la_empno = e.EMPNO AND ((l.la_dates != '' AND FIND_IN_SET(dt.date_column, l.la_dates) > 0) OR (l.la_dates = '' AND dt.date_column BETWEEN l.la_start AND l.la_end)) AND LOWER(l.la_status) IN ('approved','confirmed')
+		LEFT JOIN tngc_hrd2.`tbl_edtr_hours` trvl ON trvl.emp_no = e.EMPNO AND trvl.date_dtr = dt.date_column AND LOWER(trvl.day_type) LIKE '%travel%' AND LOWER(trvl.dtr_stat) IN ('approved','confirmed')
+		LEFT JOIN tngc_hrd2.`tbl201_leave` l ON l.la_empno = e.EMPNO AND ((l.la_dates != '' AND FIND_IN_SET(dt.date_column, l.la_dates) > 0) OR (l.la_dates = '' AND dt.date_column BETWEEN l.la_start AND l.la_end)) AND LOWER(l.la_status) IN ('approved','confirmed')
 		LEFT JOIN (
 			SELECT a.os_id AS id, a.os_empno AS empno, DATE_FORMAT(b.osd_offsetdt, '%Y-%m-%d') AS os_date
-			FROM demo_tngc_hrd2.`tbl201_offset` a
-			JOIN demo_tngc_hrd2.`tbl201_offset_details` b ON b.osd_osid = a.os_id 
+			FROM tngc_hrd2.`tbl201_offset` a
+			JOIN tngc_hrd2.`tbl201_offset_details` b ON b.osd_osid = a.os_id 
 			WHERE LOWER(a.os_status) IN ('approved','confirmed') AND DATE_FORMAT(b.osd_offsetdt, '%Y-%m-%d') BETWEEN ? AND LAST_DAY(?)
 		) os ON os.empno = e.EMPNO AND os.os_date = dt.date_column 
 		ORDER BY dt.date_column ASC");
@@ -209,7 +209,7 @@ if(isset($month)){
 			IF(tlo_outlet = 'ADMIN', 'STI', tlo_outlet) AS tlo_outlet 
 		FROM tbl_tl_outlet a
 		JOIN (SELECT tlo_empno, MAX(tlo_todt) AS tlo_todt
-                    FROM demo_tngc_hrd2.tbl_tl_outlet
+                    FROM tngc_hrd2.tbl_tl_outlet
                     WHERE 
                         tlo_fromdt <= ? 
                         OR tlo_todt <= ?

@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: text/html; charset=UTF-8');
 
-$connection = new mysqli("localhost", "root", "", "portal_db");
+$connection = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), (getenv('ZEN_DB_DATABASE_PORTAL') ?: ""));
 
 if ($connection->connect_error) {
     die("Connection failed: " . $connection->connect_error);

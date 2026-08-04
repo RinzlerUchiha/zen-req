@@ -1,9 +1,9 @@
 <?php
-require_once($lv_root."/db/db_functions.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
 $trans = new Transactions;
 $con1 = $trans->connect();
 
-$user_empno = $trans->getUser($_SESSION['DEMOHR_UID'], 'Emp_No');
+$user_empno = $trans->getUser($_SESSION[SESSION_KEY], 'Emp_No');
 // $position = getjobinfo($user_empno, "jrec_position");
 
 $user_assign_list = $trans->check_auth($user_empno, 'DTR');
@@ -116,7 +116,7 @@ function getemplist($emparr, $from)
 
 $load = 'restday';
 
-echo 'load:'.$load;
+// echo 'load:'.$load;
 $_SESSION['d1'] = !empty($_POST['d1']) ? $_POST['d1'] : (!empty($_SESSION['d1']) ? $_SESSION['d1'] : (date('d')>=26 ? date("Y-m-26") : (date('d')>10 ? date("Y-m-11") : date("Y-m-26",strtotime('-1 month')))));
 $_SESSION['d2'] = !empty($_POST['d2']) ? $_POST['d2'] : (!empty($_SESSION['d2']) ? $_SESSION['d2'] : (date('d')>=26 ? date("Y-m-10",strtotime('+1 month')) : (date("d")>10 ? date("Y-m-25") : date("Y-m-10"))));
 

@@ -49,7 +49,8 @@ function smsReviewers(PDO $pdo, $requestId, $requestorName = '', $systemName = '
         $reviewers = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($reviewers as $empNo) {
-            SendSmsToEmpNo($empNo, $message, 'reqhub_review');
+            // SendSmsToEmpNo($empNo, $message, 'reqhub_review');
+            SendSmsToEmpNo($empNo, $message, 'reqhub');
         }
     } catch (Exception $e) {
         error_log("smsReviewers error: " . $e->getMessage());
@@ -88,7 +89,8 @@ function smsApproversForSystem(PDO $pdo, $systemId, $requestId, $requestorName =
         $approvers = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($approvers as $empNo) {
-            SendSmsToEmpNo($empNo, $message, 'reqhub_approval');
+            // SendSmsToEmpNo($empNo, $message, 'reqhub_approval');
+            SendSmsToEmpNo($empNo, $message, 'reqhub');
         }
     } catch (Exception $e) {
         error_log("smsApproversForSystem error: " . $e->getMessage());
@@ -106,7 +108,8 @@ function smsAdmins(PDO $pdo, $message)
         $admins = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($admins as $empNo) {
-            SendSmsToEmpNo($empNo, $message, 'reqhub_admin');
+            // SendSmsToEmpNo($empNo, $message, 'reqhub_admin');
+            SendSmsToEmpNo($empNo, $message, 'reqhub');
         }
     } catch (Exception $e) {
         error_log("smsAdmins error: " . $e->getMessage());
@@ -123,7 +126,8 @@ function smsUserById(PDO $pdo, $userId, $message)
         $stmt->execute([$userId]);
         $empNo = $stmt->fetchColumn();
         if ($empNo) {
-            SendSmsToEmpNo($empNo, $message, 'reqhub_notify');
+            // SendSmsToEmpNo($empNo, $message, 'reqhub_notify');
+            SendSmsToEmpNo($empNo, $message, 'reqhub');
         }
     } catch (Exception $e) {
         error_log("smsUserById error: " . $e->getMessage());
@@ -155,35 +159,18 @@ function smsChatParticipants(PDO $pdo, $requestId, $senderUserId)
         }
 
         if ($status === 'pending') {
-        $stmt = $pdo->prepare("
-            SELECT DISTINCT u.id
-            FROM users u
-            INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
-            WHERE u.reqhub_role = 'Reviewer'
-            AND u.is_active = 1
-            AND uaa.department_id = ?
-        ");
-        $stmt->execute([$request['department_id']]);
-        $reviewerIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        foreach ($reviewerIds as $id) {
-            if ((int)$id !== $senderUserId) $recipientIds[] = (int)$id;
-        }
-
-        // No reviewer assigned — fall through to approvers
-        if (empty($reviewerIds)) {
             $stmt = $pdo->prepare("
                 SELECT DISTINCT u.id
                 FROM users u
                 INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
-                WHERE u.reqhub_role = 'Approver'
-                AND u.is_active = 1
-                AND uaa.system_id = ?
+                WHERE u.reqhub_role = 'Reviewer'
+                  AND u.is_active = 1
+                  AND uaa.department_id = ?
             ");
-            $stmt->execute([$request['system_id']]);
+            $stmt->execute([$request['department_id']]);
             foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
                 if ((int)$id !== $senderUserId) $recipientIds[] = (int)$id;
             }
-        }
 
         } elseif (in_array($status, ['reviewed', 'needs_revision'])) {
             $stmt = $pdo->prepare("
@@ -230,7 +217,8 @@ function smsChatParticipants(PDO $pdo, $requestId, $senderUserId)
             $stmtEmp->execute([$recipientId]);
             $empNo = $stmtEmp->fetchColumn();
             if ($empNo) {
-                SendSmsToEmpNo($empNo, $message, 'reqhub_chat');
+                // SendSmsToEmpNo($empNo, $message, 'reqhub_chat');
+                SendSmsToEmpNo($empNo, $message, 'reqhub');
             }
         }
     } catch (Exception $e) {

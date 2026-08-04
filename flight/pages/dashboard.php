@@ -1,5 +1,8 @@
 <?php
 require_once($fl_root."/actions/get_flights.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $flightbooking = FLIGHT::GetFlightReq($empno); 
 $cuntcomments = FLIGHT::FlightRequests($empno); 
 
@@ -9,10 +12,20 @@ foreach ($cuntcomments as $c) {
   // $isOwnerOrAdmin = (
   //   $c['f_empno'] == $empno ||
   //   $c['acc_empno'] == $empno ||
+  //   in_array($empno, $c['acc_empno']) ||
   //   $empno == '045-0000-003'
   // );
+  $accEmpnos = array_map('trim', explode(',', $c['acc_empno'])); 
 
-  // if ($isOwnerOrAdmin) {
+  $isOwnerOrAdmin = (
+      $c['f_empno'] == $empno ||
+      $c['acc_empno'] == $empno ||
+      in_array($empno, $accEmpnos) ||
+      $empno == '045-0000-003'
+  );
+
+// echo 'user:'.$empno;
+  if ($isOwnerOrAdmin) {
     switch ($c['f_status']) {
       case 'pending': $pending++; break;
       case 'confirmed': $confirmed++; break;
@@ -30,7 +43,7 @@ foreach ($cuntcomments as $c) {
       case 'returned rebook' : $Rreturned++; break;
       case 'cancelled rebook' : $Rcancelled++; break;
     }
-  // }
+  }
 }
 
 ?>
@@ -93,53 +106,69 @@ foreach ($cuntcomments as $c) {
               </div>
               <div class="col-lg-12 col-xl-12">
                 <ul class="nav nav-tabs tabs" role="tablist">
+                  <?php if (get_assign_fbr('all_flight','view',$empno)) { ?>
                   <li class="nav-item">
-                    <a class="nav-link active" data-toggle="tab" href="#all" role="tab">All</a>
+                    <a class="nav-link" data-toggle="tab" href="#all" role="tab">All</a>
                   </li>
+                  <?php } ?>
+                  <?php if (get_assign_fbr('pending_flight','view',$empno)) { ?>
                   <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#request" role="tab">
-                      Pending <label class="badge bg-danger"><?= $pending + $Rpending ?></label>
+                      Pending <label class="badge bg-danger"><?= $pending ?></label>
                     </a>
                   </li>
+                  <?php } ?>
+                  <?php if (get_assign_fbr('confirm_flight','view',$empno)) { ?>
                   <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#review" role="tab">
                       Reviewed <label class="badge bg-danger"><?= $confirmed + $Rconfirmed ?></label>
                     </a>
                   </li>
+                  <?php } ?>
+                  <?php if (get_assign_fbr('approved_flight','view',$empno)) { ?>
                   <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#approve" role="tab">
                       Approved <label class="badge bg-danger"><?= $approved + $Rapproved ?></label>
                     </a>
                   </li>
+                  <?php } ?>
+                  <?php if (get_assign_fbr('served_booking','view',$empno)) { ?>
                   <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#serve" role="tab">
-                      Served <label class="badge bg-danger"><?= $served ?></label>
+                      Served <label class="badge bg-danger"><?= $served + $Rserved ?></label>
                     </a>
                   </li>
+                  <?php } ?>
                   <!-- <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#return" role="tab">
                       Returned <label class="badge bg-danger"><?= $returned ?></label>
                     </a>
                   </li> -->
+                  <?php if (get_assign_fbr('cancelled_flight','view',$empno)) { ?>
                   <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#cancel" role="tab">
                       Cancelled <label class="badge bg-danger"><?= $cancelled ?></label>
                     </a>
                   </li>
+                  <?php } ?>
+                  <?php if (get_assign_fbr('rebook_flight','view',$empno)) { ?>
                   <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#rebook" role="tab">
-                      Rebooked <label class="badge bg-danger"><?= $Rserved ?></label>
+                      Rebooking <label class="badge bg-danger"><?= $Rpending ?></label>
                     </a>
                   </li>
+                  <?php } ?>
+                  <?php if (get_assign_fbr('refund_flight','view',$empno)) { ?>
                   <li class="nav-item">
                     <a class="nav-link" data-toggle="tab" href="#refund" role="tab">
                       Refund <label class="badge bg-danger"><?= $refund ?></label>
                     </a>
                   </li>
+                  <?php } ?>
                 </ul>
 
                 <?php
-                function renderFlightRow($fb, $comments) {
+                function renderFlightRow($fb, $comments = [], $addons = []) {
                   $dateStr = $fb['f_date'] ?? '';
                   $requestor = $fb['cust_name'];
                   $formattedDate = $dateStr ? date('F j, Y', strtotime($dateStr)) : 'N/A';
@@ -168,11 +197,18 @@ foreach ($cuntcomments as $c) {
                     case 'rebooked': echo '<span class="badge badge-info">rebooked</span>'; break;
                     case 'rebooking': echo '<span class="badge badge-warning">for rebooking</span>'; break;
                     case 'confirmed rebook': echo '<span class="badge badge-warning">rebooking reviewed</span>'; break;
+                    case 'refund': echo '<span class="badge badge-danger">refunded</span>'; break;
+                    case 'deleted': echo '<span class="badge badge-danger">deleted</span>'; break;
                   }
                   echo "</td>";
                   if (!empty($comments)) {
                     foreach ($comments as $v) {
-                      echo "<td style='align-content:center !important;width: 20px;'>{$v['comnum']} <i class='icofont icofont-speech-comments' style='font-size: 20px;'></i></td>";
+                      echo "<td style='align-content:center !important;width: 20px;'>{$v['comnum']} <i class='icofont icofont-speech-comments' style='font-size: 25px;'></i></td>";
+                    }
+                  }
+                  if (!empty($addons)) {
+                    foreach ($addons as $b) {
+                      echo "<td style='align-content:center !important;width: 20px;color:red;'>{$b['addons']} <i class='fa-solid fa-suitcase-rolling' style='font-size: 25px;'></i></td>";
                     }
                   }
                   if (!empty($fb['f_attachment'])) {
@@ -183,7 +219,7 @@ foreach ($cuntcomments as $c) {
                 ?>
 
                 <div class="tab-content tabs card-block">
-                  <div class="tab-pane active" id="all" role="tabpanel">
+                  <div class="tab-pane" id="all" role="tabpanel">
                   <div class="table-container">
                     <table  class="table flight-table">
                       <thead><tr><th>Request No.</th><th>Requested by</th><th>Route</th><th>Airline</th><th>Status</th></tr></thead>
@@ -191,11 +227,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
                           if ($isOwnerOrAdmin) {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            $addons = FLIGHT::CountAddons($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>
@@ -211,10 +254,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                          if (in_array($fb['f_status'], ['pending','rebooking']) && $isOwnerOrAdmin) {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                          if ($fb['f_status'] === 'pending' && $isOwnerOrAdmin) {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>
@@ -230,8 +281,15 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                            if (in_array($fb['f_status'], ['confirmed','confirmed rebook']) && $isOwnerOrAdmin) {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                            if ($fb['f_status'] === 'confirmed' && $isOwnerOrAdmin) {
                             $comments = FLIGHT::CountComment($fb['f_no']);
                             renderFlightRow($fb, $comments);
                           }
@@ -249,10 +307,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                          if (in_array($fb['f_status'], ['approved','approved rebook']) && $isOwnerOrAdmin) {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                          if ($fb['f_status'] === 'approved' && $isOwnerOrAdmin) {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>
@@ -268,10 +334,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                          if ($fb['f_status'] == 'served' && $isOwnerOrAdmin) {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                          if (in_array($fb['f_status'], ['served','rebooked']) && $isOwnerOrAdmin) {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>
@@ -287,10 +361,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                          if ($fb['f_status'] == 'returned' && $isOwnerOrAdmin) {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                          if (in_array($fb['f_status'], ['returned','cancelled']) && $isOwnerOrAdmin) {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>
@@ -306,10 +388,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                          if ($fb['f_status'] == 'rebooked') {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                          if ($fb['f_status'] === 'rebooking') {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>
@@ -325,10 +415,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                          if ($fb['f_status'] == 'cancelled') {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                          if ($fb['f_status'] === 'cancelled') {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>
@@ -344,10 +442,18 @@ foreach ($cuntcomments as $c) {
                         <?php
                         foreach ($flightbooking as $fb) {
                           $requestor = $fb['cust_name'];
-                          $isOwnerOrAdmin = ($fb['f_empno'] == $empno);
-                          if ($fb['f_status'] == 'refund') {
+                          $accEmpnos = array_map('trim', explode(',', $fb['acc_empno'])); 
+                          // $isOwnerOrAdmin = ($fb['f_empno'] == $empno || $fb['acc_empno'] == $empno);
+                            $isOwnerOrAdmin = (
+                                $fb['f_empno'] == $empno ||
+                                $fb['acc_empno'] == $empno ||
+                                in_array($empno, $accEmpnos) ||
+                                $empno == '045-0000-003'
+                            );
+                          if ($fb['f_status'] === 'refund') {
                             $comments = FLIGHT::CountComment($fb['f_no']);
-                            renderFlightRow($fb, $comments);
+                            $addons = FLIGHT::CountAddons($fb['f_id']);
+                            renderFlightRow($fb, $comments, $addons);
                           }
                         }
                         ?>

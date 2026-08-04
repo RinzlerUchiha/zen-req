@@ -9,12 +9,13 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once (__DIR__ . '/../includes/auth.php');
-require_once (__DIR__ . '/../database/db.php');
+// require_once (__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 requireRole('Admin');
 
 try {
-    $pdo = ReqHubDatabase::getConnection('reqhub');
+    $pdo = Database::getConnection('reqhub');
     
     if (!empty($_POST['action_name'])) {
         $actionName = trim($_POST['action_name']);

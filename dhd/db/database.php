@@ -3,8 +3,8 @@
   class DB
   {
       private static $dbName = 'demo_db_hr' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbHost = "";
+      private static $dbUsername = "";
       private static $dbUserPassword = '';
       private static $cont  = null;
       
@@ -36,7 +36,7 @@
 
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "demo_db_hr");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), "demo_db_hr");
           return $cont;
       }
   }
@@ -44,9 +44,9 @@
   //Connect to HR Database
   class HRDatabase
   {
-      private static $dbName = 'demo_tngc_hrd2' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbName = "";
+      private static $dbHost = "";
+      private static $dbUsername = "";
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -79,7 +79,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "demo_tngc_hrd2");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), (getenv('ZEN_DB_DATABASE_HRD2') ?: ""));
           return $cont;
       }
   }
@@ -88,8 +88,8 @@
   class MainDatabase
   {
       private static $dbName = 'demo_db_main' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbHost = "";
+      private static $dbUsername = "";
       private static $dbUserPassword = '';
       private static $cont  = null;
       
@@ -121,7 +121,7 @@
 
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "demo_db_main");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), "demo_db_main");
           return $cont;
       }
   }
@@ -130,8 +130,8 @@
   class HR1Database
   {
       private static $dbName = 'demo_tngc_hrd' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbHost = "";
+      private static $dbUsername = "";
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -164,15 +164,15 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "demo_tngc_hrd");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), "demo_tngc_hrd");
           return $cont;
       }
   }
    class DTRDatabase
   {
       private static $dbName = 'demo_db_dtr' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbHost = "";
+      private static $dbUsername = "";
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -205,7 +205,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "demo_db_dtr");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), "demo_db_dtr");
           return $cont;
       }
   }
@@ -213,8 +213,8 @@
   class APPDatabase
   {
       private static $dbName = 'demo_db_applicants' ;
-      private static $dbHost = 'localhost' ;
-      private static $dbUsername = 'root';
+      private static $dbHost = "";
+      private static $dbUsername = "";
       private static $dbUserPassword = '';
 
       private static $cont  = null;
@@ -247,7 +247,7 @@
       }
       public static function mysqli()
       {
-          $cont = new mysqli("localhost", "root", "", "demo_db_applicants");
+          $cont = new mysqli((getenv('ZEN_DB_HOST') ?: ""), (getenv('ZEN_DB_USERNAME') ?: ""), (getenv('ZEN_DB_PASSWORD') ?: ""), "demo_db_applicants");
           return $cont;
       }
   }

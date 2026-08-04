@@ -1,5 +1,5 @@
 <?php
-require_once($pcf_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'User not authenticated']);
@@ -11,6 +11,7 @@ $user_id = $_SESSION['user_id'];
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $replNo = $_POST['replNo'];
     $replNoRRR = $_POST['replNoRRR'];
+    $appPCF = $_POST['appPCF'];
     $cashOnhand = $_POST['cashOnhand'];
     $endbalance = $_POST['endbalance'];
     $variance = $_POST['variance'];
@@ -32,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 
     // Debugging Output
-    file_put_contents("debug_log.txt", "Received Data:\n" . print_r($_POST, true) . "\n", FILE_APPEND);
+    // file_put_contents("debug_log.txt", "Received Data:\n" . print_r($_POST, true) . "\n", FILE_APPEND);
 
     try {
         $pcf_db = Database::getConnection('pcf');
@@ -40,8 +41,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // Insert or Update in PCF Table
         $stmt = $pcf_db->prepare("INSERT INTO tbl_replenish 
-             (repl_no, repl_custodian, repl_company, repl_outlet_dept, repl_outlet, repl_pending, repl_rrr, repl_cash_on_hand, repl_end_balance, repl_expense, repl_new_expense, repl_unrepl, repl_variance, repl_status, repl_date) 
-             VALUES (:repl_no, :repl_custodian, :repl_company, :repl_outlet_dept, :repl_outlet, :repl_pending, :repl_rrr, :repl_cash_on_hand, :repl_end_balance, :repl_expense, :repl_new_expense, :repl_unrepl, :repl_variance, :repl_status, :repl_date)");
+             (repl_no, repl_custodian, repl_company, repl_outlet_dept, repl_outlet, repl_pending, repl_rrr, repl_approved_pcf, repl_cash_on_hand, repl_end_balance, repl_expense, repl_new_expense, repl_unrepl, repl_variance, repl_status, repl_date) 
+             VALUES (:repl_no, :repl_custodian, :repl_company, :repl_outlet_dept, :repl_outlet, :repl_pending, :repl_rrr, :repl_approved_pcf, :repl_cash_on_hand, :repl_end_balance, :repl_expense, :repl_new_expense, :repl_unrepl, :repl_variance, :repl_status, :repl_date)");
 
         $stmt->execute([
             'repl_no' => $pcfID,
@@ -51,6 +52,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             'repl_outlet' => $outlet,
             'repl_pending' => $replNo,
             'repl_rrr' => $replNoRRR,
+            'repl_approved_pcf' => $appPCF,
             'repl_cash_on_hand' => $cashOnhand,
             'repl_end_balance' => $endbalance,
             'repl_expense' => $requestAmt,

@@ -1,9 +1,9 @@
 <?php
-require_once($main_root."../dtrdb/database.php");
-require_once($main_root."../dtrdb/core.php");
-require_once($main_root."../dtrdb/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 
-$pdo = DB::connect();
+// $pdo = DB::connect();
 $hr_pdo = HRDatabase::connect();
 
 if (isset($_SESSION['user_id'])) {

@@ -1,11 +1,11 @@
 <?php
 class Dbcon
 {
-	// private $dbName = 'portal_db';
-	private $dbName = 'tngc_hrd2';
+	// private $dbName = (getenv('ZEN_DB_DATABASE_PORTAL') ?: "");
+	private $dbName = (getenv('ZEN_DB_DATABASE_HRD2') ?: "");
 	// private $dbName = 'tngc_hrdserver3' ;
-	private $dbHost = 'localhost';
-	private $dbUsername = 'root';
+	private $dbHost = (getenv('ZEN_DB_HOST') ?: "");
+	private $dbUsername = (getenv('ZEN_DB_USERNAME') ?: "");
 	private $dbUserPassword = '';
 	protected $cont  = null;
 

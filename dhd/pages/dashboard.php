@@ -3,7 +3,7 @@
 
 ?>
 <?php
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
 $load = 'dhd';
@@ -696,7 +696,7 @@ function initsig() {
       }
       $(thistab).html("<div class='mb-3'><span class='spinner-border spinner-border-sm text-muted'></span> Loading...</div>");
       if(ajax1 && ajax1.readyState != 4){ajax1.abort();}
-      ajax1 = $.post("/demo/dtrservicesdemo/manpower/mp_data/load/",
+      ajax1 = $.post("/dtrservices/manpower/mp_data/load/",
         {
           load: tabid != 'calendar-tab' ? tabid.replace("-tab", "") : 'month',
           // y: $("#mpdatey").val(),
@@ -839,7 +839,7 @@ function initsig() {
     $("#divmp").hide();
     $("#divmpinfo").show();
     $("#mpinfodata").html("<div class='mb-3'><span class='spinner-border spinner-border-sm text-muted'></span> Loading...</div>");
-    $.post("/demo/dtrservicesdemo/manpower/mp_data/load/",
+    $.post("/dtrservices/manpower/mp_data/load/",
       {
         load: 'day',
         dt: $(e1).attr("dt"),
@@ -1021,7 +1021,7 @@ $(document).ready(function () {
         }
 
           if(dhdready==1 && dhdarrset.length>0){
-            $.post("/demo/dtrservicesdemo/actions/dhd.php",
+            $.post("/dtrservices/actions/dhd.php",
           {
             action: $("#dhd_action").val(),
             id: $("#dhd_id").val(),
@@ -1051,7 +1051,7 @@ $(document).ready(function () {
         $("#dhd_emp").val(button.data('reqemp') ? button.data('reqemp') : "");
         $("#dhd_change").val(button.data('reqchange') ? button.data('reqchange') : "");
         $("#form_dhd *").attr("disabled", true);
-        $.post("/demo/dtrservicesdemo/manpower/dhd_data/load/", { get_dhd: $("#dhd_id").val() }, function(data1){
+        $.post("/dtrservices/manpower/dhd_data/load/", { get_dhd: $("#dhd_id").val() }, function(data1){
           $("#dhd-table tbody").html(data1);
           $("#form_dhd *").attr("disabled", false);
         });
@@ -1104,7 +1104,7 @@ $(document).ready(function () {
       $(elem).closest(".tab-content").find("table tbody input.approvechkitem:checked").each(function(){
         data.push([ $(this).data("reqid"), $(this).data("reqemp") ]);
       });
-      $.post("/demo/dtrservicesdemo/actions/process.php", 
+      $.post("/dtrservices/actions/process.php", 
       {
         action: "deny dhd",
         data: data
@@ -1149,7 +1149,7 @@ $(function(){
           if(signaturePad.isEmpty()){
         alert("Please provide signature");
       }else{
-            $.post("/demo/dtrservicesdemo/actions/process.php",
+            $.post("/dtrservices/actions/process.php",
         {
           action: "approve " + $("#sign_type").val(),
           id: $("#sign_id").val(),

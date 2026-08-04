@@ -194,7 +194,7 @@
         							</a>
     							</li>
 								<?php
-									require_once($sr_root."/db/db.php");
+									require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 								
 									$date = date("Y-m-d");
 								    $Year = date("Y");
@@ -277,106 +277,6 @@
         								<img src="/zen/assets/img/notif.png" width="30" height="30">
         							</a>
     							</li>
-    							<div class="modal fade" id="event-Modal" tabindex="-1" role="dialog">
-                                    <div class="modal-dialog" role="document">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h6 class="modal-title">Add Events</h6>
-                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                                    <span aria-hidden="true"><i class="icofont icofont-close-circled"></i></span>
-                                                </button>
-                                            </div>
-                                            <div class="modal-body" style="padding: 5px;">
-                                                <div id="personal-form">
-                        						  <div id="pers-name">
-                        						      <label style="width:50% !important;">Event Title<span id="required">*</span>  
-                        						          <input class="form-control" type="text" name="eventname" id="eventInput" value=""/>
-                        						      </label>
-                        						      <label style="width:45% !important;">Event Date<span id="required">*</span> 
-                        						          <input class="form-control" type="date" name="eventdate" id="eventdateInput" value=""/>
-                        						      </label>
-                        						  </div>
-                        						  <div id="pers-name">
-                        						      <label style="width:50% !important;">Start Date<span id="required">*</span>  
-                        						          <input class="form-control" type="date" name="startdate" id="sdateInput" value=""/>
-                        						      </label>
-                        						      <label style="width:45% !important;">End Date<span id="required">*</span> 
-                        						          <input class="form-control" type="date" name="enddate" id="edateInput" value=""/>
-                        						      </label>
-                        						  </div>
-                        						  <div id="pers-name">
-                        						      <label style="width:50% !important;">Event Img(563x286 px)<span id="required">*</span> 
-                        						          <input class="form-control" type="file" name="eventimg" id="eventimgInput" value=""/>
-                        						      </label>
-                        						      <label style="width:45% !important;">
-													      Sample Img
-													      <input style="pointer-events: auto; cursor: pointer;" 
-													             type="text" 
-													             value="Click to view image" 
-													             readonly 
-													             class="clickable-input" 
-													             onclick="openImage()">
-													  </label>
-                        						  </div>
-                        						</div>
-                        						<div id="event-message" class="alert" style="display: none;"></div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-default btn-mini " data-dismiss="modal">Close</button>
-                                                <button type="button" class="btn btn-primary btn-mini waves-light" id="save-event">Save changes</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <script type="text/javascript">
-                                	function openImage() {
-										console.log('Input clicked');
-										window.open('https://i.pinimg.com/564x/b0/68/56/b06856d929b6066d2281c9f065a29e31.jpg', '_blank');
-									}
-									  document.getElementById('save-event').addEventListener('click', function () {
-									    // Get input values
-									    const eventname = document.getElementById('eventInput').value;
-									    const eventdate = document.getElementById('eventdateInput').value;
-									    const startdate = document.getElementById('sdateInput').value;
-									    const enddate = document.getElementById('edateInput').value;
-									    const eventimg = document.getElementById('eventimgInput').files[0]; // Get file
-									
-									    if (!eventname || !eventdate || !startdate || !enddate || !eventimg) {
-									        alert('All fields are required!');
-									        return;
-									    }
-									
-									    // Create FormData object
-									    const formData = new FormData();
-									    formData.append('eventname', eventname);
-									    formData.append('eventdate', eventdate);
-									    formData.append('startdate', startdate);
-									    formData.append('enddate', enddate);
-									    formData.append('eventimg', eventimg);
-									
-									    // Send AJAX request
-									    fetch('save_event', {
-									        method: 'POST',
-									        body: formData,
-									    })
-									    .then(response => response.json())
-									    .then(data => {
-									        if (data.success) {
-									            alert('Event saved successfully!');
-									            document.getElementById("eventInput").value = "";
-            									document.getElementById("eventdateInput").value = "";
-            									document.getElementById("sdateInput").value = "";
-            									document.getElementById("edateInput").value = "";
-            									document.getElementById("eventimgInput").value = "";
-									        } else {
-									            alert('Error: ' + data.message);
-									        }
-									    })
-									    .catch(error => {
-									        console.error('Error:', error);
-									    });
-									});
-                                </script>
 								<li class="user-profile header-notification">
 									<a href="#!">
 										<?php

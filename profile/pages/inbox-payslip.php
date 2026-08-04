@@ -1,7 +1,7 @@
 <?php
-include_once '../db/database.php';
-require_once "../db/core.php";
-include_once '../db/mysqlhelper.php';
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 $pdo = $pdo ?? Database::connect();
 $hr_pdo = $hr_pdo ?? HRDatabase::connect();
 $user_empno = $user_empno ?? fn_get_user_info('bi_empno');

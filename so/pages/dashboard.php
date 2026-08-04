@@ -1,5 +1,5 @@
 <?php
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
 $load = 'sodtr';
@@ -752,7 +752,7 @@ $d2 = $_SESSION['d2'];
         $("#mpdata").on("click", ".checklist1", function(){
           // $("#"+$(this).data("reqtype")+"-tab").click();
           var dt = $(this).data("dt").split("/");
-          window.open('/demo/dtrservicesdemo/manpower/' + $(this).data("reqtype") + '/' + dt[0] + '/' + dt[1], '_blank');
+          window.open('/dtrservices/manpower/' + $(this).data("reqtype") + '/' + dt[0] + '/' + dt[1], '_blank');
         });
 
 
@@ -828,7 +828,7 @@ $d2 = $_SESSION['d2'];
         formData.append("prevfile", $("#prevfile").text().trim());
 
         $.ajax({
-              url: "/demo/dtrservicesdemo/actions/dtr.php",
+              url: "/dtrservices/actions/dtr.php",
               type: 'POST',
               data: formData, 
               contentType: false, // Set to false, as we are sending FormData
@@ -891,7 +891,7 @@ $d2 = $_SESSION['d2'];
       $("#form_update").submit(function(e){
         e.preventDefault();
         $("#form_update button[type='submit']").prop("disabled", true);
-        $.post("/demo/dtrservicesdemo/actions/dtr.php",{
+        $.post("/dtrservices/actions/dtr.php",{
           action:"reqtoupdate",
           id: $("#dtru_id").val(),
           dtr_id: $("#dtru_dtrid").val(),
@@ -953,7 +953,7 @@ $d2 = $_SESSION['d2'];
       $("#form_deldtr").submit(function(e){
         e.preventDefault();
         if(confirm("Request to DELETE this record?")){
-          $.post("/demo/dtrservicesdemo/actions/dtr.php", 
+          $.post("/dtrservices/actions/dtr.php", 
           {
             action:"reqtodel",
             id: $("#deldtr_id").val(),
@@ -1045,7 +1045,7 @@ $d2 = $_SESSION['d2'];
           formData.append("dtr", JSON.stringify(arr));
           // formData.append("files[]", files);
           $.ajax({
-                url: "/demo/dtrservicesdemo/actions/dtr.php",
+                url: "/dtrservices/actions/dtr.php",
                 type: 'POST',
                 data: formData, 
                 contentType: false, // Set to false, as we are sending FormData
@@ -1061,7 +1061,7 @@ $d2 = $_SESSION['d2'];
               $("#form_dtr_batch button[type='submit']").prop("disabled", false);
                 }
             });
-          // $.post("/demo/dtrservicesdemo/actions/dtr.php",{
+          // $.post("/dtrservices/actions/dtr.php",{
           //  action: "addbatch",
           //  empno: $("#dtr_emp_batch").val(),
           //  dtr: arr
@@ -1144,7 +1144,7 @@ $d2 = $_SESSION['d2'];
         if(err > 0){
           return false;
         }else{
-          $.post("/demo/dtrservicesdemo/actions/dtr.php",{
+          $.post("/dtrservices/actions/dtr.php",{
             action: "addsobatch",
             dtr: arr
           },function(res1){
@@ -1242,7 +1242,7 @@ $d2 = $_SESSION['d2'];
       }
       $(thistab).html("<div class='mb-3'><span class='spinner-border spinner-border-sm text-muted'></span> Loading...</div>");
       if(ajax1 && ajax1.readyState != 4){ajax1.abort();}
-      ajax1 = $.post("/demo/dtrservicesdemo/manpower/mp_data/load/",
+      ajax1 = $.post("/dtrservices/manpower/mp_data/load/",
         {
           load: tabid != 'calendar-tab' ? tabid.replace("-tab", "") : 'month',
           // y: $("#mpdatey").val(),
@@ -1385,7 +1385,7 @@ $d2 = $_SESSION['d2'];
     $("#divmp").hide();
     $("#divmpinfo").show();
     $("#mpinfodata").html("<div class='mb-3'><span class='spinner-border spinner-border-sm text-muted'></span> Loading...</div>");
-    $.post("/demo/dtrservicesdemo/manpower/mp_data/load/",
+    $.post("/dtrservices/manpower/mp_data/load/",
       {
         load: 'day',
         dt: $(e1).attr("dt"),
@@ -1408,7 +1408,7 @@ $d2 = $_SESSION['d2'];
 
   // --------------- notify
     function notify() {
-      $.post("/demo/dtrservicesdemo/manpower/mp_data/load/", { load: "notify" }, function(data){
+      $.post("/dtrservices/manpower/mp_data/load/", { load: "notify" }, function(data){
         var obj = JSON.parse(data);
         var checked_dtr = $("#reqdata .nav-tabs li.nav-item a[href='#dtr_checked'] span i").length > 0 ? parseInt($("#reqdata .nav-tabs li.nav-item a[href='#dtr_checked'] span i").text()) : 0;
         $("#reqdata .nav-tabs li.nav-item a:not([href='#dtr_checked']) span").html("");
@@ -1436,12 +1436,12 @@ $d2 = $_SESSION['d2'];
           }
 
           cnt = parseInt(obj['pending'][y]) + parseInt(obj['approved'][y] ? obj['approved'][y] : 0) + parseInt(obj['req'][y] ? obj['req'][y] : 0);
-          $("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").html("");
+          $("a[href='/dtrservices/manpower/"+y+"'] p span").html("");
           if(cnt > 0){
-            if($("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").length > 0){
-              $("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
+            if($("a[href='/dtrservices/manpower/"+y+"'] p span").length > 0){
+              $("a[href='/dtrservices/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
             }else{
-              $("a[href='/demo/dtrservicesdemo/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
+              $("a[href='/dtrservices/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
             }
           }
         }
@@ -1483,7 +1483,7 @@ $d2 = $_SESSION['d2'];
     }
 
     function approvedureq(id1) {
-      $.post("/demo/dtrservicesdemo/actions/dtr.php", 
+      $.post("/dtrservices/actions/dtr.php", 
         {
           action: "approvedureq",
           id: id1
@@ -1499,7 +1499,7 @@ $d2 = $_SESSION['d2'];
     }
 
     function denydureq(id1) {
-      $.post("/demo/dtrservicesdemo/actions/dtr.php", 
+      $.post("/dtrservices/actions/dtr.php", 
         {
           action: "denydureq",
           id: id1
@@ -1515,7 +1515,7 @@ $d2 = $_SESSION['d2'];
     }
 
     function deldureq(id1) {
-      $.post("/demo/dtrservicesdemo/actions/dtr.php", 
+      $.post("/dtrservices/actions/dtr.php", 
         {
           action: "deldureq",
           id: id1
@@ -1538,7 +1538,7 @@ $d2 = $_SESSION['d2'];
 
     function checkdtr(id1, type1) {
       if(confirm("Are you sure?")){
-        $.post("/demo/dtrservicesdemo/actions/dtr.php", 
+        $.post("/dtrservices/actions/dtr.php", 
           {
             action: "checkdtr",
             id: id1,

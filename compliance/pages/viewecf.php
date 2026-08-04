@@ -1,7 +1,7 @@
 <?php
-require_once($com_root."/db/database.php"); 
-require_once($com_root."/db/core.php"); 
-require_once($com_root."/db/mysqlhelper.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/database.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/core.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/mysqlhelper.php");
 
 date_default_timezone_set('Asia/Manila');
 $hr_pdo = HRDatabase::connect();
@@ -28,7 +28,7 @@ if (isset($_SESSION['user_id'])) {
   }
   if(isset($_GET["id"])){
     $ecfid=$_GET["id"];
-    foreach ($hr_pdo->query("SELECT * FROM demo_db_ecf2.tbl_request LEFT JOIN tbl_separation_type ON sep_id=ecf_separation WHERE ecf_id='$ecfid'") as $ecfr) {
+    foreach ($hr_pdo->query("SELECT * FROM db_ecf2.tbl_request LEFT JOIN tbl_separation_type ON sep_id=ecf_separation WHERE ecf_id='$ecfid'") as $ecfr) {
       $ecfempno=$ecfr["ecf_empno"];
       $separation=$ecfr["sep_name"];
       $lastday=$ecfr["ecf_lastday"];
@@ -140,7 +140,7 @@ if (isset($_SESSION['user_id'])) {
                 <div id="div-req-disp">
                   <div class="form-horizontal">
                     <?php
-                        foreach ($hr_pdo->query("SELECT * FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='$ecfid' AND (catstat_emp='$user_empno' OR FIND_IN_SET('$user_empno', cat_checker) > 0)
+                        foreach ($hr_pdo->query("SELECT * FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='$ecfid' AND (catstat_emp='$user_empno' OR FIND_IN_SET('$user_empno', cat_checker) > 0)
                           ORDER BY cat_order ASC, cat_priority ASC") as $cat_r) { ?>
                           <div class="form-group">
                             <label class="col-md-12">Requirements of <?=$cat_r["cat_title"];?>:</label>
@@ -159,7 +159,7 @@ if (isset($_SESSION['user_id'])) {
                                   <?php 
                                     $ecfsql="SELECT bi_empno, bi_empfname, bi_emplname, bi_empext FROM tbl201_basicinfo LEFT JOIN tbl201_jobinfo ON ji_empno=bi_empno WHERE datastat='current' AND ji_remarks='Active'";
 
-                                    foreach ($hr_pdo->query("SELECT * FROM demo_db_ecf2.tbl_requirement LEFT JOIN demo_db_ecf2.tbl_cat_req ON catreq_reqid=req_id AND catreq_catstatid='".$cat_r["catstat_id"]."' WHERE req_cat='".$cat_r["cat_id"]."'") as $req_r) { ?>
+                                    foreach ($hr_pdo->query("SELECT * FROM db_ecf2.tbl_requirement LEFT JOIN db_ecf2.tbl_cat_req ON catreq_reqid=req_id AND catreq_catstatid='".$cat_r["catstat_id"]."' WHERE req_cat='".$cat_r["cat_id"]."'") as $req_r) { ?>
 
                                       <?php
                                           if($cat_r["catstat_sign"]!='' && !($cat_r["catstat_dtchecked"]=='' || $cat_r["catstat_dtchecked"]=='0000-00-00 00:00:00')){ ?>
@@ -217,7 +217,7 @@ if (isset($_SESSION['user_id'])) {
 
                   <div class="form-horizontal">
                     <?php
-                        foreach ($hr_pdo->query("SELECT * FROM demo_db_ecf2.tbl_req_category LEFT JOIN demo_db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='$ecfid' AND catstat_emp!='$user_empno'
+                        foreach ($hr_pdo->query("SELECT * FROM db_ecf2.tbl_req_category LEFT JOIN db_ecf2.tbl_category ON cat_id=catstat_cat WHERE catstat_ecfid='$ecfid' AND catstat_emp!='$user_empno'
                           ORDER BY cat_order ASC, cat_priority ASC") as $cat_r) { ?>
                           <div class="form-group">
                             <label class="col-md-12">Requirements of <u><?=$cat_r["cat_title"];?></u></label>
@@ -263,7 +263,7 @@ if (isset($_SESSION['user_id'])) {
                     </thead>
                     <tbody>
                       <?php   $filecnt=1;
-                          foreach($hr_pdo->query("SELECT * FROM demo_db_ecf2.tbl_uploads WHERE up_ecfid='$ecfid'") as $file_r){ ?>
+                          foreach($hr_pdo->query("SELECT * FROM db_ecf2.tbl_uploads WHERE up_ecfid='$ecfid'") as $file_r){ ?>
 
                             <tr>
                               <td><?=$filecnt?></td>
@@ -296,7 +296,7 @@ if (isset($_SESSION['user_id'])) {
                     </thead>
                     <tbody>
                       <?php
-                          foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM demo_db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=1 ORDER BY print_date DESC") as $pr) { ?>
+                          foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=1 ORDER BY print_date DESC") as $pr) { ?>
                             <tr>
                               <td><a href='print-ecf.php?ecf=<?=$ecfid?>&print=clearance&printid=<?=$pr["print_id"]?>' class='btn btn-info btn-sm' target='_blank'>View</a></td>
                               <td><?=date("F d, Y h:i:s A",strtotime($pr["print_date"]))?></td>
@@ -324,7 +324,7 @@ if (isset($_SESSION['user_id'])) {
                     </thead>
                     <tbody>
                       <?php
-                          foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM demo_db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=2 ORDER BY print_date DESC") as $pr) { ?>
+                          foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=2 ORDER BY print_date DESC") as $pr) { ?>
                             <tr>
                               <td><a href='print-ecf.php?ecf=<?=$ecfid?>&print=clearance2&printid=<?=$pr["print_id"]?>' class='btn btn-info btn-sm' target='_blank'>View</a></td>
                               <td><?=date("F d, Y h:i:s A",strtotime($pr["print_date"]))?></td>
@@ -353,7 +353,7 @@ if (isset($_SESSION['user_id'])) {
                     </thead>
                     <tbody>
                       <?php
-                          foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM demo_db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=5 ORDER BY print_date DESC") as $pr) { ?>
+                          foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=5 ORDER BY print_date DESC") as $pr) { ?>
                             <tr>
                               <td><a href='print-ecf.php?ecf=<?=$ecfid?>&print=clearance5&printid=<?=$pr["print_id"]?>' class='btn btn-info btn-sm' target='_blank'>View</a></td>
                               <td><?=date("F d, Y h:i:s A",strtotime($pr["print_date"]))?></td>
@@ -382,7 +382,7 @@ if (isset($_SESSION['user_id'])) {
                       </thead>
                       <tbody>
                         <?php
-                            foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM demo_db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=3 ORDER BY print_date DESC") as $pr) { ?>
+                            foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=3 ORDER BY print_date DESC") as $pr) { ?>
                               <tr>
                                 <td><a href='print-ecf.php?ecf=<?=$ecfid?>&print=clearance3&printid=<?=$pr["print_id"]?>' class='btn btn-info btn-sm' target='_blank'>View</a></td>
                                 <td><?=date("F d, Y h:i:s A",strtotime($pr["print_date"]))?></td>
@@ -410,7 +410,7 @@ if (isset($_SESSION['user_id'])) {
                       </thead>
                       <tbody>
                         <?php
-                            foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM demo_db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=4 ORDER BY print_date DESC") as $pr) { ?>
+                            foreach ($hr_pdo->query("SELECT print_id, print_date, print_by FROM db_ecf2.tbl_prints WHERE print_ecfid='$ecfid' AND print_type=4 ORDER BY print_date DESC") as $pr) { ?>
                               <tr>
                                 <td><a href='print-ecf.php?ecf=<?=$ecfid?>&print=clearance4&printid=<?=$pr["print_id"]?>' class='btn btn-info btn-sm' target='_blank'>View</a></td>
                                 <td><?=date("F d, Y h:i:s A",strtotime($pr["print_date"]))?></td>

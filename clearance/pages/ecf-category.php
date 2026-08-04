@@ -1,6 +1,6 @@
 <?php
 date_default_timezone_set('Asia/Manila');
-require_once($sr_root . '/db/HR.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/HR.php");
 $db_hr = new HR();
 ?>
 <div class="container-fluid">

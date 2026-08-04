@@ -1,5 +1,5 @@
 <?php
-require_once($fl_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 $edit_ref = $_GET['ref'] ?? null;
 if (!$edit_ref) exit("No booking specified.");
 
@@ -58,7 +58,12 @@ $flights = array_values($flights); // reset to indexed array
 <script>
   let departmentCode = "<?= $department ?>";
 </script>
-
+<style>
+  .input-error {
+    border: 2px solid #e74c3c !important;
+    background: #fff5f5;
+  }
+</style>
 <div class="page-wrapper">
   <!-- Page header start -->
   <div class="page-header">
@@ -292,7 +297,7 @@ $flights = array_values($flights); // reset to indexed array
   <!-- Page body end -->
 </div>
 <script>
-  function updateBaggageIndicator(pid, fIndex) {
+function updateBaggageIndicator(pid, fIndex) {
   const selected = document.querySelector(`input[name='baggage-${pid}-${fIndex}']:checked`);
   const indicator = document.getElementById(`baggage-indicator-${pid}-${fIndex}`);
   if (selected && indicator) {
@@ -325,6 +330,93 @@ function updateBaggageSelection(pid, fIndex) {
     // const from = tabButton.textContent.split(" (")[0];
     // tabButton.textContent = `${from} (${value})`;
   }
+}
+
+function validateFlights() {
+  let valid = true;
+  const seenFlights = new Set();
+
+  document.querySelectorAll(".flight-entry").forEach(flight => {
+    flight.querySelectorAll(".input-error").forEach(e => e.classList.remove("input-error"));
+
+    const from = flight.querySelector(".departure");
+    const to = flight.querySelector(".arrival");
+    const date = flight.querySelector(".dateflight");
+    const time = flight.querySelector(".timeflight");
+    const airline = flight.querySelector("select");
+
+    // Required fields
+    [from, to, date, time, airline].forEach(f => {
+      if (!f || !f.value.trim()) {
+        f.classList.add("input-error");
+        valid = false;
+      }
+    });
+
+    // Same origin & destination
+    if (from.value && to.value && from.value === to.value) {
+      from.classList.add("input-error");
+      to.classList.add("input-error");
+      showAlert("Origin and Destination must not be the same.", "danger");
+      valid = false;
+    }
+
+    // Duplicate flight check
+    const key = `${from.value}-${to.value}-${date.value}-${time.value}-${airline.value}`;
+    if (seenFlights.has(key)) {
+      showAlert("Duplicate flight details detected.", "danger");
+      [from, to, date, time, airline].forEach(f => f.classList.add("input-error"));
+      valid = false;
+    }
+    seenFlights.add(key);
+  });
+
+  return valid;
+}
+
+function validatePassengers() {
+  let valid = true;
+  const seenPassengers = new Set();
+  const today = new Date();
+
+  document.querySelectorAll(".passenger-entry").forEach(pass => {
+    pass.querySelectorAll(".input-error").forEach(e => e.classList.remove("input-error"));
+
+    const fname = pass.querySelector("input[name='givenname']");
+    const lname = pass.querySelector("input[name='surname']");
+    const bday = pass.querySelector("input[name='birthday']");
+    const contact = pass.querySelector("input[name='contact']");
+    const sex = pass.querySelector("select[name='sex']");
+
+    [fname, lname, bday, contact, sex].forEach(f => {
+      if (!f || !f.value.trim()) {
+        f.classList.add("input-error");
+        valid = false;
+      }
+    });
+
+    // Age validation (2 years)
+    if (bday.value) {
+      const birthDate = new Date(bday.value);
+      const age = (today - birthDate) / (1000 * 60 * 60 * 24 * 365);
+      if (age < 2) {
+        bday.classList.add("input-error");
+        showAlert("Passenger must be at least 2 years old.", "danger");
+        valid = false;
+      }
+    }
+
+    // Duplicate passenger
+    const key = `${fname.value}-${lname.value}-${bday.value}`;
+    if (seenPassengers.has(key)) {
+      showAlert("Duplicate passenger detected.", "danger");
+      [fname, lname, bday].forEach(f => f.classList.add("input-error"));
+      valid = false;
+    }
+    seenPassengers.add(key);
+  });
+
+  return valid;
 }
 
 
@@ -421,21 +513,46 @@ function updateSteps() {
             if (container) {
               const inputName = `baggage-${pid}-${fIndex}`;
               
-              container.innerHTML = data.map(bag => {
-                // const value = `${bag.bag_kg}kg`;
-                const value = `${bag.bag_kg}kg ${bag.bag_pc} bag allowed`;
-                const isChecked = selectedBaggage === value;
-                return `
-                  <label class="baggage-card">
-                    <input type="radio" name="${inputName}" value="${value}" ${isChecked ? "checked" : ""}
-                      onchange="updateBaggageSelection('${pid}', ${fIndex})">
-                    <div class="card-body">
-                      <img src="/zen/flight/assets/img/luggage.png" alt="${value}">
-                      <p>${value} baggage allowance</p>
-                    </div>
-                  </label>
-                `;
-              }).join('');
+              // container.innerHTML = data.map(bag => {
+              //   // const value = `${bag.bag_kg}kg`;
+              //   const value = `${bag.bag_kg}kg ${bag.bag_pc} bag allowed`;
+              //   const isChecked = selectedBaggage === value;
+              //   return `
+              //     <label class="baggage-card">
+              //       <input type="radio" name="${inputName}" value="${value}" ${isChecked ? "checked" : ""}
+              //         onchange="updateBaggageSelection('${pid}', ${fIndex})">
+              //       <div class="card-body">
+              //         <img src="/zen/flight/assets/img/luggage.png" alt="${value}">
+              //         <p>${value} baggage allowance</p>
+              //       </div>
+              //     </label>
+              //   `;
+              // }).join('');
+
+              const options = [
+                  { value: "No baggage", label: "No baggage (0kg)" },
+                  ...data.map(bag => ({
+                    value: `${bag.bag_kg}kg ${bag.bag_pc} bag allowed`,
+                    label: `${bag.bag_kg}kg ${bag.bag_pc} bag allowed`
+                  }))
+                ];
+
+                container.innerHTML = options.map(opt => {
+                  const isChecked = selectedBaggage === opt.value;
+                  return `
+                    <label class="baggage-card">
+                      <input type="radio"
+                             name="${inputName}"
+                             value="${opt.value}"
+                             ${isChecked ? "checked" : ""}
+                             onchange="updateBaggageSelection('${pid}', ${fIndex})">
+                      <div class="card-body">
+                        <img src="/zen/flight/assets/img/luggage.png">
+                        <p>${opt.label}</p>
+                      </div>
+                    </label>
+                  `;
+                }).join('');
 
               // Update the tab button text if a selection is made
               if (selectedBaggage !== "No baggage") {
@@ -584,7 +701,25 @@ function activateTab(passIndex, flightIndex) {
   });
 }
 
+// nextBtn.onclick = () => {
+//   if (currentStep < steps.length - 1) {
+//     currentStep++;
+//     updateSteps();
+//   } else {
+//     saveBooking();
+//   }
+// };
 nextBtn.onclick = () => {
+  if (currentStep === 0 && !validateFlights()) {
+    showAlert("Please complete and correct flight details.", "danger");
+    return;
+  }
+
+  if (currentStep === 1 && !validatePassengers()) {
+    showAlert("Please complete and correct passenger details.", "danger");
+    return;
+  }
+
   if (currentStep < steps.length - 1) {
     currentStep++;
     updateSteps();
@@ -592,6 +727,7 @@ nextBtn.onclick = () => {
     saveBooking();
   }
 };
+
 
 prevBtn.onclick = () => {
   if (currentStep > 0) {
@@ -650,12 +786,16 @@ function duplicateFlight() {
 
 
 function attachCurrencyInputListener(input) {
+  const rawInput = input.closest('.flight-entry')?.querySelector('.rawAmount');
+
   input.addEventListener('input', function (e) {
     let cleanValue = e.target.value.replace(/[^0-9.]/g, '');
-    const floatValue = parseFloat(cleanValue);
+    e.target.value = cleanValue;
+    if (rawInput) rawInput.value = cleanValue; 
+  });
 
-    const rawInput = e.target.closest('.flight-entry')?.querySelector('.rawAmount');
-
+  input.addEventListener('blur', function (e) {
+    let floatValue = parseFloat(e.target.value);
     if (!isNaN(floatValue)) {
       if (rawInput) rawInput.value = floatValue.toFixed(2);
       e.target.value = floatValue.toLocaleString('en-PH', {
@@ -665,6 +805,13 @@ function attachCurrencyInputListener(input) {
     } else {
       if (rawInput) rawInput.value = '';
       e.target.value = '';
+    }
+  });
+
+  // Optional: also format if Enter is pressed
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      input.blur(); 
     }
   });
 }
@@ -771,91 +918,7 @@ function duplicatePassenger() {
   updateSteps();
 }
 
-function deletePassenger(button) {
-    const container = document.getElementById("passenger-container");
-    const entry = button.closest(".passenger-entry");
-    
-    // Always require at least one passenger
-    if (container.querySelectorAll(".passenger-entry").length <= 1) {
-        alert("At least one passenger is required.");
-        return;
-    }
 
-    // Get passenger details
-    const passengerIdInput = entry.querySelector('input[name="fID"]');
-    const passengerId = passengerIdInput ? passengerIdInput.value : null;
-    
-    // If fID is empty, just remove from DOM
-    if (!passengerId) {
-        container.removeChild(entry);
-        return;
-    }
-
-    // For existing passengers (with fID), do full deletion process
-    const lastName = entry.querySelector('input[name="surname"]').value;
-    const firstName = entry.querySelector('input[name="givenname"]').value;
-    
-    // Get all associated flights
-    const flightData = [];
-    document.querySelectorAll('.flight-entry').forEach((flight, index) => {
-        const departure = flight.querySelector('.departure').value;
-        const arrival = flight.querySelector('.arrival').value;
-        const date = flight.querySelector('.dateflight').value;
-        
-        if (departure && arrival && date) {
-            flightData.push({
-                index,
-                departure,
-                arrival,
-                date,
-                last_name: lastName // Include for server-side matching
-            });
-        }
-    });
-
-    if (!confirm(`Delete passenger ${firstName} ${lastName} from all ${flightData.length} routes?`)) {
-        return;
-    }
-
-    // AJAX call to server
-    fetch('flight_modifier', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'softDeletePassenger',
-            passenger_id: passengerId,
-            last_name: lastName,
-            routes: flightData
-        })
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            entry.remove();
-            showAlert(`Deleted passenger from ${data.deleted_count} routes`, 'success');
-        } else {
-            throw new Error(data.message || 'Deletion failed');
-        }
-    })
-    .catch(error => {
-        console.error('Deletion error:', error);
-        showAlert(`Failed to delete passenger: ${error.message}`, 'error');
-    });
-}
-// function deletePassenger(button) {
-//   const container = document.getElementById("passenger-container");
-//   const entry = button.closest(".passenger-entry");
-//   if (container.querySelectorAll(".passenger-entry").length > 1) {
-//     container.removeChild(entry);
-//   } else {
-//     alert("At least one passenger entry is required.");
-//   }
-// }
 
 
 function attachAirportInputListeners() {
@@ -887,7 +950,7 @@ function attachAirportInputListeners() {
 }
 
 function saveBooking() {
-  const refnumInput = document.querySelector(".flight-id");
+  const refnumInput = document.querySelector("input[name='flight_id']");
   const refnum = refnumInput ? refnumInput.value.trim() : "";
   const dept = document.querySelector("input[name='depts']")?.value.trim() || "";
 
@@ -897,7 +960,6 @@ function saveBooking() {
   const passengers = [];
 
   passengerEntries.forEach((pass, pIndex) => {
-    const fID = pass.querySelector("input[name='fID']")?.value.trim() || "";
     const fname = pass.querySelector("input[name='givenname']")?.value.trim() || "";
     const mname = pass.querySelector("input[name='midname']")?.value.trim() || "";
     const lname = pass.querySelector("input[name='surname']")?.value.trim() || "";
@@ -914,7 +976,7 @@ function saveBooking() {
       baggagePerFlight.push(baggage ? baggage.value : "No baggage");
     });
   
-    passengers.push({ fID, refnum, fname, mname, lname, sex, bday, dept, contact, reason, baggage: baggagePerFlight });
+    passengers.push({ refnum, fname, mname, lname, sex, bday, dept, contact, reason, baggage: baggagePerFlight });
   });
 
   const flights = [];
@@ -927,17 +989,11 @@ function saveBooking() {
     const prices = flight.querySelector(".rawAmount")?.value || "0.00";
     // const prices = flight.querySelector("input[name='price[]']")?.value || "0.00";
 
-    const idInput = flight.querySelector(".flight-id");
+    const idInput = flight.querySelector("input[name='flight_id[]']");
     const flight_id = idInput ? idInput.value.trim() : "";
 
     flights.push({ flight_id, arr, dep, date, time, airline, prices });
   });
-
-  if (passengers.length === 0 || flights.length === 0) {
-        alert("Please add at least one passenger and one flight");
-        return;
-    }
-
 
   $.ajax({
     url: "flight_modifier",
@@ -949,12 +1005,11 @@ function saveBooking() {
     },
     success: function (res) {
       alert(res);
-      location.reload();
+      window.location.reload('dashboard');
     },
     error: function () {
       alert("Failed to save booking.");
     }
   });
 }
-
 </script>

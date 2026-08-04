@@ -37,6 +37,7 @@
 	<link rel="stylesheet" type="text/css" href="/zen/admin_template/assets/pages/flag-icon/flag-icon.min.css">   
 	<!-- Style.css -->
 	<link rel="stylesheet" type="text/css" href="/zen/admin_template/assets/css/fstyle.css">
+	<!-- <link rel="stylesheet" type="text/css" href="/zen/admin_template/assets/css/style.css"> -->
 	<!--forms-wizard css-->
     <link rel="stylesheet" type="text/css" href="/zen/admin_template/bower_components/jquery.steps/css/jquery.steps.css">
     <!-- jquery file upload Frame work -->
@@ -59,6 +60,7 @@
    	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
 	<link rel="stylesheet" type="text/css" href="/zen/assets/css/Portal.css">
+	<link rel="stylesheet" type="text/css" href="/zen/assets/css/profile.css">
 	<!-- <link rel="stylesheet" type="text/css" href="/zen/assets/css/newsfeed.css"> -->
 	<!-- <link rel="stylesheet" type="text/css" href="/zen/assets/css/memo.css"> -->
 	<!-- <link rel="stylesheet" type="text/css" href="/zen/assets/css/leave.css"> -->
@@ -100,8 +102,11 @@
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/3.0.0-beta.4/signature_pad.umd.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
-	<!-- jQuery (required) -->
-	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+	<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 	
 	<!-- Bootstrap JS (required for modal) -->
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
@@ -116,7 +121,12 @@
 	  gtag('config', 'G-BQ6QJNGV2N');
 	</script>
 </head>
-
+<style>
+	.userlist-box{
+		gap: 15px !important;
+		font-size: 12px;
+	}
+</style>
 <body>
 	<!-- Pre-loader end -->
 	<!-- Menu header start -->
@@ -160,7 +170,7 @@
         							</a>
     							</li>
 								<?php
-									require_once($fl_root."/db/db.php");
+									require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 									$date = date("Y-m-d");
 								    $Year = date("Y");
 								    $Month = date("m");
@@ -168,7 +178,8 @@
 								    $yearMonth = date("Y-m");
 								
 								    try {
-								        $hr_db = Database::getConnection('hr');
+								        // $hr_db = Database::getConnection('hr');
+								        $portal_db = Database::getConnection('port');
 								    } catch (\PDOException $e) {
 								        throw new \PDOException($e->getMessage(), (int)$e->getCode());
 								    }
@@ -178,35 +189,36 @@
 								        
 								        error_log("User ID: $user_id");
 								
-								        $stmt = $hr_db->prepare("SELECT 
-								                a.bi_empno, 
-								                a.bi_empfname, a.bi_empmname, a.bi_emplname,
-								                CONCAT(a.bi_empfname, ' ', a.bi_empmname, ' ', a.bi_emplname) AS fullname, 
+								        $stmt = $portal_db->prepare("SELECT 
+								                a.pers_empno, 
+								                a.pers_firstname, a.pers_midname, a.pers_lastname,
+								                CONCAT(a.pers_firstname, ' ', a.pers_midname, ' ', a.pers_lastname) AS fullname, 
 								                jd.jd_title, 
-								                CONCAT(head.bi_emplname, ' ', head.bi_empfname) AS headNAME,
+								                CONCAT(head.pers_lastname, ' ', head.pers_firstname) AS headNAME,
 								                b.jrec_reportto,
 								                b.`jrec_outlet`,
 								                b.`jrec_area`,
 								                b.`jrec_department`,
 								                jd.`jd_title`,
 								                jd.`jd_company` as company,
-								                pi.`pi_dbirth`,
-								                pi.`pi_sex`
+								                a.`pers_birthdate`,
+								                a.`pers_sex`
 								            FROM 
-								                tbl201_basicinfo a
+								                tbl201_persinfo a
+								            LEFT JOIN tbl201_basicinfo bi ON a.pers_empno = bi.bi_empno
 								            LEFT JOIN 
-								                tbl201_jobrec b ON a.bi_empno = b.jrec_empno
+								                tbl201_jobrec b ON a.pers_empno = b.jrec_empno
 								            LEFT JOIN 
-								                tbl201_basicinfo head ON b.jrec_reportto = head.bi_empno
+								                tbl201_persinfo head ON b.jrec_reportto = head.pers_empno
 								            LEFT JOIN 
 								                tbl_jobdescription jd ON jd.jd_code = b.jrec_position
 								            LEFT JOIN 
-								                tbl201_jobinfo ji ON ji.ji_empno = a.bi_empno
-								            LEFT JOIN 
-								                tbl201_persinfo pi ON pi.pi_empno = a.bi_empno
+								                tbl201_jobinfo ji ON ji.ji_empno = a.pers_empno
+								            -- LEFT JOIN 
+								            --     tbl201_persinfo pi ON pi.pi_empno = a.pers_empno
 								            WHERE 
-								                a.bi_empno = :user_id
-								                AND a.datastat = 'current'
+								                a.pers_empno = :user_id
+								                AND bi.datastat = 'current'
 								                AND b.jrec_type = 'Primary'
 								                AND b.jrec_status = 'Primary'
 								                AND ji.ji_remarks = 'Active'
@@ -219,10 +231,10 @@
 								        if ($user) {
 								            // error_log("Query Result: " . print_r($user, true));
 								            $username = $user['fullname'];
-								            $firstname = $user['bi_empfname'];
-								            $midname = $user['bi_empmname'];
-								            $lastname = $user['bi_emplname'];
-								            $empno = $user['bi_empno'];
+								            $firstname = $user['pers_firstname'];
+								            $midname = $user['pers_midname'];
+								            $lastname = $user['pers_lastname'];
+								            $empno = $user['pers_empno'];
 								            $position = $user['jd_title'];
 								            $reportto = $user['headNAME'];
 								            $reportID = $user['jrec_reportto'];
@@ -230,8 +242,8 @@
 								            $department = $user['jrec_department'];
 								            $outlet = $user['jrec_outlet'];
 								            $company = $user['company'];
-								            $birthday = $user['pi_dbirth'];
-								            $sex = $user['pi_sex'];
+								            $birthday = $user['pers_birthdate'];
+								            $sex = $user['pers_sex'];
 								            $date = date('F j, Y');
 								        } else {
 								            // error_log("No user found for ID: $user_id");
@@ -408,73 +420,73 @@
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="/zen/dtr" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/dtrlogs.png" width="40" height="40"><br>DTR
+                                		<img src="/zen/assets/img/dtrlogs.png" width="35" height="35"><br>DTR
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/dtr" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/gatepass.png" width="45" height="45"><br>Gatepass
+                                		<img src="/zen/assets/img/gatepass.png" width="35" height="35"><br>Gatepass
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/leave" target="_blank" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/leave.png" width="45" height="45"><br>Leave
+                                		<img src="/zen/assets/img/leave.png" width="35" height="35"><br>Leave
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/break" target="_blank" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/break.png" width="45" height="45"><br>Break
+                                		<img src="/zen/assets/img/break.png" width="35" height="35"><br>Break
                                 	</div>
                                 </a>
                             </div>
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/restday" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/restday.png" width="45" height="45"><br>RestDay
+                                		<img src="/zen/assets/img/restday.png" width="35" height="35"><br>RestDay
                                 	</div>
                                 </a>
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/schedule" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/schedule2.png" width="45" height="45"><br>Schedule
+                                		<img src="/zen/assets/img/schedule2.png" width="35" height="35"><br>Schedule
                                 	</div>
                                 </a>
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/offset" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/offset.png" width="45" height="45"><br>Offset
+                                		<img src="/zen/assets/img/offset.png" width="35" height="35"><br>Offset
                                 	</div>
                                 </a>
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/ot" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/ot.png" width="45" height="45"><br>OT
+                                		<img src="/zen/assets/img/ot.png" width="35" height="35"><br>OT
                                 	</div>
                                 </a>
                             </div>
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/drd" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/drd.png" width="45" height="45"><br>DRD
+                                		<img src="/zen/assets/img/drd.png" width="35" height="35"><br>DRD
                                 	</div>
                                 </a>
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/dhd" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/dhd.png" width="45" height="45"><br>DHD
+                                		<img src="/zen/assets/img/dhd.png" width="35" height="35"><br>DHD
                                 	</div>
                                 </a>
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/training" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/training.png" width="45" height="45"><br>Trainings
+                                		<img src="/zen/assets/img/training.png" width="35" height="35"><br>Trainings
                                 	</div>
                                 </a>
                                 <a class="media-left" href="https://teamtngc.com/hrisdtrservices/manpower/travel" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/travel.png" width="45" height="45"><br>Travel
+                                		<img src="/zen/assets/img/travel.png" width="35" height="35"><br>Travel
                                 	</div>
                                 </a>
                             </div>
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="#!" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/directory.png" width="45" height="45"><br>Sales
+                                		<img src="/zen/assets/img/directory.png" width="35" height="35"><br>Sales
                                 	</div>
                                 </a>
                             </div>
@@ -486,34 +498,34 @@
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="/zen/compliance/phoneA" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/phoneAgree.png" width="45" height="45"><br>Phone Agreement
+                                		<img src="/zen/assets/img/phoneAgree.png" width="35" height="35"><br>Phone Agreement
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/clearance" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/employee2.png" width="45" height="45"><br>Clearance
+                                		<img src="/zen/assets/img/employee2.png" width="35" height="35"><br>Clearance
                                 	</div>
                                 </a>
                                 <a class="media-left" href="#!" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/device.png" width="45" height="45"><br>Device Contract
+                                		<img src="/zen/assets/img/device.png" width="35" height="35"><br>Device Contract
                                 	</div>
                                 </a>
                             </div>
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="/zen/compliance/ir" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/grieviance.png" width="45" height="45"><br>IR
+                                		<img src="/zen/assets/img/grieviance.png" width="35" height="35"><br>IR
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/compliance/13A" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/grieviance.png" width="45" height="45"><br>13A
+                                		<img src="/zen/assets/img/grieviance.png" width="35" height="35"><br>13A
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/compliance/13B" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/grieviance.png" width="45" height="45"><br>13B
+                                		<img src="/zen/assets/img/grieviance.png" width="35" height="35"><br>13B
                                 	</div>
                                 </a>
                             </div>
@@ -524,12 +536,12 @@
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="/zen/pa/dashboard" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/persapp.png" width="45" height="45"><br>PA TNGC
+                                		<img src="/zen/assets/img/persapp.png" width="35" height="35"><br>PA TNGC
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/pasji" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/persapp.png" width="45" height="45"><br>PA SJI
+                                		<img src="/zen/assets/img/persapp.png" width="35" height="35"><br>PA SJI
                                 	</div>
                                 </a>
                             </div>
@@ -540,7 +552,7 @@
                             <div class="media userlist-box" data-id="1" data-status="online" data-toggle="tooltip" style="text-align: center;">
                                 <a class="media-left" href="#!" style="text-align: center;">
                                 	<div>
-                                		<img src="/zen/assets/img/atd.png" width="40" height="40"><br>ATD
+                                		<img src="/zen/assets/img/atd.png" width="35" height="35"><br>ATD
                                 	</div>
                                 </a>
                                 <a class="media-left" href="/zen/pcf/" style="text-align: center;">
@@ -548,7 +560,7 @@
                                 	<span class="badge">!</span>
                                 	<?php } ?>
                                 	<div>
-                                		<img src="/zen/pcf/assets/img/PCF.png" width="40" height="40"><br>PCF
+                                		<img src="/zen/pcf/assets/img/PCF.png" width="35" height="35"><br>PCF
                                 	</div>
                                 </a>
                                 <!-- <a class="media-left" href="/zen/pcf/" style="text-align: center;">

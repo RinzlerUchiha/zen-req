@@ -1,5 +1,5 @@
 <?php
-require_once($pcf_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['error' => 'User not authenticated']);
@@ -27,10 +27,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         // Update Replenishment Info
         $stmt = $pcf_db->prepare("UPDATE tbl_replenish SET
             repl_new_expense = :repl_new_expense,
+            repl_variance = :repl_variance,
             repl_status = :stat
             WHERE repl_no = :pcfID");
         $stmt->execute([
             'repl_new_expense' => $request,
+            'repl_variance' => $variance,
             'stat' => $status,
             'pcfID' => $pcfID
         ]);

@@ -1,11 +1,11 @@
 <?php
 
-	$host ='localhost';
+	$host =(getenv('ZEN_DB_HOST') ?: "");
 	//$host ='192.168.10.6';
-	$uname='root';
+	$uname=(getenv('ZEN_DB_USERNAME') ?: "");
 	$pword='';
 	//$pword='';
-	$dbase = 'pi_db';
+	$dbase = (getenv('ZEN_DB_DATABASE_PI') ?: "");
 	
 	try {
 

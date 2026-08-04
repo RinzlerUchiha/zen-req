@@ -1,3 +1,277 @@
+function validateStep0() {
+  const flights = document.querySelectorAll(".flight-entry");
+
+  let valid = true;
+  let msg = "";
+
+  // 1) Validate each flight details
+  for (let index = 0; index < flights.length; index++) {
+    const flight = flights[index];
+
+    const dep = flight.querySelector(".departure")?.value.trim() || "";
+    const arr = flight.querySelector(".arrival")?.value.trim() || "";
+    const date = flight.querySelector(".dateflight")?.value.trim() || "";
+    const time = flight.querySelector(".timeflight")?.value.trim() || "";
+    const airline = flight.querySelector("select")?.value.trim() || "";
+    const price = flight.querySelector(".rawAmount")?.value.trim() || "";
+    const reason = document.querySelector("textarea")?.value.trim() || "";
+
+    const now = new Date();
+    const flightDateTime = (date && time) ? new Date(`${date}T${time}`) : null;
+
+    if (
+      !dep || !arr || !date || !time || !airline || !reason || isNaN(price) || price < 1000 ||
+      !flightDateTime || isNaN(flightDateTime.getTime()) ||
+      flightDateTime <= now ||
+      dep.toLowerCase() === arr.toLowerCase()
+    ) {
+      valid = false;
+      msg = `Please double check flight details in Flight #${index + 1}.`;
+      break;
+    }
+  }
+
+  // 2) Check duplicate routes for ALL flights
+  if (valid) {
+    const routeMap = new Map(); // route => flight #
+
+    for (let i = 0; i < flights.length; i++) {
+      const dep = flights[i].querySelector(".departure")?.value.trim().toLowerCase() || "";
+      const arr = flights[i].querySelector(".arrival")?.value.trim().toLowerCase() || "";
+
+      const routeKey = `${dep}-${arr}`;
+
+      if (routeMap.has(routeKey)) {
+        const firstIndex = routeMap.get(routeKey);
+        valid = false;
+        msg = `Cannot proceed: Flight #${firstIndex + 1} and Flight #${i + 1} have the same Departure and Arrival.`;
+        break;
+      }
+
+      routeMap.set(routeKey, i);
+    }
+  }
+
+  if (!valid) {
+    alert(msg);
+    return false;
+  }
+
+  return true;
+}
+
+
+function duplicateFlight() {
+  const container = document.getElementById("flight-container");
+  const original = container.querySelector(".flight-entry");
+  const clone = original.cloneNode(true);
+
+  // Clear all input and select values in the clone
+  clone.querySelectorAll("input, select").forEach(el => {
+    if (el.tagName === "SELECT") el.selectedIndex = 0;
+    else el.value = "";
+  });
+
+  // Update flight ID if needed
+  const flightIdInput = clone.querySelector(".flight-id");
+  if (flightIdInput) {
+    flightIdInput.value = generateFlightId();
+  }
+
+  container.appendChild(clone);
+
+  // Attach listeners to the currency input in the cloned node
+  const newCurrencyInput = clone.querySelector('.currencyInput');
+  if (newCurrencyInput) {
+    attachCurrencyInputListener(newCurrencyInput);
+  }
+
+  attachAirportInputListeners(); // If you have other inputs
+}
+
+
+function attachCurrencyInputListener(input) {
+  const rawInput = input.closest('.flight-entry')?.querySelector('.rawAmount');
+
+  input.addEventListener('input', function (e) {
+    let cleanValue = e.target.value.replace(/[^0-9.]/g, '');
+    e.target.value = cleanValue;
+    if (rawInput) rawInput.value = cleanValue; 
+  });
+
+  input.addEventListener('blur', function (e) {
+    let floatValue = parseFloat(e.target.value);
+    if (!isNaN(floatValue)) {
+      if (rawInput) rawInput.value = floatValue.toFixed(2);
+      e.target.value = floatValue.toLocaleString('en-PH', {
+        style: 'currency',
+        currency: 'PHP'
+      });
+    } else {
+      if (rawInput) rawInput.value = '';
+      e.target.value = '';
+    }
+  });
+
+  // Optional: also format if Enter is pressed
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      input.blur(); 
+    }
+  });
+}
+
+document.querySelectorAll('.currencyInput').forEach(input => {
+  attachCurrencyInputListener(input);
+});
+
+
+
+
+function deleteFlight(button) {
+  const container = document.getElementById("flight-container");
+  const entry = button.closest(".flight-entry");
+  if (container.querySelectorAll(".flight-entry").length > 1) {
+    container.removeChild(entry);
+  } else {
+    alert("At least one flight entry is required.");
+  }
+}
+
+function duplicatePassenger() {
+  const container = document.getElementById("passenger-container");
+  const original = container.querySelector(".passenger-entry");
+  const clone = original.cloneNode(true);
+
+  // Clear all inputs in the clone
+  clone.setAttribute("data-passenger-id", `pid-${++passengerCounter}`);
+  clone.querySelectorAll("input, select").forEach(el => {
+    if (el.tagName === "SELECT") el.selectedIndex = 0;
+    else el.value = "";
+  });
+
+  // Clear baggage tab UI (important!)
+  const tabs = clone.querySelector(".flightTabs");
+  const contents = clone.querySelector(".tabContents");
+  if (tabs) tabs.innerHTML = "";
+  if (contents) contents.innerHTML = "";
+
+  container.appendChild(clone);
+
+  updateSteps(); // rebuild baggage UI for all passengers
+}
+
+function deletePassenger(button) {
+  const container = document.getElementById("passenger-container");
+  const entry = button.closest(".passenger-entry");
+  if (container.querySelectorAll(".passenger-entry").length > 1) {
+    container.removeChild(entry);
+  } else {
+    alert("At least one passenger entry is required.");
+  }
+}
+
+function validatePassengers() {
+  const passengers = document.querySelectorAll(".passenger-entry");
+  const today = new Date();
+  const minBirthDate = new Date();
+  minBirthDate.setFullYear(minBirthDate.getFullYear() - 2); // 2 years ago
+
+  const namesSet = new Set(); // For checking duplicates
+  let isValid = true;
+
+  // First, clear previous highlights
+  passengers.forEach(p => {
+    p.querySelectorAll("input, select").forEach(el => el.classList.remove("invalid-field"));
+  });
+
+  for (let passenger of passengers) {
+    const lastNameInput = passenger.querySelector("input[name='surname']");
+    const firstNameInput = passenger.querySelector("input[name='givenname']");
+    const middleNameInput = passenger.querySelector("input[name='midname']");
+    const sexInput = passenger.querySelector("select[name='sex']");
+    const birthdayInput = passenger.querySelector("input[name='birthday']");
+    const contactInput = passenger.querySelector("input[name='contact']");
+
+    const lastName = lastNameInput.value.trim();
+    const firstName = firstNameInput.value.trim();
+    const middleName = middleNameInput.value.trim();
+    const sex = sexInput.value;
+    const birthdayVal = birthdayInput.value.trim();
+    const contact = contactInput.value.trim();
+
+    // 1. Required fields
+    if (!lastName) { lastNameInput.classList.add("invalid-field"); isValid = false; }
+    if (!firstName) { firstNameInput.classList.add("invalid-field"); isValid = false; }
+    if (!sex) { sexInput.classList.add("invalid-field"); isValid = false; }
+    if (!birthdayVal) { birthdayInput.classList.add("invalid-field"); isValid = false; }
+    if (!contact) { contactInput.classList.add("invalid-field"); isValid = false; }
+
+    // 2. Birthday checks
+    if (birthdayVal) {
+      const birthday = new Date(birthdayVal);
+      if (birthday >= today) { birthdayInput.classList.add("invalid-field"); isValid = false; }
+      if (birthday > minBirthDate) { birthdayInput.classList.add("invalid-field"); isValid = false; }
+    }
+
+    // 3. Duplicate names
+    const nameKey = `${lastName.toLowerCase()}|${firstName.toLowerCase()}`;
+    if (namesSet.has(nameKey)) {
+      lastNameInput.classList.add("invalid-field");
+      firstNameInput.classList.add("invalid-field");
+      // middleNameInput.classList.add("invalid-field");
+      isValid = false;
+    } else {
+      namesSet.add(nameKey);
+    }
+  }
+
+  if (!isValid) {
+    alert("Please fix highlighted fields before proceeding.");
+  }
+
+  return isValid;
+}
+
+// CSS for visual highlight
+const style = document.createElement('style');
+style.innerHTML = `
+  .invalid-field {
+    border: 2px solid red !important;
+    background-color: #ffe6e6;
+  }
+`;
+document.head.appendChild(style);
+
+
+function attachAirportInputListeners() {
+  document.querySelectorAll('.departure').forEach(input => {
+    input.addEventListener('input', () => {
+      const list = document.getElementById('from');
+      const options = list.options;
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].value === input.value) {
+          input.value = options[i].dataset.code;
+          break;
+        }
+      }
+    });
+  });
+
+  document.querySelectorAll('.arrival').forEach(input => {
+    input.addEventListener('input', () => {
+      const list = document.getElementById('to');
+      const options = list.options;
+      for (let i = 0; i < options.length; i++) {
+        if (options[i].value === input.value) {
+          input.value = options[i].dataset.code;
+          break;
+        }
+      }
+    });
+  });
+}
+
 function updateBaggageIndicator(pid, fIndex) {
   const selected = document.querySelector(`input[name='baggage-${pid}-${fIndex}']:checked`);
   const indicator = document.getElementById(`baggage-indicator-${pid}-${fIndex}`);
@@ -128,35 +402,53 @@ function updateSteps() {
             return res.json();
           })
           .then(data => {
-            const container = passenger.querySelector(`#baggage-options-${pid}-${fIndex}`);
-            if (container) {
-              const inputName = `baggage-${pid}-${fIndex}`;
-              container.innerHTML = data.map(bag => {
-                  const value = `${bag.bag_kg}kg ${bag.bag_pc} bag allowed`;
-                  const isChecked = previousSelections[`${pid}-${fIndex}`] === value;
+              const container = passenger.querySelector(`#baggage-options-${pid}-${fIndex}`);
+              if (container) {
+                const inputName = `baggage-${pid}-${fIndex}`;
+
+                let selectedValue = previousSelections[`${pid}-${fIndex}`] || "No baggage";
+
+                let html = `
+                  <label class="baggage-card">
+                    <input type="radio" name="${inputName}" value="No baggage" ${selectedValue === "No baggage" ? "checked" : ""} 
+                      onchange="updateBaggageSelection('${pid}', ${fIndex})">
+                    <div class="card-body">
+                      <img src="/zen/flight/assets/img/luggage.png" alt="No baggage">
+                      <p>No baggage</p>
+                    </div>
+                  </label>
+                `;
+
+                html += data.map(bag => {
+                  const value = `${bag.bag_kg}kg - ${bag.bag_price}.00`; 
+                  const price = `${bag.bag_price}`;
+                  const displayText = `${bag.bag_kg}kg ${bag.bag_pc} bag allowed ₱${bag.bag_price}.00`;
+                  const isChecked = selectedValue === value && price;
                   return `
                     <label class="baggage-card">
-                      <input type="radio" name="${inputName}" value="${value}" ${isChecked ? "checked" : ""}
+                      <input type="radio" name="${inputName}" value="${value}" ${isChecked ? "checked" : ""} 
                         onchange="updateBaggageSelection('${pid}', ${fIndex})">
                       <div class="card-body">
-                        <img src="/zen/flight/assets/img/luggage.png" alt="${value}">
-                        <p>${value} baggage allowance</p>
+                        <img src="/zen/flight/assets/img/luggage.png" alt="${displayText}">
+                        <p>${displayText}</p>
                       </div>
                     </label>
                   `;
                 }).join('');
-                
-                // Add a display container for the selected baggage
-                const indicatorId = `baggage-indicator-${pid}-${fIndex}`;
-                const currentVal = previousSelections[`${pid}-${fIndex}`] || "None";
-                const baggageSummary = document.createElement("div");
-                baggageSummary.className = "baggage-selected-indicator";
-                baggageSummary.id = indicatorId;
-                baggageSummary.style = "margin-top: 8px; font-style: italic; color: #444;";
-                // baggageSummary.innerHTML = `Selected: <strong>${currentVal}</strong> baggage allowance`;
-                container.appendChild(baggageSummary);
-            }
-          })
+
+                container.innerHTML = html;
+
+                // Add display for selected baggage
+                // const indicatorId = `baggage-indicator-${pid}-${fIndex}`;
+                // const baggageSummary = document.createElement("div");
+                // baggageSummary.className = "baggage-selected-indicator";
+                // baggageSummary.id = indicatorId;
+                // baggageSummary.style = "margin-top: 8px; font-style: italic; color: #444;";
+                // baggageSummary.innerHTML = `Selected: <strong>${selectedValue}</strong>`;
+                // container.appendChild(baggageSummary);
+              }
+            }) 
+
           .catch(error => {
             console.error("Fetch error:", error);
             const container = passenger.querySelector(`#baggage-options-${pid}-${fIndex}`);
@@ -199,8 +491,9 @@ function updateSteps() {
     const airline = flight.querySelector("select")?.value || "";
     const date = flight.querySelector(".dateflight")?.value.trim() || "";
     const time = flight.querySelector(".timeflight")?.value.trim() || "";
+    const price = flight.querySelector(".rawAmount")?.value.trim() || "";
 
-    // 🛫 Flight Details Section
+    // Flight Details Section
     const flightHeader = document.createElement("div");
     flightHeader.style.marginTop = "1rem";
     flightHeader.innerHTML = `
@@ -213,6 +506,9 @@ function updateSteps() {
         <tr>
           <td style="padding: 6px;"><strong>Airline:</strong> ${airline}</td>
           <td style="padding: 6px;"><strong>Time:</strong> ${time}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px;"><strong>Estimated Price:</strong>₱ ${price}</td>
         </tr>
       </table>
     `;
@@ -274,60 +570,6 @@ function updateSteps() {
   });
 }
 
-  // if (currentStep === steps.length - 1) {
-  //   const summaryContainer = document.getElementById("summaryContent");
-  //   summaryContainer.innerHTML = "";
-
-  //   const passengers = document.querySelectorAll(".passenger-entry");
-  //   const flights = document.querySelectorAll(".flight-entry");
-
-  //   passengers.forEach((passenger, pIndex) => {
-  //     const pid = passenger.getAttribute("data-passenger-id");
-  //     const fname = passenger.querySelector("input[name='givenname']")?.value.trim() || "";
-  //     const mname = passenger.querySelector("input[name='midname']")?.value.trim() || "";
-  //     const lname = passenger.querySelector("input[name='surname']")?.value.trim() || "";
-  //     const bday = passenger.querySelector("input[name='birthday']")?.value.trim() || "";
-  //     const contact = passenger.querySelector("input[name='contact']")?.value.trim() || "";
-  //     const reason = document.querySelector("textarea")?.value.trim() || "";
-
-  //     const card = document.createElement("div");
-  //     card.className = "passenger-card";
-  //     card.innerHTML = `
-  //       <h5>Passenger ${pIndex + 1}: ${fname} ${mname} ${lname}</h5>
-  //       <p><strong>Birthday:</strong> ${bday}</p>
-  //       <p><strong>Contact:</strong> ${contact}</p>
-  //       <p><strong>Reason:</strong> ${reason}</p>
-  //       <h5>Flights & Baggage:</h5>
-  //       <ul id="flight-baggage-${pid}"></ul>
-  //     `;
-
-  //     const ul = card.querySelector(`#flight-baggage-${pid}`);
-
-  //     flights.forEach((flight, fIndex) => {
-  //       const dep = flight.querySelector(".departure")?.value.trim() || "";
-  //       const arr = flight.querySelector(".arrival")?.value.trim() || "";
-  //       const flightdt = flight.querySelector(".dateflight")?.value.trim() || "";
-  //       const flighttime = flight.querySelector(".timeflight")?.value.trim() || "";
-  //       const airline = flight.querySelector("select")?.value || "";
-  //       const flightId = flight.querySelector(".flight-id")?.value || `FLIGHT-${fIndex + 1}`;
-  //       const baggageInput = passenger.querySelector(`input[name='baggage-${pid}-${fIndex}']:checked`);
-  //       const baggage = baggageInput ? baggageInput.value : "No baggage";
-
-  //       const li = document.createElement("li");
-  //       li.innerHTML = `
-  //         <strong>Request ID:</strong> ${flightId} <br>
-  //         <strong>Route:</strong> ${dep} → ${arr} <br>
-  //         <strong>Airline:</strong> ${airline} <br>
-  //         <strong>Travel Date:</strong> ${flightdt} <br>
-  //         <strong>Travel Time:</strong> ${flighttime} <br>
-  //         <strong>Baggage:</strong> ${baggage} baggage allowance.<br>
-  //       `;
-  //       ul.appendChild(li);
-  //     });
-
-  //     summaryContainer.appendChild(card);
-  //   });
-  // }
 }
 
 
@@ -347,12 +589,24 @@ function activateTab(passIndex, flightIndex) {
   });
 }
 
+
+
 nextBtn.onclick = () => {
+
+  if (currentStep === 0) {
+    if (!validateStep0()) return;
+  }
+
+  if (currentStep === 1) { // Passenger step
+    if (!validatePassengers()) return; // stop if invalid
+  }
+
   if (currentStep < steps.length - 1) {
     currentStep++;
     updateSteps();
   } else {
-    saveBooking();
+    // saveBooking();
+    $("#RequestorSignModal").modal("show");
   }
 };
 
@@ -363,153 +617,53 @@ prevBtn.onclick = () => {
   }
 };
 
-// function duplicateFlight() {
-//   const container = document.getElementById("flight-container");
-//   const original = container.querySelector(".flight-entry");
-//   const clone = original.cloneNode(true);
 
-//   clone.querySelectorAll("input, select").forEach(el => {
-//     if (el.tagName === "SELECT") el.selectedIndex = 0;
-//     else el.value = "";
-//   });
+  let RsignaturePad;
 
-//   const flightIdInput = clone.querySelector(".flight-id");
-//   if (flightIdInput) {
-//     flightIdInput.value = generateFlightId();
-//   }
+  function initSignaturePad() {
+    const signcanvas = document.getElementById("RequestorCanvas");
+    if (!signcanvas) return;
 
-//   container.appendChild(clone);
-//   attachAirportInputListeners();
-// }
+    // Reset the canvas
+    RsignaturePad = null;
 
-function duplicateFlight() {
-  const container = document.getElementById("flight-container");
-  const original = container.querySelector(".flight-entry");
-  const clone = original.cloneNode(true);
+    const rect = signcanvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
 
-  // Clear all input and select values in the clone
-  clone.querySelectorAll("input, select").forEach(el => {
-    if (el.tagName === "SELECT") el.selectedIndex = 0;
-    else el.value = "";
-  });
+    signcanvas.width = rect.width * ratio;
+    signcanvas.height = rect.height * ratio;
 
-  // Update flight ID if needed
-  const flightIdInput = clone.querySelector(".flight-id");
-  if (flightIdInput) {
-    flightIdInput.value = generateFlightId();
+    const ctx = signcanvas.getContext("2d");
+    ctx.scale(ratio, ratio);
+
+    RsignaturePad = new SignaturePad(signcanvas, {
+      backgroundColor: "rgb(255,255,255)",
+      penColor: "black"
+    });
+
+    RsignaturePad.clear();
   }
 
-  container.appendChild(clone);
 
-  // Attach listeners to the currency input in the cloned node
-  const newCurrencyInput = clone.querySelector('.currencyInput');
-  if (newCurrencyInput) {
-    attachCurrencyInputListener(newCurrencyInput);
-  }
+    $('#RequestorSignModal').on('shown.bs.modal', function () {
+      initSignaturePad();
+    });
 
-  attachAirportInputListeners(); // If you have other inputs
-}
+    $("#clear-btn").on("click", function () {
+      if (RsignaturePad) RsignaturePad.clear();
+    });
 
-
-function attachCurrencyInputListener(input) {
-  input.addEventListener('input', function (e) {
-    let cleanValue = e.target.value.replace(/[^0-9.]/g, '');
-    const floatValue = parseFloat(cleanValue);
-
-    const rawInput = e.target.closest('.flight-entry')?.querySelector('.rawAmount');
-
-    if (!isNaN(floatValue)) {
-      if (rawInput) rawInput.value = floatValue.toFixed(2);
-      e.target.value = floatValue.toLocaleString('en-PH', {
-        style: 'currency',
-        currency: 'PHP'
-      });
-    } else {
-      if (rawInput) rawInput.value = '';
-      e.target.value = '';
-    }
-  });
-}
-
-
-document.querySelectorAll('.currencyInput').forEach(input => {
-  attachCurrencyInputListener(input);
+    $("#cancel-btn").on("click", function () {
+      $("#RequestorSignModal").modal("hide");
+    });
+    document.getElementById("RequestorCanvas").addEventListener("pointerdown", () => {
+  console.log("Signature canvas is receiving input!");
 });
 
 
 
-function deleteFlight(button) {
-  const container = document.getElementById("flight-container");
-  const entry = button.closest(".flight-entry");
-  if (container.querySelectorAll(".flight-entry").length > 1) {
-    container.removeChild(entry);
-  } else {
-    alert("At least one flight entry is required.");
-  }
-}
-
-function duplicatePassenger() {
-  const container = document.getElementById("passenger-container");
-  const original = container.querySelector(".passenger-entry");
-  const clone = original.cloneNode(true);
-
-  // Clear all inputs in the clone
-  clone.setAttribute("data-passenger-id", `pid-${++passengerCounter}`);
-  clone.querySelectorAll("input, select").forEach(el => {
-    if (el.tagName === "SELECT") el.selectedIndex = 0;
-    else el.value = "";
-  });
-
-  // Clear baggage tab UI (important!)
-  const tabs = clone.querySelector(".flightTabs");
-  const contents = clone.querySelector(".tabContents");
-  if (tabs) tabs.innerHTML = "";
-  if (contents) contents.innerHTML = "";
-
-  container.appendChild(clone);
-
-  updateSteps(); // rebuild baggage UI for all passengers
-}
-
-function deletePassenger(button) {
-  const container = document.getElementById("passenger-container");
-  const entry = button.closest(".passenger-entry");
-  if (container.querySelectorAll(".passenger-entry").length > 1) {
-    container.removeChild(entry);
-  } else {
-    alert("At least one passenger entry is required.");
-  }
-}
-
-function attachAirportInputListeners() {
-  document.querySelectorAll('.departure').forEach(input => {
-    input.addEventListener('input', () => {
-      const list = document.getElementById('from');
-      const options = list.options;
-      for (let i = 0; i < options.length; i++) {
-        if (options[i].value === input.value) {
-          input.value = options[i].dataset.code;
-          break;
-        }
-      }
-    });
-  });
-
-  document.querySelectorAll('.arrival').forEach(input => {
-    input.addEventListener('input', () => {
-      const list = document.getElementById('to');
-      const options = list.options;
-      for (let i = 0; i < options.length; i++) {
-        if (options[i].value === input.value) {
-          input.value = options[i].dataset.code;
-          break;
-        }
-      }
-    });
-  });
-}
-
-function saveBooking() {
+// Submit with signature
+$(document).on("click", "#submitSignature", function () {
   const refnumInput = document.querySelector("input[name='flight_id']");
   const refnum = refnumInput ? refnumInput.value.trim() : "";
   const dept = document.querySelector("input[name='depts']")?.value.trim() || "";
@@ -555,13 +709,22 @@ function saveBooking() {
     flights.push({ flight_id, arr, dep, date, time, airline, prices });
   });
 
+  if (RsignaturePad.isEmpty()) {
+    alert("Please draw your signature.");
+    return;
+  }
+
+  const signatureSVG = RsignaturePad.toSVG(); 
+  // const signaturePNG = signaturePad.toDataURL("image/png");
+
   $.ajax({
     url: "flight_modifier",
     method: "POST",
     data: {
       action: "saveBooking",
       passengers: JSON.stringify(passengers),
-      flights: JSON.stringify(flights)
+      flights: JSON.stringify(flights),
+      signature: signatureSVG 
     },
     success: function (res) {
       alert(res);
@@ -571,4 +734,4 @@ function saveBooking() {
       alert("Failed to save booking.");
     }
   });
-}
+});

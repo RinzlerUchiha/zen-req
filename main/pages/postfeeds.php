@@ -15,37 +15,37 @@
                             <!-- Mood icon at the top right corner -->
                             <div style="position: absolute; top: 0; right: 0; background-color: white; color: white; padding: 2px; border-radius: 50%;">
                                 <?php if ($v['m_mood'] == 'happy') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/happiest.PNG">';  
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/happiest.png">';  
                                 }elseif ($v['m_mood'] == 'weird') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/smiles.PNG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/smiles.png">'; 
                                 }elseif ($v['m_mood'] == 'playful') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/bleh.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/bleh.jpg">'; 
                                 }elseif ($v['m_mood'] == 'haha') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/laugh.WEBP">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/laugh.webp">'; 
                                 }elseif ($v['m_mood'] == 'hug') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/hug.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/hug.jpg">'; 
                                 }elseif ($v['m_mood'] == 'relieved') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/relieved.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/relieved.jpg">'; 
                                 }elseif ($v['m_mood'] == 'inlove') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/love.PNG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/love.png">'; 
                                 }elseif ($v['m_mood'] == 'hehe') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/sweat.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/sweat.jpg">'; 
                                 }elseif ($v['m_mood'] == 'unamused') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/unamused.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/unamused.jpg">'; 
                                 }elseif ($v['m_mood'] == 'smirk') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/smirk.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/smirk.jpg">'; 
                                 }elseif ($v['m_mood'] == 'vomit') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/vomit.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/vomit.jpg">'; 
                                 }elseif ($v['m_mood'] == 'crying') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/cry.WEBP">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/cry.webp">'; 
                                 }elseif ($v['m_mood'] == 'anger') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/sadness.WEBP">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/sadness.webp">'; 
                                 }elseif ($v['m_mood'] == 'eyeroll') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/ROLL.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/ROLL.jpg">'; 
                                 }elseif ($v['m_mood'] == 'sleepy') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/sleeping.PNG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/sleeping.png">'; 
                                 }elseif ($v['m_mood'] == 'tired') {
-                                    echo'<img id="img-emoji" src="/zen/assets/reactions/Tireds.JPG">'; 
+                                    echo'<img id="img-emoji" src="/zen/assets/reactions/Tireds.jpg">'; 
                                 } ?>
                             </div>
                         </a>

@@ -4,11 +4,12 @@
  * File: /zen/reqHub/includes/sms_engine.php
  */
 
-require_once(__DIR__ . '/../database/db.php');
+// require_once(__DIR__ . '/../database/db.php');
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 function SendSmsToEmpNo($empno, $msg, $tag)
 {
-    $hr_pdo = ReqHubDatabase::getConnection('hr');
+    $hr_pdo = Database::getConnection('hr');
     $number = "";
 
     $sql_sms = $hr_pdo->prepare("SELECT 

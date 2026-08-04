@@ -1,12 +1,12 @@
 <?php
-// require_once '../db/db_functions.php';
+// require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php");
 // $trans = new Transactions;
 // $con1 = $trans->connect();
 
 // $date1 = date("Y-m-d H:i:s");
-// $user_empno = $trans->getUser($_SESSION['DEMOHR_UID'], 'Emp_No');<?php
+// $user_empno = $trans->getUser($_SESSION[SESSION_KEY], 'Emp_No');<?php
 
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
 

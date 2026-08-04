@@ -1,12 +1,12 @@
 <?php
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
 $load = 'travel'; 
 header('Content-Type: application/json');
 $data = json_decode(file_get_contents("php://input"), true);
 $date1 = date("Y-m-d H:i:s");
-// $user_id = $trans->getUser($_SESSION['DEMOHR_UID'], 'Emp_No');
+// $user_id = $trans->getUser($_SESSION[SESSION_KEY], 'Emp_No');
 if (isset($_SESSION['user_id'])) {
         $user_id = $_SESSION['user_id'];
 }

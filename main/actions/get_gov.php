@@ -1,5 +1,5 @@
 <?php
-require_once($main_root . "/db/db.php");
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 try {
     $port_db = Database::getConnection('hr');

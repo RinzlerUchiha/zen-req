@@ -40,7 +40,7 @@
                                     </button>
                                 </div>
                                 <div class="modal-body">
-                                  <iframe class="pdf" src="https://teamtngc.com/hris2/pages/memo/<?=$m['memo_pdf'];?>" width="100%" height="500"></iframe>
+                                  <iframe class="pdf" src="/zen/files/memo/<?=$m['memo_pdf'];?>" width="100%" height="500"></iframe>
                                 </div>
                             </div>
                         </div>
@@ -101,7 +101,7 @@
                             </button>
                         </div>
                         <div class="modal-body">
-                          <iframe class="pdf" src="https://teamtngc.com/hris2/pages/memo/<?=$ml['memo_pdf'];?>" width="100%" height="500"></iframe>
+                          <iframe class="pdf" src="/zen/files/memo/<?=$ml['memo_pdf'];?>" width="100%" height="500"></iframe>
                         </div>
                     </div>
                 </div>

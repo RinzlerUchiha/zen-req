@@ -1,5 +1,5 @@
 <?php
-require_once($lv_root."/db/db_functions.php"); 
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db_functions.php"); 
 $trans = new Transactions;
 $con1 = $trans->connect();
 $load = 'training';
@@ -1205,7 +1205,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
       }
 
       $(thistab).html("<div class='mb-3'><span class='spinner-border spinner-border-sm text-muted'></span> Loading...</div>");
-      $.post("/dtrservicesdemo/manpower/mp_data/load/",
+      $.post("/dtrservices/manpower/mp_data/load/",
         {
           load: tabid != 'calendar-tab' ? tabid.replace("-tab", "") : 'month',
           // y: $("#mpdatey").val(),
@@ -1301,7 +1301,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
     $("#divmp").hide();
     $("#divmpinfo").show();
     $("#mpinfodata").html("<div class='mb-3'><span class='spinner-border spinner-border-sm text-muted'></span> Loading...</div>");
-    $.post("/dtrservicesdemo/manpower/mp_data/load/",
+    $.post("/dtrservices/manpower/mp_data/load/",
       {
         load: 'day',
         dt: $(e1).attr("dt"),
@@ -1324,7 +1324,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
 
   // --------------- leave
     function initleave() {
-      $.post("/dtrservicesdemo/manpower/init_leave/load/", {}, function(data){
+      $.post("/dtrservices/manpower/init_leave/load/", {}, function(data){
         var obj = JSON.parse(data);
         leavebal = obj[0] ? obj[0] : [];
         _hdays = obj[1] ? obj[1] : [];
@@ -1581,7 +1581,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
 
     function setrd(e1) {
       if(e1 && confirm("Are you sure want to apply for Rest Day on "+$(e1).attr("dt")+"?")){
-        $.post("/dtrservicesdemo/actions/rd.php",
+        $.post("/dtrservices/actions/rd.php",
         {
           action: "add",
           date: $(e1).attr("dt"),
@@ -1609,7 +1609,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
         }).get();
         arr[$(this).data("empno")] = { d1: $(this).data("d1"), d2: $(this).data("d2"), rd: rd };
       });
-      $.post("/dtrservicesdemo/actions/rd.php",
+      $.post("/dtrservices/actions/rd.php",
       {
         action: "setup",
         set: JSON.stringify(arr)
@@ -1650,7 +1650,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
     function getdtrlog(dt1) {
       if(dt1){
         $("#dtrtable").html("<div class='mb-3'><span class='spinner-border spinner-border-sm text-muted'></span> Loading...</div>");
-        $.post("/dtrservicesdemo/manpower/mp_data/load/", { load: "gpdtr", get_dtr: dt1 }, function(data){
+        $.post("/dtrservices/manpower/mp_data/load/", { load: "gpdtr", get_dtr: dt1 }, function(data){
           $("#dtrtable").html(data);
         });
       }else{
@@ -1671,7 +1671,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
 
   // --------------- notify
     function notify() {
-      $.post("/dtrservicesdemo/manpower/mp_data/load/", { load: "notify" }, function(data){
+      $.post("/dtrservices/manpower/mp_data/load/", { load: "notify" }, function(data){
         var obj = JSON.parse(data);
         $("#reqdata .nav-tabs li.nav-item a span").html("");
         for(y in obj['pending']){
@@ -1698,12 +1698,12 @@ function calculateTimeDifference(_t1, _t2, _d1){
           }
 
           cnt = parseInt(obj['pending'][y]) + parseInt(obj['approved'][y] ? obj['approved'][y] : 0) + parseInt(obj['req'][y] ? obj['req'][y] : 0);
-          $("a[href='/dtrservicesdemo/manpower/"+y+"'] p span").html("");
+          $("a[href='/dtrservices/manpower/"+y+"'] p span").html("");
           if(cnt > 0){
-            if($("a[href='/dtrservicesdemo/manpower/"+y+"'] p span").length > 0){
-              $("a[href='/dtrservicesdemo/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
+            if($("a[href='/dtrservices/manpower/"+y+"'] p span").length > 0){
+              $("a[href='/dtrservices/manpower/"+y+"'] p span").append("<i class='badge badge-danger ml-1'>" + cnt + "</i>");
             }else{
-              $("a[href='/dtrservicesdemo/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
+              $("a[href='/dtrservices/manpower/"+y+"'] p").append("<span class='ml-1'><i class='badge badge-danger ml-1'>" + cnt + "</i></span>");
             }
           }
         }
@@ -1729,7 +1729,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
     }
 
     function approvedureq(id1) {
-      $.post("/dtrservicesdemo/actions/dtr.php", 
+      $.post("/dtrservices/actions/dtr.php", 
         {
           action: "approvedureq",
           id: id1
@@ -1745,7 +1745,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
     }
 
     function denydureq(id1) {
-      $.post("/dtrservicesdemo/actions/dtr.php", 
+      $.post("/dtrservices/actions/dtr.php", 
         {
           action: "denydureq",
           id: id1
@@ -1761,7 +1761,7 @@ function calculateTimeDifference(_t1, _t2, _d1){
     }
 
     function deldureq(id1) {
-      $.post("/dtrservicesdemo/actions/dtr.php", 
+      $.post("/dtrservices/actions/dtr.php", 
         {
           action: "deldureq",
           id: id1
