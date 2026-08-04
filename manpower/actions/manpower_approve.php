@@ -138,16 +138,9 @@ try {
         $newStatus = 'Returned';
         $newLevel  = 0; // resets so the requestor's resubmission starts from level 1 again
     } else {
-        // Approve
-        if ($actingLevel >= MP_LEVEL_HR_HEAD) {
-            // Final level cleared — request is fully approved
-            $newStatus = 'Approved';
-            $newLevel  = $actingLevel;
-        } else {
-            // Advance to next level, stays Pending
-            $newStatus = 'Pending';
-            $newLevel  = $actingLevel;
-        }
+        // Approve — Phase 1 is single-level: Approver's decision is final.
+        $newStatus = 'Approved';
+        $newLevel  = $actingLevel;
     }
 
     $updateStmt = $hr_db->prepare("UPDATE tbl_manpower_request

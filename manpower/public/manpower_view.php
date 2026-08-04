@@ -1,12 +1,14 @@
 <?php
+
 /**
- * Manpower Request View
+ * Manpower Request View (modal fragment)
  *
  * File: manpower/public/manpower_view.php
  *
- * Purpose: Shows full request detail, the approval timeline, and
- * (for eligible approvers) Approve / Return / Reject actions.
- * Actions post via AJAX to actions/manpower_approve.php.
+ * Purpose: Returns the request detail + approval timeline + actions as an
+ * HTML fragment, loaded via AJAX into a Bootstrap modal from dashboard.php.
+ * This file intentionally does NOT include header.php/footer.php — it is
+ * not a standalone page anymore.
  *
  * Expects $currentUser, $empno, $hr_db to already be set by
  * manpower/includes/auth.php (included via manpower/routes/route.php).
@@ -31,7 +33,7 @@ $roleLevelMap = [
 $id = isset($_GET['id']) && ctype_digit($_GET['id']) ? (int) $_GET['id'] : null;
 
 if (!$id) {
-    echo '<div class="alert alert-danger" style="margin:20px;">No request specified.</div>';
+    echo '<div class="alert alert-danger">No request specified.</div>';
     return;
 }
 
@@ -47,7 +49,7 @@ $stmt->execute();
 $req = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$req) {
-    echo '<div class="alert alert-danger" style="margin:20px;">Request not found.</div>';
+    echo '<div class="alert alert-danger">Request not found.</div>';
     return;
 }
 
@@ -55,13 +57,33 @@ if (!$req) {
 // Access check — requestor can view their own; Approver/HR Head/Admin can view any
 // ============================================================================
 
-$isOwner = ($req['requestor_employee_id'] === $empno);
+$isOwner   = ($req['requestor_employee_id'] === $empno);
 $canReview = userHasRoleIn('Approver', 'HR Head', 'Admin');
 
 if (!$isOwner && !$canReview) {
-    echo '<div class="alert alert-danger" style="margin:20px;">You do not have permission to view this request.</div>';
+    echo '<div class="alert alert-danger">You do not have permission to view this request.</div>';
     return;
 }
+
+// ============================================================================
+// Load positions, split by type (mirrors the Replacement / Additional split
+// used on the request form itself)
+// ============================================================================
+
+$posStmt = $hr_db->prepare("SELECT * FROM tbl_manpower_request_position
+    WHERE request_id = :id ORDER BY id ASC");
+$posStmt->bindParam(':id', $id);
+$posStmt->execute();
+
+$replacementRows = [];
+$additionalRows  = [];
+foreach ($posStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    if ($row['type'] === 'replacement') $replacementRows[] = $row;
+    else $additionalRows[] = $row;
+}
+
+$allPositionNames = array_column(array_merge($replacementRows, $additionalRows), 'position');
+$positionSummary  = $allPositionNames ? implode(', ', $allPositionNames) : null;
 
 // ============================================================================
 // Load approval log / timeline
@@ -84,186 +106,397 @@ $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $canAct = false;
 
 if ($req['status'] === 'Pending') {
-    $nextLevel = (int) $req['current_approval_level'] + 1;
-    $userRole  = $currentUser['manpower_role'];
+    $userRole = $currentUser['manpower_role'];
 
     if ($userRole === 'Admin') {
         $canAct = true;
-    } elseif (isset($roleLevelMap[$userRole]) && $roleLevelMap[$userRole] === $nextLevel) {
-        $canAct = true;
+    } elseif ($userRole === 'Approver') {
+        $deptMatches = ($currentUser['manpower_department_id'] === $req['department_id']);
+        $canAct = $deptMatches;
     }
+    // HR Head has no action rights on manpower requests in Phase 1
 }
 
-function mp_status_badge($status) {
+function mp_view_status_badge($status)
+{
     $map = [
-        'Draft'     => 'label-default',
-        'Pending'   => 'label-warning',
-        'Returned'  => 'label-info',
-        'Rejected'  => 'label-danger',
-        'Approved'  => 'label-success',
-        'Cancelled' => 'label-default',
+        'Draft'     => ['#EEF0F3', '#5B6474'],
+        'Pending'   => ['#2F6FE4', '#FFFFFF'],
+        'Returned'  => ['#E8F0FE', '#1B4FB0'],
+        'Rejected'  => ['#FCEBEB', '#791F1F'],
+        'Approved'  => ['#E7F6EC', '#1E7A34'],
+        'Cancelled' => ['#EEF0F3', '#5B6474'],
     ];
-    $class = $map[$status] ?? 'label-default';
-    return '<label class="label ' . $class . '">' . htmlspecialchars($status) . '</label>';
+    [$bg, $fg] = $map[$status] ?? ['#EEF0F3', '#5B6474'];
+    return '<span class="mpv-chip" style="background:' . $bg . ';color:' . $fg . ';">'
+        . htmlspecialchars($status) . '</span>';
 }
 
-function mp_action_badge($action) {
+function mp_view_action_badge($action)
+{
     $map = [
-        'Approved' => 'label-success',
-        'Returned' => 'label-info',
-        'Rejected' => 'label-danger',
+        'Approved' => ['#E7F6EC', '#1E7A34'],
+        'Returned' => ['#E8F0FE', '#1B4FB0'],
+        'Rejected' => ['#FCEBEB', '#791F1F'],
     ];
-    $class = $map[$action] ?? 'label-default';
-    return '<label class="label ' . $class . '">' . htmlspecialchars($action) . '</label>';
+    [$bg, $fg] = $map[$action] ?? ['#EEF0F3', '#5B6474'];
+    return '<span class="mpv-chip" style="background:' . $bg . ';color:' . $fg . ';">'
+        . htmlspecialchars($action) . '</span>';
+}
+
+function mp_view_render_table($rows)
+{
+    if (empty($rows)) {
+        echo '<div class="mpv-table-empty">No positions added.</div>';
+        return;
+    }
+    echo '<div class="mpv-table-wrap"><table class="mpv-table"><thead><tr>';
+    echo '<th>Subject/Position</th><th>Number Needed</th><th>Reason</th><th>Date Needed</th>';
+    echo '</tr></thead><tbody>';
+    foreach ($rows as $r) {
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($r['position']) . '</td>';
+        echo '<td>' . htmlspecialchars($r['headcount']) . '</td>';
+        echo '<td>' . htmlspecialchars($r['reason'] ?: '—') . '</td>';
+        echo '<td>' . ($r['date_needed'] ? date("Y-m-d", strtotime($r['date_needed'])) : '—') . '</td>';
+        echo '</tr>';
+    }
+    echo '</tbody></table></div>';
 }
 ?>
-<div class="page-wrapper">
-    <div class="page-body">
-        <div class="row" style="margin-left:0; margin-right:0;">
+<style>
+    #mpv-fragment {
+        --mpv-blue: #2F6FE4;
+        --mpv-blue-dark: #1B4FB0;
+        --mpv-purple: #6A4FE0;
+        --mpv-text: #1F2430;
+        --mpv-muted: #8A93A3;
+        --mpv-border: #E7E9EE;
+        --mpv-bg-input: #F4F5F8;
+        font-size: 14px;
+    }
 
-            <div class="col-sm-8">
-                <div class="card" id="mp-view-card">
-                    <div class="card-block" style="padding:1.25rem;">
+    #mpv-fragment,
+    #mpv-fragment * {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
-                            <div>
-                                <h5 style="margin:0;"><?= htmlspecialchars($req['mr_no']) ?></h5>
-                                <small class="text-muted">Submitted <?= date("F j, Y", strtotime($req['created_at'])) ?></small>
-                            </div>
-                            <div><?= mp_status_badge($req['status']) ?></div>
-                        </div>
+    #mpv-fragment .mpv-topline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+    }
 
-                        <table class="table table-borderless" style="width:100%;">
-                            <tr>
-                                <td style="width:180px;"><strong>Requestor</strong></td>
-                                <td><?= htmlspecialchars($req['requestor_name'] ?? $req['requestor_employee_id']) ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Department</strong></td>
-                                <td><?= htmlspecialchars($req['Dept_Name'] ?? $req['department_id']) ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Position</strong></td>
-                                <td><?= htmlspecialchars($req['position']) ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Headcount</strong></td>
-                                <td><?= htmlspecialchars($req['headcount']) ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Employment Type</strong></td>
-                                <td><?= htmlspecialchars($req['employment_type']) ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Urgency</strong></td>
-                                <td><?= htmlspecialchars($req['urgency']) ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Needed By</strong></td>
-                                <td><?= date("F j, Y", strtotime($req['requested_date'])) ?></td>
-                            </tr>
-                            <tr>
-                                <td valign="top"><strong>Justification</strong></td>
-                                <td><?= nl2br(htmlspecialchars($req['justification'])) ?></td>
-                            </tr>
-                        </table>
+    #mpv-fragment .mpv-mrno {
+        font-size: 19px;
+        font-weight: 800;
+        color: var(--mpv-text) !important;
+        background: none !important;
+        margin: 0 0 3px;
+        letter-spacing: -.2px;
+    }
 
-                        <?php if ($isOwner && in_array($req['status'], ['Draft', 'Returned'])) { ?>
-                        <div style="margin-top:15px;">
-                            <a href="request?id=<?= urlencode($req['id']) ?>" class="btn btn-outline-primary btn-mini">
-                                <i class="fa fa-pencil"></i> <?= $req['status'] === 'Returned' ? 'Revise' : 'Edit Draft' ?>
-                            </a>
-                        </div>
-                        <?php } ?>
+    #mpv-fragment .mpv-submitted {
+        font-size: 12px;
+        color: var(--mpv-muted) !important;
+        background: none !important;
+        display: block;
+    }
 
-                        <?php if ($canAct) { ?>
-                        <hr>
-                        <div id="mp-action-panel">
-                            <h6>Your Decision</h6>
-                            <div class="form-group">
-                                <textarea id="mp-remarks" class="form-control" rows="3" placeholder="Remarks (required for Return/Reject)"></textarea>
-                            </div>
-                            <div style="display:flex; gap:8px;">
-                                <button type="button" class="btn btn-success btn-mini" onclick="mpDecide('approve')">
-                                    <i class="fa fa-check"></i> Approve
-                                </button>
-                                <button type="button" class="btn btn-info btn-mini" onclick="mpDecide('return')">
-                                    <i class="fa fa-undo"></i> Return
-                                </button>
-                                <button type="button" class="btn btn-danger btn-mini" onclick="mpDecide('reject')">
-                                    <i class="fa fa-times"></i> Reject
-                                </button>
-                            </div>
-                        </div>
-                        <?php } ?>
+    #mpv-fragment .mpv-chip {
+        display: inline-block;
+        border-radius: 6px;
+        padding: 3px 11px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .2px;
+    }
 
-                    </div>
-                </div>
+    #mpv-fragment .mpv-section-divider {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 26px 0 14px;
+        font-weight: 600;
+        font-size: 13.5px;
+        color: var(--mpv-text);
+    }
+
+    #mpv-fragment .mpv-section-divider .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex: 0 0 auto;
+    }
+
+    #mpv-fragment .mpv-section-divider.replacement .dot {
+        background: var(--mpv-purple);
+    }
+
+    #mpv-fragment .mpv-section-divider.additional .dot {
+        background: var(--mpv-blue);
+    }
+
+    #mpv-fragment .mpv-section-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--mpv-border);
+        order: 1;
+    }
+
+    #mpv-fragment .mpv-section-caption {
+        font-size: 10.5px;
+        color: var(--mpv-muted);
+        font-weight: 500;
+        order: 2;
+        white-space: nowrap;
+    }
+
+    #mpv-fragment .mpv-table-wrap {
+        border: 1px solid var(--mpv-border);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 6px;
+    }
+
+    #mpv-fragment .mpv-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    #mpv-fragment .mpv-table th {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--mpv-muted);
+        text-align: left;
+        padding: 11px 16px;
+        background: var(--mpv-bg-input);
+        border-bottom: 1px solid var(--mpv-border);
+    }
+
+    #mpv-fragment .mpv-table td {
+        font-size: 13.5px;
+        color: var(--mpv-text);
+        padding: 13px 16px;
+        border-bottom: 1px solid #F1F2F5;
+    }
+
+    #mpv-fragment .mpv-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    #mpv-fragment .mpv-table-empty {
+        border: 1px dashed var(--mpv-border);
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--mpv-muted);
+        margin-bottom: 6px;
+    }
+
+    #mpv-fragment .mpv-field-label {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--mpv-muted) !important;
+        background: none !important;
+        letter-spacing: .3px;
+        display: block;
+        margin: 26px 0 8px;
+    }
+
+    #mpv-fragment .mpv-field-value {
+        font-size: 13.5px;
+        color: var(--mpv-text);
+        white-space: pre-line;
+    }
+
+    #mpv-fragment .mpv-requested-by {
+        font-size: 13.5px;
+        color: var(--mpv-text);
+        margin-top: 24px;
+        padding-top: 18px;
+        border-top: 1px solid var(--mpv-border);
+    }
+
+    #mpv-fragment .mpv-requested-by strong {
+        font-weight: 600;
+        margin-right: 6px;
+    }
+
+    #mpv-fragment .mpv-side-title {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--mpv-text);
+        margin-bottom: 12px;
+    }
+
+    #mpv-fragment .mpv-timeline-item {
+        margin-bottom: 14px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #F1F2F5;
+    }
+
+    #mpv-fragment .mpv-timeline-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    #mpv-fragment .mpv-timeline-name {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--mpv-text);
+        margin-top: 6px;
+    }
+
+    #mpv-fragment .mpv-timeline-date {
+        font-size: 10.5px;
+        color: var(--mpv-muted);
+    }
+
+    #mpv-fragment .mpv-timeline-remarks {
+        font-size: 12px;
+        color: var(--mpv-text);
+        margin-top: 6px;
+    }
+
+    #mpv-fragment .mpv-empty-muted {
+        font-size: 12px;
+        color: var(--mpv-muted);
+    }
+
+    #mpv-fragment .mpv-actions {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid var(--mpv-border);
+    }
+
+    #mpv-fragment .mpv-actions textarea {
+        width: 100%;
+        border: 1px solid var(--mpv-border);
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-size: 13px;
+        margin-bottom: 10px;
+    }
+
+    #mpv-fragment .mpv-actions textarea:focus {
+        outline: none;
+        border-color: var(--mpv-blue);
+        box-shadow: 0 0 0 2px #E8F0FE;
+    }
+
+    #mpv-fragment .mpv-btn-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    #mpv-fragment .mpv-btn {
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    #mpv-fragment .mpv-btn-approve {
+        background: #1E7A34;
+        color: #fff;
+    }
+
+    #mpv-fragment .mpv-btn-return {
+        background: var(--mpv-blue);
+        color: #fff;
+    }
+
+    #mpv-fragment .mpv-btn-reject {
+        background: #E14848;
+        color: #fff;
+    }
+
+    #mpv-fragment .mpv-btn-edit {
+        background: #fff;
+        color: var(--mpv-blue);
+        border: 1px solid var(--mpv-blue);
+    }
+</style>
+
+<div id="mpv-fragment">
+    <div class="row" style="margin-left:0; margin-right:0;">
+
+        <div class="col-sm-12">
+            <table style="width:100%; margin-bottom:6px;">
+                <tr>
+                    <td style="width:140px; font-size:12.5px; color:var(--mpv-muted); padding:3px 0;">Requestor</td>
+                    <td style="font-size:13px; color:var(--mpv-text); font-weight:600;">
+                        <?= htmlspecialchars($req['requestor_name'] ?? $req['requestor_employee_id']) ?>
+                        <span style="margin-left:10px;"><?= mp_view_status_badge($req['status']) ?></span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-size:12.5px; color:var(--mpv-muted); padding:3px 0;">Department</td>
+                    <td style="font-size:13px; color:var(--mpv-text); font-weight:600;"><?= htmlspecialchars($req['Dept_Name'] ?? $req['department_id']) ?></td>
+                </tr>
+            </table>
+
+            <div class="mpv-section-divider replacement">
+                <span class="dot"></span> Replacement positions
+                <span class="mpv-section-caption">Vacated roles</span>
             </div>
 
-            <div class="col-sm-4">
-                <div class="card" id="mp-view-card">
-                    <div class="card-header">
-                        <div class="card-header-left">
-                            <h5>Approval Timeline</h5>
-                        </div>
-                    </div>
-                    <div class="card-block">
-                        <?php if (empty($logs)) { ?>
-                            <p class="text-muted">No approval activity yet.</p>
-                        <?php } else { ?>
-                            <ul class="list-unstyled" style="margin:0;">
-                                <?php foreach ($logs as $log) { ?>
-                                <li style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee;">
-                                    <div><?= mp_action_badge($log['action']) ?></div>
-                                    <div style="margin-top:5px;">
-                                        <strong><?= htmlspecialchars($log['approver_name'] ?? $log['approver_employee_id']) ?></strong>
-                                    </div>
-                                    <small class="text-muted"><?= date("M d, Y h:i A", strtotime($log['action_date'])) ?></small>
-                                    <?php if (!empty($log['remarks'])) { ?>
-                                        <p style="margin-top:5px; margin-bottom:0;"><?= nl2br(htmlspecialchars($log['remarks'])) ?></p>
-                                    <?php } ?>
-                                </li>
-                                <?php } ?>
-                            </ul>
-                        <?php } ?>
+            <?php mp_view_render_table($replacementRows); ?>
+
+            <div class="mpv-section-divider additional">
+                <span class="dot"></span> Additional positions
+                <span class="mpv-section-caption">New or expanded roles</span>
+            </div>
+            <?php mp_view_render_table($additionalRows); ?>
+
+            <span class="mpv-field-label">NON-NEGOTIABLE</span>
+            <div class="mpv-field-value"><?= $req['nonnegotiable'] !== '' && $req['nonnegotiable'] !== null ? nl2br(htmlspecialchars($req['nonnegotiable'])) : '<span class="mpv-empty-muted">None specified.</span>' ?></div>
+
+            <?php if ($isOwner && !userHasRoleIn('Approver', 'HR Head', 'Admin') && in_array($req['status'], ['Draft', 'Returned'])) { ?>
+                <div style="margin-top:18px;">
+                    <a href="request?id=<?= urlencode($req['id']) ?>" class="mpv-btn mpv-btn-edit">
+                        <?= $req['status'] === 'Returned' ? 'Revise' : 'Edit Draft' ?>
+                    </a>
+                </div>
+            <?php } ?>
+
+            <?php if ($canAct) { ?>
+                <div class="mpv-actions">
+                    <span class="mpv-field-label" style="margin-top:0;">YOUR DECISION</span>
+                    <textarea id="mp-remarks" rows="3" placeholder="Remarks (required for Return/Reject)"></textarea>
+                    <div class="mpv-btn-row">
+                        <button type="button" class="mpv-btn mpv-btn-approve" onclick="mpDecide('approve', <?= (int) $req['id'] ?>)">Approve</button>
+                        <button type="button" class="mpv-btn mpv-btn-return" onclick="mpDecide('return', <?= (int) $req['id'] ?>)">Return</button>
+                        <button type="button" class="mpv-btn mpv-btn-reject" onclick="mpDecide('reject', <?= (int) $req['id'] ?>)">Reject</button>
                     </div>
                 </div>
-            </div>
-
+            <?php } ?>
         </div>
 
-        <div style="margin-top:10px;">
-            <a href="dashboard" class="btn btn-default btn-mini">&larr; Back to Dashboard</a>
-        </div>
+        <!-- <div class="col-sm-4">
+            <div class="mpv-side-title">Approval Timeline</div>
+            <?php if (empty($logs)) { ?>
+                <p class="mpv-empty-muted">No approval activity yet.</p>
+            <?php } else { ?>
+                <?php foreach ($logs as $log) { ?>
+                    <div class="mpv-timeline-item">
+                        <div><?= mp_view_action_badge($log['action']) ?></div>
+                        <div class="mpv-timeline-name"><?= htmlspecialchars($log['approver_name'] ?? $log['approver_employee_id']) ?></div>
+                        <div class="mpv-timeline-date"><?= date("M d, Y h:i A", strtotime($log['action_date'])) ?></div>
+                        <?php if (!empty($log['remarks'])) { ?>
+                            <div class="mpv-timeline-remarks"><?= nl2br(htmlspecialchars($log['remarks'])) ?></div>
+                        <?php } ?>
+                    </div>
+                <?php } ?>
+            <?php } ?>
+        </div> -->
+
     </div>
 </div>
-
-<script>
-function mpDecide(decision) {
-    if ((decision === 'return' || decision === 'reject') && $('#mp-remarks').val().trim() === '') {
-        alert('Remarks are required when returning or rejecting a request.');
-        return;
-    }
-
-    if (!confirm('Are you sure you want to ' + decision + ' this request?')) {
-        return;
-    }
-
-    $.post('approve', {
-        request_id: <?= (int) $req['id'] ?>,
-        decision: decision,
-        remarks: $('#mp-remarks').val()
-    }, function(res) {
-        let data = typeof res === 'string' ? JSON.parse(res) : res;
-        if (data.success) {
-            alert('Decision recorded.');
-            window.location.reload();
-        } else {
-            alert(data.error || 'Failed to record decision.');
-        }
-    }).fail(function() {
-        alert('An error occurred. Please try again.');
-    });
-}
-</script>

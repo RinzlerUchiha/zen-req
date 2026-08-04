@@ -32,7 +32,8 @@ $portal_root   = dirname($manpower_root);
 $main_root     = $portal_root . "/main";
 
 // Reuse ZenHub's existing Database class (Database::getConnection('hr') / ('port'))
-require_once $main_root . "/db/db.php";
+// require_once $main_root . "/db/db.php";
+require_once($_SERVER['DOCUMENT_ROOT']."/zen/config/db.php");
 
 // ============================================================================
 // Session / Authentication Check
@@ -92,7 +93,7 @@ $company    = $empInfo['jrec_company'];
 
 // NOTE: assumes tbl_manpower_users exists with columns:
 // employee_id, manpower_role, department_id, is_active
-$stmt = $hr_db->prepare("SELECT manpower_role, is_active
+$stmt = $hr_db->prepare("SELECT manpower_role, department_id, is_active
     FROM tbl_manpower_users
     WHERE employee_id = :empno
     LIMIT 1");
@@ -100,8 +101,28 @@ $stmt->bindParam(':empno', $empno);
 $stmt->execute();
 $roleRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
-$manpowerRole = $roleRow['manpower_role'] ?? '';
-$isActive     = isset($roleRow['is_active']) ? (bool) $roleRow['is_active'] : false;
+// Auto-provision: first-ever Manpower access for this employee.
+// Mirrors ReqHub's pattern — insert with 'No Access' so an Admin can
+// later promote them, rather than leaving them with no row at all.
+if (!$roleRow) {
+    $insertStmt = $hr_db->prepare("INSERT INTO tbl_manpower_users
+            (employee_id, manpower_role, department_id, is_active, created_at, updated_at)
+        VALUES
+            (:empno, 'No Access', :deptId, 1, NOW(), NOW())");
+    $insertStmt->bindParam(':empno', $empno);
+    $insertStmt->bindParam(':deptId', $department);
+    $insertStmt->execute();
+
+    $roleRow = [
+        'manpower_role' => 'No Access',
+        'department_id' => $department,
+        'is_active'     => 1,
+    ];
+}
+
+$manpowerRole       = $roleRow['manpower_role'] ?? '';
+$manpowerDeptId     = $roleRow['department_id'] ?? null;
+$isActive           = isset($roleRow['is_active']) ? (bool) $roleRow['is_active'] : false;
 
 // ============================================================================
 // Active check
@@ -158,13 +179,14 @@ if (empty($manpowerRole) || $manpowerRole === 'No Access') {
 // ============================================================================
 
 $currentUser = [
-    'emp_no'        => $empno,
-    'name'          => $username,
-    'position'      => $position,
-    'department'    => $department,
-    'company'       => $company,
-    'manpower_role' => $manpowerRole,
-    'is_active'     => $isActive,
+    'emp_no'                => $empno,
+    'name'                  => $username,
+    'position'              => $position,
+    'department'            => $department,       // HR-wide employee department (tbl201_jobrec)
+    'company'               => $company,
+    'manpower_role'         => $manpowerRole,
+    'manpower_department_id'=> $manpowerDeptId,    // department this user is scoped/assigned to within Manpower
+    'is_active'             => $isActive,
 ];
 
 $_SESSION['manpower_user'] = $currentUser;
