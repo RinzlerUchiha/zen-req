@@ -198,9 +198,24 @@ function mpSwitchRole(newRole) {
             </div>
         </div>
 
+        <div class="dropdown">
+            <a href="#!" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration:none; display:flex; align-items:center; gap:8px;">
+                <img src="https://e-classtngcacademy.s3.ap-southeast-1.amazonaws.com/zenhub/images/employees/<?= htmlspecialchars($empno) ?>.JPG"
+                     alt=""
+                     onerror="this.onerror=null; this.src='https://i.pinimg.com/736x/43/0f/07/430f07ae232540762bb76d3da5e7e5e6.jpg';"
+                     style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--mp-border);">
+                <div class="mp-user-block">
+                    <div class="mp-user-name">Hello, <?= htmlspecialchars($userName) ?></div>
+                    <div class="mp-user-role"><?= htmlspecialchars($roleDisplay) ?></div>
+                </div>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="/zen/profile">Profile</a></li>
+                <li><a class="dropdown-item" href="/zen/signOut">Logout</a></li>
+            </ul>
+        </div>
+
         <div class="mp-user-block position-relative">
-            <div class="mp-user-name">Hello, <?= htmlspecialchars($userName) ?></div>
-            <div class="mp-user-role"><?= htmlspecialchars($roleDisplay) ?></div>
 
             <?php if (in_array($userRole, ['Approver', 'HR Head']) && !empty($currentUser['assigned_departments'])): ?>
                 <button id="mpAssignToggleBtn" class="mp-assign-toggle" type="button">View Assignments</button>

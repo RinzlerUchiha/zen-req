@@ -1122,6 +1122,12 @@ if(!isset($_SESSION['atd_cnt'])){
 										    </div>
 										    Access Portal
 										</a>
+										<a class="media-left" href="/zen/manpower/" style="text-align: center;">
+										    <div style="position: relative; display: inline-block;">
+										        <img src="/zen/assets/img/access portal.png" width="40" height="40">
+										    </div>
+										    HireFlow
+										</a>
                   </div>
                 </div>
               </div>
