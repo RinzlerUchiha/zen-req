@@ -67,15 +67,24 @@ if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
     $forApproval = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// All Requests — visible to HR Head/Admin only
+// All Requests — Approver sees requests scoped to their assigned department;
+// HR Head/Admin see every request across all departments.
 $allRequests = [];
-if (userHasRoleIn('HR Head', 'Admin')) {
-    $stmt = $hr_db->prepare("SELECT r.*,
+if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
+    $scopeAllToDept = ($userRole === 'Approver');
+
+    $sql = "SELECT r.*,
             (SELECT GROUP_CONCAT(p.position SEPARATOR ', ') FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_list,
             (SELECT COALESCE(SUM(p.headcount), 0) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS total_headcount,
             (SELECT COUNT(*) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_count
-        FROM tbl_manpower_request r
-        ORDER BY r.created_at DESC");
+        FROM tbl_manpower_request r"
+        . ($scopeAllToDept ? " WHERE r.department_id = :deptId" : "")
+        . " ORDER BY r.created_at DESC";
+
+    $stmt = $hr_db->prepare($sql);
+    if ($scopeAllToDept) {
+        $stmt->bindParam(':deptId', $currentUser['manpower_department_id']);
+    }
     $stmt->execute();
     $allRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -110,7 +119,10 @@ function mp_render_rows($rows, $emptyMsg)
     }
     $i = 1;
     foreach ($rows as $r) {
-        echo '<div class="mp-row" onclick="mpOpenRequestModal(' . (int) $r['id'] . ')">';
+        $mpRowClick = ($r['status'] === 'Returned')
+            ? "window.location='request?id=" . (int) $r['id'] . "'"
+            : "mpOpenRequestModal(" . (int) $r['id'] . ")";
+        echo '<div class="mp-row" onclick="' . $mpRowClick . '">';
         echo   '<div class="mp-row-num">' . $i++ . '</div>';
         $positionDisplay = $r['position_list'] !== null && $r['position_list'] !== ''
             ? $r['position_list']
@@ -159,7 +171,9 @@ foreach ($myRequests as $r) {
 // Phase 1 scope: Requestor, Approver, HR Head only. HR Admin sidebar is
 // deferred to phase 2 (belongs to the separate zen-admin system).
 $mpSections = [];
-$mpSections['my-requests'] = ['label' => 'My requests', 'icon' => 'file-text'];
+if (!userHasRoleIn('Approver')) {
+    $mpSections['my-requests'] = ['label' => 'My requests', 'icon' => 'file-text'];
+}
 if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
     $mpSections['all-requests'] = ['label' => 'All requests', 'icon' => 'list'];
     $mpSections['for-approval'] = ['label' => 'For my approval', 'icon' => 'check-circle'];
@@ -170,10 +184,25 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
 <style>
     .mp-wrap {
         background: #F5F6F9;
-        padding-bottom: 20px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         display: flex;
+        align-items: stretch;
         min-height: calc(100vh - 60px);
+        /* Break out of <main>'s max-width/padding so the sidebar can go full-bleed */
+        margin: -28px -24px -40px;
+    }
+
+    @media (max-width: 768px) {
+        .mp-wrap {
+            margin: -18px -16px -32px;
+        }
+    }
+
+    /* header.php's <main> centers content at max-width:1280px — override
+       that here so the sidebar can go fully edge-to-edge on wide screens */
+    main {
+        max-width: none !important;
+        margin: 0 !important;
     }
 
     .mp-wrap * {
@@ -187,17 +216,6 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
         background: #FFFFFF;
         border-right: 1px solid #E7E9EE;
         padding: 20px 12px;
-    }
-
-    .mp-sidebar-brand {
-        font-size: 15px;
-        font-weight: 800;
-        color: #1F2430;
-        padding: 0 10px 18px;
-    }
-
-    .mp-sidebar-brand span {
-        color: #2F6FE4;
     }
 
     .mp-nav-item {
@@ -225,6 +243,21 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
     .mp-nav-item .mp-nav-icon {
         width: 18px;
         text-align: center;
+        flex: 0 0 auto;
+    }
+
+    .mp-nav-icon {
+        width: 18px;
+        text-align: center;
+        flex: 0 0 auto;
+    }
+
+    .mp-nav-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #E14848;
+        margin-left: auto;
         flex: 0 0 auto;
     }
 
@@ -563,13 +596,12 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
 <div class="mp-wrap">
 
     <div class="mp-sidebar">
-        <div class="mp-sidebar-brand">Hire<span>Flow</span></div>
         <?php foreach ($mpSections as $key => $section): ?>
             <div class="mp-nav-item<?= $key === $mpDefaultSection ? ' active' : '' ?>" data-target="<?= $key ?>">
                 <span class="mp-nav-icon"><i class="fa fa-<?= $section['icon'] ?>"></i></span>
                 <span><?= htmlspecialchars($section['label']) ?></span>
                 <?php if ($key === 'for-approval' && !empty($forApproval)) { ?>
-                    <span class="mp-subtab-count" style="margin-left:auto;"><?= count($forApproval) ?></span>
+                    <span class="mp-nav-dot" title="<?= count($forApproval) ?> pending your approval"></span>
                 <?php } ?>
             </div>
         <?php endforeach; ?>
@@ -753,11 +785,30 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
     </div>
 </div>
 
+<div class="modal fade" id="mpChangeRequestModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document" style="max-width:480px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mpChangeRequestTitle">Request to Edit</h5>
+                <button type="button" class="btn-close" aria-label="Close" onclick="mpCloseChangeRequestModal()"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="mpChangeRequestReason" rows="4" class="form-control" placeholder="Add a note for your Approver..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-mp-modal-close" onclick="mpCloseChangeRequestModal()">Cancel</button>
+                <button type="button" class="mpv-btn mpv-btn-approve" id="mpChangeRequestSubmitBtn">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function mpOpenRequestModal(id) {
         const modalEl = document.getElementById('mpRequestModal');
-        modalEl.classList.add('show');
         modalEl.style.display = 'block';
+        modalEl.offsetHeight; // force reflow so the transition below actually animates
+        modalEl.classList.add('show');
         document.body.classList.add('modal-open');
         if (!document.getElementById('mpModalBackdrop')) {
             const backdrop = document.createElement('div');
@@ -774,6 +825,77 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
         }).fail(function() {
             $('#mpRequestModalBody').html('<div class="alert alert-danger">Failed to load request details.</div>');
         });
+    }
+
+    function mpCancelRequest(requestId) {
+        if (!confirm('Are you sure you want to delete this request? This cannot be undone.')) {
+            return;
+        }
+        $.post('cancel', {
+            request_id: requestId
+        }, function(res) {
+            let data = typeof res === 'string' ? JSON.parse(res) : res;
+            if (data.success) {
+                alert('Request deleted.');
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to cancel request.');
+            }
+        }).fail(function() {
+            alert('An error occurred. Please try again.');
+        });
+    }
+
+    function mpRequestAction(changeType, requestId) {
+        const modalEl = document.getElementById('mpChangeRequestModal');
+        document.getElementById('mpChangeRequestTitle').textContent =
+            changeType === 'edit' ? 'Request to Edit' : 'Request to Cancel';
+        document.getElementById('mpChangeRequestReason').value = '';
+        document.getElementById('mpChangeRequestReason').placeholder =
+            changeType === 'edit'
+                ? 'What would you like to edit? (this note goes to your Approver)'
+                : 'Why are you requesting to cancel this request?';
+
+        modalEl.style.display = 'block';
+        modalEl.offsetHeight;
+        modalEl.classList.add('show');
+        document.body.classList.add('modal-open');
+        if (!document.getElementById('mpModalBackdrop')) {
+            const backdrop = document.createElement('div');
+            backdrop.id = 'mpModalBackdrop';
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+        }
+
+        document.getElementById('mpChangeRequestSubmitBtn').onclick = function() {
+            const reason = document.getElementById('mpChangeRequestReason').value.trim();
+            $.post('request_action', {
+                request_id: requestId,
+                change_type: changeType,
+                reason: reason
+            }, function(res) {
+                let data = typeof res === 'string' ? JSON.parse(res) : res;
+                if (data.success) {
+                    mpCloseChangeRequestModal();
+                    alert('Your request has been submitted for review.');
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to submit request.');
+                }
+            }).fail(function() {
+                alert('An error occurred. Please try again.');
+            });
+        };
+    }
+
+    function mpCloseChangeRequestModal() {
+        const modalEl = document.getElementById('mpChangeRequestModal');
+        modalEl.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        $('#mpModalBackdrop').remove();
+        setTimeout(function() {
+            modalEl.style.display = 'none';
+        }, 150);
     }
 
     function mpDecide(decision, requestId) {
@@ -828,12 +950,26 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
         });
 
         // Manual close handling (data-bs-dismiss relies on the broken bootstrap JS)
-        $(document).on('click', '#mpRequestModal [data-bs-dismiss="modal"]', function() {
+        function mpCloseRequestModal() {
             const modalEl = document.getElementById('mpRequestModal');
             modalEl.classList.remove('show');
-            modalEl.style.display = 'none';
             document.body.classList.remove('modal-open');
             $('#mpModalBackdrop').remove();
+            // Wait for the fade-out transition (Bootstrap's default is 150ms) before hiding
+            setTimeout(function() {
+                modalEl.style.display = 'none';
+            }, 150);
+        }
+        $(document).on('click', '#mpRequestModal [data-bs-dismiss="modal"]', mpCloseRequestModal);
+
+        // Close on Esc key, but only if the modal is actually open
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('mpRequestModal').classList.contains('show')) {
+                mpCloseRequestModal();
+            }
+            if (e.key === 'Escape' && document.getElementById('mpChangeRequestModal').classList.contains('show')) {
+                mpCloseChangeRequestModal();
+            }
         });
 
         var hash = window.location.hash.replace('#', '');

@@ -133,7 +133,7 @@ try {
             exit;
         }
 
-        if (!in_array($existing['status'], ['Draft', 'Returned'])) {
+        if (!in_array($existing['status'], ['Draft', 'Returned', 'Pending'])) {
             $hr_db->rollBack();
             echo json_encode(['success' => false, 'error' => 'This request can no longer be edited.']);
             exit;

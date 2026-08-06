@@ -467,6 +467,22 @@ function mp_view_render_table($rows)
                 </div>
             <?php } ?>
 
+            <?php if ($isOwner && !userHasRoleIn('Approver', 'HR Head', 'Admin') && $req['status'] === 'Pending') { ?>
+                <div style="margin-top:18px; display:flex; gap:8px;">
+                    <a href="request?id=<?= urlencode($req['id']) ?>" class="mpv-btn mpv-btn-edit">Edit Request</a>
+                    <button type="button" class="mpv-btn mpv-btn-reject" onclick="mpCancelRequest(<?= (int) $req['id'] ?>)">
+                        Delete Request
+                    </button>
+                </div>
+            <?php } ?>
+
+            <?php if ($isOwner && !userHasRoleIn('Approver', 'HR Head', 'Admin') && $req['status'] === 'Approved') { ?>
+                <div style="margin-top:18px; display:flex; gap:8px;">
+                    <button type="button" class="mpv-btn mpv-btn-edit" onclick="mpRequestAction('edit', <?= (int) $req['id'] ?>)">Request to Edit</button>
+                    <button type="button" class="mpv-btn mpv-btn-reject" onclick="mpRequestAction('delete', <?= (int) $req['id'] ?>)">Request to Cancel</button>
+                </div>
+            <?php } ?>
+
             <?php if ($canAct) { ?>
                 <div class="mpv-actions">
                     <span class="mpv-field-label" style="margin-top:0;">YOUR DECISION</span>

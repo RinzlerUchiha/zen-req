@@ -118,7 +118,7 @@ body { background:var(--mp-bg); }
 .mp-dev-strip {
     background:#3A3F4B; color:#FFF; font-size:11.5px; padding:6px 16px;
     display:flex; align-items:center; gap:10px;
-    position: sticky; top: 0; z-index: 1100;
+    position: sticky; top: 0; z-index: 1030;
 }
 
 /* Page content spacing: .page-wrapper/.page-body are not real Bootstrap

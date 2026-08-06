@@ -51,7 +51,7 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
     $found = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($found) {
-        if (in_array($found['status'], ['Draft', 'Returned'])) {
+        if (in_array($found['status'], ['Draft', 'Returned', 'Pending'])) {
             $editing = true;
             $request = array_merge($request, $found);
 
@@ -61,6 +61,18 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
             foreach ($posStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 if ($row['type'] === 'replacement') $replacementRows[] = $row;
                 else $additionalRows[] = $row;
+            }
+
+            // If this request was returned, pull the most recent "Returned"
+            // remarks so the Requestor sees what needs fixing.
+            $returnRemarks = null;
+            if ($found['status'] === 'Returned') {
+                $remarksStmt = $hr_db->prepare("SELECT remarks FROM tbl_manpower_approval_log
+                    WHERE request_id = :id AND action = 'Returned'
+                    ORDER BY action_date DESC LIMIT 1");
+                $remarksStmt->bindParam(':id', $request['id']);
+                $remarksStmt->execute();
+                $returnRemarks = $remarksStmt->fetchColumn() ?: null;
             }
         } else {
             echo '<div class="alert alert-warning" style="margin:20px;">This request can no longer be edited (status: ' . htmlspecialchars($found['status']) . ').</div>';
@@ -392,6 +404,12 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
                 </div>
 
                 <div class="mp-content-area">
+                    <?php if ($editing && $found['status'] === 'Returned' && !empty($returnRemarks)): ?>
+                        <div class="mp-card" style="background:#FFF1EC; border-color:#F0D3C6; margin-bottom:16px; padding:14px 18px;">
+                            <p style="margin:0 0 4px; font-size:11px; font-weight:700; color:#5C2A18; letter-spacing:.04em;">APPROVER'S FEEDBACK</p>
+                            <p style="margin:0; font-size:13px; color:#5C2A18;"><?= nl2br(htmlspecialchars($returnRemarks)) ?></p>
+                        </div>
+                    <?php endif; ?>
                     <div class="mp-card">
                         <form id="manpower-form">
                             <input type="hidden" name="id" value="<?= htmlspecialchars($request['id']) ?>">
@@ -456,7 +474,9 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
 
                             <div class="mp-form-footer">
                                 <a href="dashboard" class="btn-mp-outline">Cancel</a>
-                                <button type="button" class="btn-mp-outline" data-draft="1"><i class="fa fa-save" aria-hidden="true"></i> Save as Draft</button>
+                                <?php if ($request['status'] !== 'Pending'): ?>
+                                    <button type="button" class="btn-mp-outline" data-draft="1"><i class="fa fa-save" aria-hidden="true"></i> Save as Draft</button>
+                                <?php endif; ?>
                                 <button type="submit" class="btn-mp-solid"><i class="fa fa-paper-plane" aria-hidden="true"></i> Submit for approval</button>
                             </div>
                         </form>

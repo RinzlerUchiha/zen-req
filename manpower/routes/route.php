@@ -36,6 +36,8 @@ $routes = [
     '/approve' => '/actions/manpower_approve.php',
     '/role' => '/actions/get_manpower_role.php',
     '/role_switch' => '/actions/role_switch.php',
+    '/cancel' => '/actions/manpower_cancel.php',
+    '/request_action' => '/actions/manpower_request_action.php',
 ];
 
 // ============================================================================
