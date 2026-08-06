@@ -35,6 +35,7 @@ $routes = [
     '/save' => '/actions/save_manpower.php',
     '/approve' => '/actions/manpower_approve.php',
     '/role' => '/actions/get_manpower_role.php',
+    '/role_switch' => '/actions/role_switch.php',
 ];
 
 // ============================================================================

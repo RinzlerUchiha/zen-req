@@ -115,7 +115,11 @@ body { background:var(--mp-bg); }
 .mp-assign-card .mp-assign-title { padding:8px 12px; border-bottom:1px solid var(--mp-border); font-weight:700; font-size:11.5px; }
 .mp-assign-card .mp-assign-row { padding:6px 12px; border-bottom:1px solid #F1F2F5; font-size:11.5px; color:var(--mp-text); }
 
-.mp-dev-strip { background:#3A3F4B; color:#FFF; font-size:11.5px; padding:6px 16px; display:flex; align-items:center; gap:10px; }
+.mp-dev-strip {
+    background:#3A3F4B; color:#FFF; font-size:11.5px; padding:6px 16px;
+    display:flex; align-items:center; gap:10px;
+    position: sticky; top: 0; z-index: 1100;
+}
 
 /* Page content spacing: .page-wrapper/.page-body are not real Bootstrap
    classes (this stack only loads Bootstrap, not Tabler) so they render
@@ -149,7 +153,7 @@ main {
 </div>
 <script>
 function mpSwitchRole(newRole) {
-    fetch('<?= $manpower_root ?>/role_switch', {
+    fetch('/zen/manpower/role_switch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'role=' + encodeURIComponent(newRole)

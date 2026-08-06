@@ -93,7 +93,7 @@ $company    = $empInfo['jrec_company'];
 
 // NOTE: assumes tbl_manpower_users exists with columns:
 // employee_id, manpower_role, department_id, is_active
-$stmt = $hr_db->prepare("SELECT manpower_role, department_id, is_active
+$stmt = $hr_db->prepare("SELECT manpower_role, department_id, is_active, is_admin_dev
     FROM tbl_manpower_users
     WHERE employee_id = :empno
     LIMIT 1");
@@ -187,6 +187,7 @@ $currentUser = [
     'manpower_role'         => $manpowerRole,
     'manpower_department_id'=> $manpowerDeptId,    // department this user is scoped/assigned to within Manpower
     'is_active'             => $isActive,
+    'is_admin_dev'          => isset($roleRow['is_admin_dev']) ? (bool) $roleRow['is_admin_dev'] : false,
 ];
 
 $_SESSION['manpower_user'] = $currentUser;

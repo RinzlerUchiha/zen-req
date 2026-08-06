@@ -756,9 +756,16 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
 <script>
     function mpOpenRequestModal(id) {
         const modalEl = document.getElementById('mpRequestModal');
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalEl.classList.add('show');
+        modalEl.style.display = 'block';
+        document.body.classList.add('modal-open');
+        if (!document.getElementById('mpModalBackdrop')) {
+            const backdrop = document.createElement('div');
+            backdrop.id = 'mpModalBackdrop';
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+        }
         $('#mpRequestModalBody').html('<div class="text-center text-muted" style="padding:40px 0;">Loading…</div>');
-        modal.show();
 
         $.get('view', {
             id: id
@@ -818,6 +825,15 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
         }
         $('.mp-subtab').on('click', function() {
             showSubTab($(this).data('sub'));
+        });
+
+        // Manual close handling (data-bs-dismiss relies on the broken bootstrap JS)
+        $(document).on('click', '#mpRequestModal [data-bs-dismiss="modal"]', function() {
+            const modalEl = document.getElementById('mpRequestModal');
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            document.body.classList.remove('modal-open');
+            $('#mpModalBackdrop').remove();
         });
 
         var hash = window.location.hash.replace('#', '');
