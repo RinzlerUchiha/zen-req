@@ -141,19 +141,32 @@ try {
 
         $wasReturned = $existing['status'] === 'Returned';
 
+        // Draft -> Pending on submit (normal first submission).
+        // Returned/Update -> stays 'Returned', but flagged as awaiting the
+        // Approver's decision on the just-made edits (distinct from a
+        // Returned request the Requestor hasn't touched yet).
+        $finalStatus = $status;
+        $updatePendingReview = 0;
+        if ($wasReturned && $action === 'submit') {
+            $finalStatus = 'Returned';
+            $updatePendingReview = 1;
+        }
+
         $stmt = $hr_db->prepare("UPDATE tbl_manpower_request SET
                 department_id = :department_id,
                 company_id = :company_id,
                 nonnegotiable = :nonnegotiable,
                 status = :status,
+                update_pending_review = :update_pending_review,
                 current_approval_level = 0
             WHERE id = :id");
         $stmt->execute([
-            'department_id'   => $department_id,
-            'company_id'      => $company_id ?: null,
-            'nonnegotiable'   => $nonnegotiable,
-            'status'          => $status,
-            'id'              => $id,
+            'department_id'          => $department_id,
+            'company_id'             => $company_id ?: null,
+            'nonnegotiable'          => $nonnegotiable,
+            'status'                 => $finalStatus,
+            'update_pending_review'  => $updatePendingReview,
+            'id'                     => $id,
         ]);
 
         // Replace child position rows wholesale

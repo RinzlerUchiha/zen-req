@@ -60,6 +60,18 @@ if (!$req) {
 $isOwner   = ($req['requestor_employee_id'] === $empno);
 $canReview = userHasRoleIn('Approver', 'HR Head', 'Admin');
 
+// If this Approved request had a change request that was declined, pull
+// the most recent one so the Requestor can see the Approver's remarks.
+$declinedChangeRequest = null;
+if ($req['status'] === 'Approved') {
+    $crStmt = $hr_db->prepare("SELECT * FROM tbl_manpower_change_request
+        WHERE request_id = :id AND status = 'Declined'
+        ORDER BY id DESC LIMIT 1");
+    $crStmt->bindParam(':id', $id);
+    $crStmt->execute();
+    $declinedChangeRequest = $crStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
 if (!$isOwner && !$canReview) {
     echo '<div class="alert alert-danger">You do not have permission to view this request.</div>';
     return;
@@ -105,7 +117,9 @@ $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $canAct = false;
 
-if ($req['status'] === 'Pending') {
+$isFlaggedUpdate = $req['status'] === 'Returned' && !empty($req['update_pending_review']);
+
+if ($req['status'] === 'Pending' || $isFlaggedUpdate) {
     $userRole = $currentUser['manpower_role'];
 
     if ($userRole === 'Admin') {
@@ -264,6 +278,12 @@ function mp_view_render_table($rows)
     #mpv-fragment .mpv-table {
         width: 100%;
         border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    #mpv-fragment .mpv-table th:first-child,
+    #mpv-fragment .mpv-table td:first-child {
+        width: 40%;
     }
 
     #mpv-fragment .mpv-table th {
@@ -281,6 +301,8 @@ function mp_view_render_table($rows)
         color: var(--mpv-text);
         padding: 13px 16px;
         border-bottom: 1px solid #F1F2F5;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
 
     #mpv-fragment .mpv-table tr:last-child td {
@@ -433,8 +455,11 @@ function mp_view_render_table($rows)
                 <tr>
                     <td style="width:140px; font-size:12.5px; color:var(--mpv-muted); padding:3px 0;">Requestor</td>
                     <td style="font-size:13px; color:var(--mpv-text); font-weight:600;">
-                        <?= htmlspecialchars($req['requestor_name'] ?? $req['requestor_employee_id']) ?>
+                    <?= htmlspecialchars($req['requestor_name'] ?? $req['requestor_employee_id']) ?>
                         <span style="margin-left:10px;"><?= mp_view_status_badge($req['status']) ?></span>
+                        <?php if ($declinedChangeRequest) { ?>
+                            <span class="mpv-chip" style="background:#FCEBEB; color:#791F1F; margin-left:6px;">Change Request Declined</span>
+                        <?php } ?>
                     </td>
                 </tr>
                 <tr>
@@ -459,6 +484,15 @@ function mp_view_render_table($rows)
             <span class="mpv-field-label">NON-NEGOTIABLE</span>
             <div class="mpv-field-value"><?= $req['nonnegotiable'] !== '' && $req['nonnegotiable'] !== null ? nl2br(htmlspecialchars($req['nonnegotiable'])) : '<span class="mpv-empty-muted">None specified.</span>' ?></div>
 
+            <?php if ($declinedChangeRequest): ?>
+                <div style="background:#FFF1EC; border:1px solid #F0D3C6; border-radius:8px; padding:12px 16px; margin-top:18px;">
+                    <p style="margin:0 0 4px; font-size:10px; font-weight:700; color:#5C2A18; letter-spacing:.04em;">
+                        APPROVER'S REMARKS — <?= $declinedChangeRequest['change_type'] === 'edit' ? 'Edit' : 'Cancel' ?> request declined
+                    </p>
+                    <p style="margin:0; font-size:13px; color:#5C2A18;"><?= nl2br(htmlspecialchars($declinedChangeRequest['remarks'] ?: 'No reason given.')) ?></p>
+                </div>
+            <?php endif; ?>
+
             <?php if ($isOwner && !userHasRoleIn('Approver', 'HR Head', 'Admin') && in_array($req['status'], ['Draft', 'Returned'])) { ?>
                 <div style="margin-top:18px;">
                     <a href="request?id=<?= urlencode($req['id']) ?>" class="mpv-btn mpv-btn-edit">
@@ -479,17 +513,16 @@ function mp_view_render_table($rows)
             <?php if ($isOwner && !userHasRoleIn('Approver', 'HR Head', 'Admin') && $req['status'] === 'Approved') { ?>
                 <div style="margin-top:18px; display:flex; gap:8px;">
                     <button type="button" class="mpv-btn mpv-btn-edit" onclick="mpRequestAction('edit', <?= (int) $req['id'] ?>)">Request to Edit</button>
-                    <button type="button" class="mpv-btn mpv-btn-reject" onclick="mpRequestAction('delete', <?= (int) $req['id'] ?>)">Request to Cancel</button>
+                    <button type="button" class="mpv-btn mpv-btn-reject" onclick="mpRequestAction('cancel', <?= (int) $req['id'] ?>)">Request to Cancel</button>
                 </div>
             <?php } ?>
 
             <?php if ($canAct) { ?>
                 <div class="mpv-actions">
                     <span class="mpv-field-label" style="margin-top:0;">YOUR DECISION</span>
-                    <textarea id="mp-remarks" rows="3" placeholder="Remarks (required for Return/Reject)"></textarea>
+                    <textarea id="mp-remarks" rows="3" placeholder="Remarks (required for Reject)"></textarea>
                     <div class="mpv-btn-row">
                         <button type="button" class="mpv-btn mpv-btn-approve" onclick="mpDecide('approve', <?= (int) $req['id'] ?>)">Approve</button>
-                        <button type="button" class="mpv-btn mpv-btn-return" onclick="mpDecide('return', <?= (int) $req['id'] ?>)">Return</button>
                         <button type="button" class="mpv-btn mpv-btn-reject" onclick="mpDecide('reject', <?= (int) $req['id'] ?>)">Reject</button>
                     </div>
                 </div>

@@ -38,6 +38,8 @@ $routes = [
     '/role_switch' => '/actions/role_switch.php',
     '/cancel' => '/actions/manpower_cancel.php',
     '/request_action' => '/actions/manpower_request_action.php',
+    '/change_view' => '/public/manpower_change_view.php',
+    '/change_action' => '/actions/manpower_change_action.php',
 ];
 
 // ============================================================================

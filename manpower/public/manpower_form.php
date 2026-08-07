@@ -418,12 +418,12 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
                             <input type="hidden" name="company_id" value="<?= htmlspecialchars($company ?? '') ?>">
                             <input type="hidden" id="mp-submit-mode" name="action" value="draft">
 
-                            <?php if ($editing): ?>
+                            <!-- <?php if ($editing): ?>
                                 <div class="mp-field-block">
                                     <span class="mp-field-label">MR Number</span>
                                     <strong><?= htmlspecialchars($request['mr_no']) ?></strong>
                                 </div>
-                            <?php endif; ?>
+                            <?php endif; ?> -->
 
                             <!-- REPLACEMENT positions -->
                             <div class="mp-section-divider replacement"><span class="dot"></span> Replacement</div>

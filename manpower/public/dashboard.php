@@ -55,7 +55,7 @@ if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
             (SELECT COALESCE(SUM(p.headcount), 0) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS total_headcount,
             (SELECT COUNT(*) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_count
         FROM tbl_manpower_request r
-        WHERE r.status = 'Pending'"
+        WHERE (r.status = 'Pending' OR (r.status = 'Returned' AND r.update_pending_review = 1))"
         . ($scopeToDept ? " AND r.department_id = :deptId" : "")
         . " ORDER BY r.created_at ASC";
 
@@ -89,6 +89,32 @@ if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
     $allRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
+// Change Requests — pending edit/cancel requests on Approved manpower
+// requests, scoped like For My Approval (Approver: own department,
+// HR Head/Admin: all).
+$changeRequests = [];
+if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
+    $scopeChangeToDept = ($userRole === 'Approver');
+
+    $sql = "SELECT c.*, r.department_id, r.mr_no,
+            (SELECT GROUP_CONCAT(p.position SEPARATOR ', ') FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_list
+        FROM tbl_manpower_change_request c
+        JOIN tbl_manpower_request r ON r.id = c.request_id
+        WHERE c.status = 'Pending'"
+        . ($scopeChangeToDept ? " AND r.department_id = :deptId" : "")
+        . " ORDER BY c.created_at ASC";
+
+    $stmt = $hr_db->prepare($sql);
+    if ($scopeChangeToDept) {
+        $stmt->bindParam(':deptId', $currentUser['manpower_department_id']);
+    }
+    $stmt->execute();
+    $changeRequests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+$changeRequestsEdit   = array_values(array_filter($changeRequests, fn($c) => $c['change_type'] === 'edit'));
+$changeRequestsCancel = array_values(array_filter($changeRequests, fn($c) => $c['change_type'] === 'cancel'));
+
 // ============================================================================
 // Helpers (unchanged)
 // ============================================================================
@@ -108,6 +134,42 @@ function mp_status_badge($status)
         . htmlspecialchars($status) . '</span>';
 }
 
+
+
+function mp_change_type_badge($type)
+{
+    $map = [
+        'edit'   => ['#E8F0FE', '#1B4FB0'],
+        'cancel' => ['#FCEBEB', '#791F1F'],
+    ];
+    [$bg, $fg] = $map[$type] ?? ['#EEF0F3', '#5B6474'];
+    $label = $type === 'edit' ? 'Edit Requested' : 'Cancel Requested';
+    return '<span class="mp-chip" style="background:' . $bg . ';color:' . $fg . ';">'
+        . htmlspecialchars($label) . '</span>';
+}
+
+function mp_render_change_rows($rows, $emptyMsg)
+{
+    if (empty($rows)) {
+        echo '<div class="mp-empty"><span>' . htmlspecialchars($emptyMsg) . '</span></div>';
+        return;
+    }
+    $i = 1;
+    foreach ($rows as $r) {
+        echo '<div class="mp-row" onclick="mpOpenChangeRequestModal(' . (int) $r['id'] . ')">';
+        echo   '<div class="mp-row-num">' . $i++ . '</div>';
+        echo   '<div class="mp-row-body">';
+        echo     '<div class="mp-row-top"><span class="mp-row-title">' . htmlspecialchars($r['position_list'] ?: $r['mr_no']) . '</span></div>';
+        echo     '<div class="mp-row-cols">';
+        echo       '<div class="mp-col"><span class="mp-col-label">DEPARTMENT</span><span class="mp-col-value">' . htmlspecialchars($r['department_id']) . '</span></div>';
+        echo       '<div class="mp-col"><span class="mp-col-label">REQUESTED</span><span class="mp-col-value">' . date("M d", strtotime($r['created_at'])) . '</span></div>';
+        echo       '<div class="mp-col mp-col-status">' . mp_change_type_badge($r['change_type']) . '</div>';
+        echo     '</div>';
+        echo   '</div>';
+        echo '</div>';
+    }
+}
+
 function mp_render_rows($rows, $emptyMsg)
 {
     if (empty($rows)) {
@@ -119,7 +181,7 @@ function mp_render_rows($rows, $emptyMsg)
     }
     $i = 1;
     foreach ($rows as $r) {
-        $mpRowClick = ($r['status'] === 'Returned')
+        $mpRowClick = ($r['status'] === 'Returned' && !userHasRoleIn('Approver', 'HR Head', 'Admin'))
             ? "window.location='request?id=" . (int) $r['id'] . "'"
             : "mpOpenRequestModal(" . (int) $r['id'] . ")";
         echo '<div class="mp-row" onclick="' . $mpRowClick . '">';
@@ -136,10 +198,15 @@ function mp_render_rows($rows, $emptyMsg)
         echo       '<div class="mp-col"><span class="mp-col-label">HEADCOUNT</span><span class="mp-col-value">' . htmlspecialchars($r['total_headcount']) . '</span></div>';
         echo       '<div class="mp-col"><span class="mp-col-label">POSITIONS</span><span class="mp-col-value">' . htmlspecialchars($r['position_count']) . '</span></div>';
         echo       '<div class="mp-col"><span class="mp-col-label">SUBMITTED</span><span class="mp-col-value">' . date("M d", strtotime($r['created_at'])) . '</span></div>';
-        echo       '<div class="mp-col mp-col-status">' . mp_status_badge($r['status']) . '</div>';
+        echo       '<div class="mp-col mp-col-status">';
+        if ($r['status'] === 'Returned' && !empty($r['update_pending_review'])) {
+            echo mp_status_badge('Update') . ' <span class="mp-chip" style="background:#E8F0FE;color:#1B4FB0;">Revised</span>';
+        } else {
+            echo mp_status_badge($r['status']);
+        }
+        echo       '</div>';
         echo     '</div>';
         echo   '</div>';
-        echo   '<div class="mp-row-view">&#128065;</div>';
         echo '</div>';
     }
 }
@@ -170,16 +237,23 @@ foreach ($myRequests as $r) {
 // Which sidebar sections this user can see, in order.
 // Phase 1 scope: Requestor, Approver, HR Head only. HR Admin sidebar is
 // deferred to phase 2 (belongs to the separate zen-admin system).
+$isHrHeadOnly = userHasRoleIn('HR Head') && !userHasRoleIn('Approver', 'Admin');
+
 $mpSections = [];
-if (!userHasRoleIn('Approver')) {
-    $mpSections['my-requests'] = ['label' => 'My requests', 'icon' => 'file-text'];
+if ($isHrHeadOnly) {
+    $mpSections['contract-offers'] = ['label' => 'Contract offers', 'icon' => 'handshake-o'];
+} else {
+    if (!userHasRoleIn('Approver')) {
+        $mpSections['my-requests'] = ['label' => 'My requests', 'icon' => 'file-text'];
+    }
+    if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
+        $mpSections['all-requests'] = ['label' => 'All requests', 'icon' => 'list'];
+        $mpSections['for-approval'] = ['label' => 'For my approval', 'icon' => 'check-circle'];
+        $mpSections['change-requests'] = ['label' => 'Requests to edit/cancel', 'icon' => 'pencil-square-o'];
+    }
+    $mpSections['job-spec'] = ['label' => 'Job specification', 'icon' => 'briefcase'];
 }
-if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
-    $mpSections['all-requests'] = ['label' => 'All requests', 'icon' => 'list'];
-    $mpSections['for-approval'] = ['label' => 'For my approval', 'icon' => 'check-circle'];
-}
-$mpSections['job-spec'] = ['label' => 'Job specification', 'icon' => 'briefcase'];
-$mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approval' : 'my-requests';
+$mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approval' : 'my-requests');
 ?>
 <style>
     .mp-wrap {
@@ -439,7 +513,7 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
 
     .mp-row {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 16px;
         padding: 16px 22px;
         border-bottom: 1px solid #F1F2F5;
@@ -477,14 +551,22 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
     .mp-row-top {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
         margin-bottom: 9px;
+        gap: 12px;
     }
 
     .mp-row-title {
         font-size: 13.5px;
         font-weight: 700;
         color: #1F2430;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.4;
     }
 
     .mp-row-cols {
@@ -603,6 +685,9 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
                 <?php if ($key === 'for-approval' && !empty($forApproval)) { ?>
                     <span class="mp-nav-dot" title="<?= count($forApproval) ?> pending your approval"></span>
                 <?php } ?>
+                <?php if ($key === 'change-requests' && !empty($changeRequests)) { ?>
+                    <span class="mp-nav-dot" title="<?= count($changeRequests) ?> pending edit/cancel requests"></span>
+                <?php } ?>
             </div>
         <?php endforeach; ?>
     </div>
@@ -616,13 +701,103 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
                         <h4>Manpower Requests</h4>
                         <p class="mp-subtitle">Track, submit, and approve headcount requests</p>
                     </div>
-                    <?php if (!userHasRoleIn('Approver')) { ?>
+                    <?php if (!userHasRoleIn('Approver') && !$isHrHeadOnly) { ?>
                         <a href="request" class="mp-new-btn">
                             <i class="fa fa-plus-circle"></i> New Request
                         </a>
                     <?php } ?>
                 </div>
 
+                <?php if ($isHrHeadOnly): ?>
+                <div class="mp-cards">
+                    <div class="mp-card mp-card-pending">
+                        <div class="mp-card-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 7v5l3.5 2" />
+                            </svg>
+                        </div>
+                        <div class="mp-card-text">
+                            <div class="mp-card-label">Pending Offers</div>
+                            <div class="mp-card-value">2</div>
+                        </div>
+                    </div>
+                    <div class="mp-card mp-card-approved">
+                        <div class="mp-card-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 12l2 2 4-4" />
+                                <circle cx="12" cy="12" r="9" />
+                            </svg>
+                        </div>
+                        <div class="mp-card-text">
+                            <div class="mp-card-label">Accepted</div>
+                            <div class="mp-card-value">5</div>
+                        </div>
+                    </div>
+                    <div class="mp-card mp-card-rejected">
+                        <div class="mp-card-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M9.5 9.5l5 5m0-5l-5 5" />
+                            </svg>
+                        </div>
+                        <div class="mp-card-text">
+                            <div class="mp-card-label">Denied</div>
+                            <div class="mp-card-value">1</div>
+                        </div>
+                    </div>
+                    <div class="mp-card mp-card-total">
+                        <div class="mp-card-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" />
+                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </div>
+                        <div class="mp-card-text">
+                            <div class="mp-card-label">Revision Requested</div>
+                            <div class="mp-card-value">1</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mp-panel active" id="contract-offers">
+                    <div style="padding:18px 22px 0;">
+                        <span style="display:block; font-size:11.5px; color:#B0B6C0; margin-bottom:14px;">
+                            Sample preview — Contract Offers will be fully wired up in a future phase.
+                        </span>
+                    </div>
+                    <?php
+                    $sampleOffers = [
+                        ['candidate' => 'Maria Santos', 'position' => 'Software Engineer II', 'department' => 'MIS', 'salary' => '₱45,000', 'status' => 'Pending'],
+                        ['candidate' => 'John Dela Cruz', 'position' => 'HR Generalist', 'department' => 'HR', 'salary' => '₱32,000', 'status' => 'Pending'],
+                        ['candidate' => 'Anna Reyes', 'position' => 'Accounting Associate', 'department' => 'Finance', 'salary' => '₱30,000', 'status' => 'Approved'],
+                    ];
+                    $i = 1;
+                    foreach ($sampleOffers as $offer):
+                    ?>
+                        <div class="mp-row" style="cursor:default;">
+                            <div class="mp-row-num"><?= $i++ ?></div>
+                            <div class="mp-row-body">
+                                <div class="mp-row-top">
+                                    <span class="mp-row-title"><?= htmlspecialchars($offer['candidate']) ?> — <?= htmlspecialchars($offer['position']) ?></span>
+                                </div>
+                                <div class="mp-row-cols">
+                                    <div class="mp-col"><span class="mp-col-label">DEPARTMENT</span><span class="mp-col-value"><?= htmlspecialchars($offer['department']) ?></span></div>
+                                    <div class="mp-col"><span class="mp-col-label">OFFERED SALARY</span><span class="mp-col-value"><?= htmlspecialchars($offer['salary']) ?></span></div>
+                                    <div class="mp-col mp-col-status"><?= mp_status_badge($offer['status']) ?></div>
+                                </div>
+                                <?php if ($offer['status'] === 'Pending'): ?>
+                                    <div style="margin-top:12px; display:flex; gap:8px;">
+                                        <button type="button" class="mpv-btn mpv-btn-approve" onclick="alert('Contract offer actions will be available once this module is built out.')">Accept</button>
+                                        <button type="button" class="mpv-btn mpv-btn-return" onclick="alert('Contract offer actions will be available once this module is built out.')">Revise</button>
+                                        <button type="button" class="mpv-btn mpv-btn-reject" onclick="alert('Contract offer actions will be available once this module is built out.')">Deny</button>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
                 <div class="mp-cards">
                     <div class="mp-card mp-card-pending">
                         <div class="mp-card-icon">
@@ -660,19 +835,36 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
                             <div class="mp-card-value"><?= $mpCounts['Rejected'] ?></div>
                         </div>
                     </div>
-                    <div class="mp-card mp-card-total">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M4 19V10M12 19V4M20 19v-7" />
-                            </svg>
+                    <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
+                        <div class="mp-card mp-card-total" onclick="document.querySelector('.mp-nav-item[data-target=\'change-requests\']').click();" style="cursor:pointer;">
+                            <div class="mp-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                            </div>
+                            <div class="mp-card-text">
+                                <div class="mp-card-label">Requests to Edit/Cancel</div>
+                                <div class="mp-card-value"><?= count($changeRequests) ?></div>
+                            </div>
                         </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Total Requests</div>
-                            <div class="mp-card-value"><?= $mpTotal ?></div>
+                    <?php } else { ?>
+                        <div class="mp-card mp-card-total">
+                            <div class="mp-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 19V10M12 19V4M20 19v-7" />
+                                </svg>
+                            </div>
+                            <div class="mp-card-text">
+                                <div class="mp-card-label">Total Requests</div>
+                                <div class="mp-card-value"><?= $mpTotal ?></div>
+                            </div>
                         </div>
-                    </div>
+                        <?php } ?>
                 </div>
+                <?php endif; ?>
 
+                <?php if (!$isHrHeadOnly): ?>
                 <!-- My requests -->
                 <div class="mp-panel<?= $mpDefaultSection === 'my-requests' ? ' active' : '' ?>" id="my-requests">
                     <div style="padding:16px 22px 0;">
@@ -710,12 +902,31 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
                     </div>
                 <?php } ?>
 
+                <!-- Requests to edit/cancel -->
+                <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
+                    <div class="mp-panel" id="change-requests">
+                        <div style="padding:16px 22px 0;">
+                            <div class="mp-subtabs">
+                                <div class="mp-subtab active" data-sub="cr-edit">Edit <span class="mp-subtab-count"><?= count($changeRequestsEdit) ?></span></div>
+                                <div class="mp-subtab" data-sub="cr-cancel">Cancel <span class="mp-subtab-count"><?= count($changeRequestsCancel) ?></span></div>
+                            </div>
+                        </div>
+                        <div class="mp-subpanel active" id="cr-edit">
+                            <?php mp_render_change_rows($changeRequestsEdit, "No pending edit requests."); ?>
+                        </div>
+                        <div class="mp-subpanel" id="cr-cancel">
+                            <?php mp_render_change_rows($changeRequestsCancel, "No pending cancel requests."); ?>
+                        </div>
+                    </div>
+                <?php } ?>
+
                 <!-- Job specification -->
                 <div class="mp-panel" id="job-spec">
                     <div class="mp-empty">
                         <span>Job specification view isn't wired up yet — link this to your Job Specification page/query.</span>
                     </div>
                 </div>
+                <?php endif; ?>
 
             </div>
         </div>
@@ -804,7 +1015,7 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
 </div>
 
 <script>
-    function mpOpenRequestModal(id) {
+    function mpOpenRequestModal(id, returnToChangeId) {
         const modalEl = document.getElementById('mpRequestModal');
         modalEl.style.display = 'block';
         modalEl.offsetHeight; // force reflow so the transition below actually animates
@@ -822,6 +1033,13 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
             id: id
         }, function(html) {
             $('#mpRequestModalBody').html(html);
+            if (returnToChangeId) {
+                $('#mpRequestModalBody').append(
+                    '<div style="margin-top:14px; padding-top:14px; border-top:1px solid #E7E9EE;">' +
+                    '<a href="#" class="mpv-btn mpv-btn-edit" onclick="mpOpenChangeRequestModal(' + returnToChangeId + '); return false;">&larr; Back to Change Request</a>' +
+                    '</div>'
+                );
+            }
         }).fail(function() {
             $('#mpRequestModalBody').html('<div class="alert alert-danger">Failed to load request details.</div>');
         });
@@ -852,9 +1070,9 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
             changeType === 'edit' ? 'Request to Edit' : 'Request to Cancel';
         document.getElementById('mpChangeRequestReason').value = '';
         document.getElementById('mpChangeRequestReason').placeholder =
-            changeType === 'edit'
-                ? 'What would you like to edit? (this note goes to your Approver)'
-                : 'Why are you requesting to cancel this request?';
+            changeType === 'edit' ?
+            'What would you like to edit? (this note goes to your Approver)' :
+            'Why are you requesting to cancel this request?';
 
         modalEl.style.display = 'block';
         modalEl.offsetHeight;
@@ -900,8 +1118,8 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
 
     function mpDecide(decision, requestId) {
         const $panel = $('#mpRequestModalBody');
-        if ((decision === 'return' || decision === 'reject') && $panel.find('#mp-remarks').val().trim() === '') {
-            alert('Remarks are required when returning or rejecting a request.');
+        if (decision === 'reject' && $panel.find('#mp-remarks').val().trim() === '') {
+            alert('Remarks are required when rejecting a request.');
             return;
         }
         if (!confirm('Are you sure you want to ' + decision + ' this request?')) {
@@ -916,6 +1134,55 @@ $mpDefaultSection = userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approva
             if (data.success) {
                 alert('Decision recorded.');
                 mpOpenRequestModal(requestId);
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to record decision.');
+            }
+        }).fail(function() {
+            alert('An error occurred. Please try again.');
+        });
+    }
+
+    function mpOpenChangeRequestModal(id) {
+        const modalEl = document.getElementById('mpRequestModal');
+        modalEl.style.display = 'block';
+        modalEl.offsetHeight;
+        modalEl.classList.add('show');
+        document.body.classList.add('modal-open');
+        if (!document.getElementById('mpModalBackdrop')) {
+            const backdrop = document.createElement('div');
+            backdrop.id = 'mpModalBackdrop';
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+        }
+        $('#mpRequestModalBody').html('<div class="text-center text-muted" style="padding:40px 0;">Loading…</div>');
+
+        $.get('change_view', {
+            id: id
+        }, function(html) {
+            $('#mpRequestModalBody').html(html);
+        }).fail(function() {
+            $('#mpRequestModalBody').html('<div class="alert alert-danger">Failed to load change request.</div>');
+        });
+    }
+
+    function mpDecideChangeRequest(decision, changeId) {
+        const $panel = $('#mpRequestModalBody');
+        if (decision === 'decline' && $panel.find('#mp-cr-remarks').val().trim() === '') {
+            alert('Remarks are required when declining.');
+            return;
+        }
+        if (!confirm('Are you sure you want to ' + decision + ' this change request?')) {
+            return;
+        }
+        $.post('change_action', {
+            change_id: changeId,
+            decision: decision,
+            remarks: $panel.find('#mp-cr-remarks').val()
+        }, function(res) {
+            let data = typeof res === 'string' ? JSON.parse(res) : res;
+            if (data.success) {
+                alert('Decision recorded.');
                 location.reload();
             } else {
                 alert(data.error || 'Failed to record decision.');

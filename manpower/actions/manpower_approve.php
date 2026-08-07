@@ -55,13 +55,13 @@ if (!$request_id) {
     exit;
 }
 
-if (!in_array($decision, ['approve', 'return', 'reject'])) {
+if (!in_array($decision, ['approve', 'reject'])) {
     echo json_encode(['success' => false, 'error' => 'Invalid decision.']);
     exit;
 }
 
-if (in_array($decision, ['return', 'reject']) && $remarks === '') {
-    echo json_encode(['success' => false, 'error' => 'Remarks are required when returning or rejecting a request.']);
+if ($decision === 'reject' && $remarks === '') {
+    echo json_encode(['success' => false, 'error' => 'Remarks are required when rejecting a request.']);
     exit;
 }
 
@@ -82,7 +82,8 @@ try {
         exit;
     }
 
-    if ($req['status'] !== 'Pending') {
+    $isFlaggedUpdate = $req['status'] === 'Returned' && !empty($req['update_pending_review']);
+    if ($req['status'] !== 'Pending' && !$isFlaggedUpdate) {
         $hr_db->rollBack();
         echo json_encode(['success' => false, 'error' => 'This request is not currently pending approval (status: ' . $req['status'] . ').']);
         exit;
@@ -118,7 +119,7 @@ try {
     // ------------------------------------------------------------------
     // Apply decision
     // ------------------------------------------------------------------
-    $logAction = ($decision === 'approve') ? 'Approved' : (($decision === 'return') ? 'Returned' : 'Rejected');
+    $logAction = ($decision === 'approve') ? 'Approved' : 'Rejected';
 
     $logStmt = $hr_db->prepare("INSERT INTO tbl_manpower_approval_log
         (request_id, approver_employee_id, approval_level, action, remarks)
@@ -134,9 +135,6 @@ try {
     if ($decision === 'reject') {
         $newStatus = 'Rejected';
         $newLevel  = $actingLevel;
-    } elseif ($decision === 'return') {
-        $newStatus = 'Returned';
-        $newLevel  = 0; // resets so the requestor's resubmission starts from level 1 again
     } else {
         // Approve — Phase 1 is single-level: Approver's decision is final.
         $newStatus = 'Approved';
@@ -144,7 +142,7 @@ try {
     }
 
     $updateStmt = $hr_db->prepare("UPDATE tbl_manpower_request
-        SET status = :status, current_approval_level = :level
+        SET status = :status, current_approval_level = :level, update_pending_review = 0
         WHERE id = :id");
     $updateStmt->execute([
         'status' => $newStatus,
