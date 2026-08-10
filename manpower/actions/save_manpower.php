@@ -141,6 +141,12 @@ try {
 
         $wasReturned = $existing['status'] === 'Returned';
 
+        if ($wasReturned && $action === 'draft') {
+            $hr_db->rollBack();
+            echo json_encode(['success' => false, 'error' => 'This request must be resubmitted for approval — it cannot be saved as a draft.']);
+            exit;
+        }
+
         // Draft -> Pending on submit (normal first submission).
         // Returned/Update -> stays 'Returned', but flagged as awaiting the
         // Approver's decision on the just-made edits (distinct from a

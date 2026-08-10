@@ -119,97 +119,17 @@ $changeRequestsCancel = array_values(array_filter($changeRequests, fn($c) => $c[
 // Helpers (unchanged)
 // ============================================================================
 
-function mp_status_badge($status)
-{
-    $map = [
-        'Draft'     => ['#EEF0F3', '#5B6474'],
-        'Pending'   => ['#2F6FE4', '#FFFFFF'],
-        'Returned'  => ['#E8F0FE', '#1B4FB0'],
-        'Rejected'  => ['#FCEBEB', '#791F1F'],
-        'Approved'  => ['#E7F6EC', '#1E7A34'],
-        'Cancelled' => ['#EEF0F3', '#5B6474'],
-    ];
-    [$bg, $fg] = $map[$status] ?? ['#EEF0F3', '#5B6474'];
-    return '<span class="mp-chip" style="background:' . $bg . ';color:' . $fg . ';">'
-        . htmlspecialchars($status) . '</span>';
-}
+require_once dirname(__DIR__) . '/includes/manpower_render_helpers.php';
+require_once dirname(__DIR__) . '/includes/manpower_jobspec_config.php';
 
-
-
-function mp_change_type_badge($type)
-{
-    $map = [
-        'edit'   => ['#E8F0FE', '#1B4FB0'],
-        'cancel' => ['#FCEBEB', '#791F1F'],
-    ];
-    [$bg, $fg] = $map[$type] ?? ['#EEF0F3', '#5B6474'];
-    $label = $type === 'edit' ? 'Edit Requested' : 'Cancel Requested';
-    return '<span class="mp-chip" style="background:' . $bg . ';color:' . $fg . ';">'
-        . htmlspecialchars($label) . '</span>';
-}
-
-function mp_render_change_rows($rows, $emptyMsg)
-{
-    if (empty($rows)) {
-        echo '<div class="mp-empty"><span>' . htmlspecialchars($emptyMsg) . '</span></div>';
-        return;
-    }
-    $i = 1;
-    foreach ($rows as $r) {
-        echo '<div class="mp-row" onclick="mpOpenChangeRequestModal(' . (int) $r['id'] . ')">';
-        echo   '<div class="mp-row-num">' . $i++ . '</div>';
-        echo   '<div class="mp-row-body">';
-        echo     '<div class="mp-row-top"><span class="mp-row-title">' . htmlspecialchars($r['position_list'] ?: $r['mr_no']) . '</span></div>';
-        echo     '<div class="mp-row-cols">';
-        echo       '<div class="mp-col"><span class="mp-col-label">DEPARTMENT</span><span class="mp-col-value">' . htmlspecialchars($r['department_id']) . '</span></div>';
-        echo       '<div class="mp-col"><span class="mp-col-label">REQUESTED</span><span class="mp-col-value">' . date("M d", strtotime($r['created_at'])) . '</span></div>';
-        echo       '<div class="mp-col mp-col-status">' . mp_change_type_badge($r['change_type']) . '</div>';
-        echo     '</div>';
-        echo   '</div>';
-        echo '</div>';
-    }
-}
-
-function mp_render_rows($rows, $emptyMsg)
-{
-    if (empty($rows)) {
-        echo '<div class="mp-empty">';
-        echo '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 00-2 2v7a1 1 0 001 1h16a1 1 0 001-1v-7a2 2 0 00-2-2h-4M9 11V4a1 1 0 011-1h4a1 1 0 011 1v7M9 11h6"/></svg>';
-        echo '<span>' . htmlspecialchars($emptyMsg) . '</span>';
-        echo '</div>';
-        return;
-    }
-    $i = 1;
-    foreach ($rows as $r) {
-        $mpRowClick = ($r['status'] === 'Returned' && !userHasRoleIn('Approver', 'HR Head', 'Admin'))
-            ? "window.location='request?id=" . (int) $r['id'] . "'"
-            : "mpOpenRequestModal(" . (int) $r['id'] . ")";
-        echo '<div class="mp-row" onclick="' . $mpRowClick . '">';
-        echo   '<div class="mp-row-num">' . $i++ . '</div>';
-        $positionDisplay = $r['position_list'] !== null && $r['position_list'] !== ''
-            ? $r['position_list']
-            : 'No positions added yet';
-        echo   '<div class="mp-row-body">';
-        echo     '<div class="mp-row-top">';
-        echo       '<span class="mp-row-title">' . htmlspecialchars($positionDisplay) . '</span>';
-        echo     '</div>';
-        echo     '<div class="mp-row-cols">';
-        echo       '<div class="mp-col"><span class="mp-col-label">DEPARTMENT</span><span class="mp-col-value">' . htmlspecialchars($r['department_id']) . '</span></div>';
-        echo       '<div class="mp-col"><span class="mp-col-label">HEADCOUNT</span><span class="mp-col-value">' . htmlspecialchars($r['total_headcount']) . '</span></div>';
-        echo       '<div class="mp-col"><span class="mp-col-label">POSITIONS</span><span class="mp-col-value">' . htmlspecialchars($r['position_count']) . '</span></div>';
-        echo       '<div class="mp-col"><span class="mp-col-label">SUBMITTED</span><span class="mp-col-value">' . date("M d", strtotime($r['created_at'])) . '</span></div>';
-        echo       '<div class="mp-col mp-col-status">';
-        if ($r['status'] === 'Returned' && !empty($r['update_pending_review'])) {
-            echo mp_status_badge('Update') . ' <span class="mp-chip" style="background:#E8F0FE;color:#1B4FB0;">Revised</span>';
-        } else {
-            echo mp_status_badge($r['status']);
-        }
-        echo       '</div>';
-        echo     '</div>';
-        echo   '</div>';
-        echo '</div>';
-    }
-}
+// Job specifications — standalone list, not scoped by department/role
+$specStmt = $hr_db->query("SELECT " . MP_JOBSPEC_COLUMNS['id'] . " AS id,
+        " . MP_JOBSPEC_COLUMNS['department'] . " AS department,
+        " . MP_JOBSPEC_COLUMNS['position'] . " AS position,
+        " . MP_JOBSPEC_COLUMNS['headcount'] . " AS headcount,
+        " . MP_JOBSPEC_COLUMNS['emplstat'] . " AS emplstat
+    FROM " . MP_JOBSPEC_TABLE . " ORDER BY " . MP_JOBSPEC_COLUMNS['id'] . " DESC");
+$jobSpecs = $specStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Summary counts (derived from the data already fetched above)
 $countSource = userHasRoleIn('HR Head', 'Admin') ? $allRequests : $myRequests;
@@ -709,134 +629,44 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                 </div>
 
                 <?php if ($isHrHeadOnly): ?>
-                <div class="mp-cards">
-                    <div class="mp-card mp-card-pending">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 7v5l3.5 2" />
-                            </svg>
-                        </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Pending Offers</div>
-                            <div class="mp-card-value">2</div>
-                        </div>
-                    </div>
-                    <div class="mp-card mp-card-approved">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 12l2 2 4-4" />
-                                <circle cx="12" cy="12" r="9" />
-                            </svg>
-                        </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Accepted</div>
-                            <div class="mp-card-value">5</div>
-                        </div>
-                    </div>
-                    <div class="mp-card mp-card-rejected">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M9.5 9.5l5 5m0-5l-5 5" />
-                            </svg>
-                        </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Denied</div>
-                            <div class="mp-card-value">1</div>
-                        </div>
-                    </div>
-                    <div class="mp-card mp-card-total">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" />
-                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                        </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Revision Requested</div>
-                            <div class="mp-card-value">1</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mp-panel active" id="contract-offers">
-                    <div style="padding:18px 22px 0;">
-                        <span style="display:block; font-size:11.5px; color:#B0B6C0; margin-bottom:14px;">
-                            Sample preview — Contract Offers will be fully wired up in a future phase.
-                        </span>
-                    </div>
-                    <?php
-                    $sampleOffers = [
-                        ['candidate' => 'Maria Santos', 'position' => 'Software Engineer II', 'department' => 'MIS', 'salary' => '₱45,000', 'status' => 'Pending'],
-                        ['candidate' => 'John Dela Cruz', 'position' => 'HR Generalist', 'department' => 'HR', 'salary' => '₱32,000', 'status' => 'Pending'],
-                        ['candidate' => 'Anna Reyes', 'position' => 'Accounting Associate', 'department' => 'Finance', 'salary' => '₱30,000', 'status' => 'Approved'],
-                    ];
-                    $i = 1;
-                    foreach ($sampleOffers as $offer):
-                    ?>
-                        <div class="mp-row" style="cursor:default;">
-                            <div class="mp-row-num"><?= $i++ ?></div>
-                            <div class="mp-row-body">
-                                <div class="mp-row-top">
-                                    <span class="mp-row-title"><?= htmlspecialchars($offer['candidate']) ?> — <?= htmlspecialchars($offer['position']) ?></span>
-                                </div>
-                                <div class="mp-row-cols">
-                                    <div class="mp-col"><span class="mp-col-label">DEPARTMENT</span><span class="mp-col-value"><?= htmlspecialchars($offer['department']) ?></span></div>
-                                    <div class="mp-col"><span class="mp-col-label">OFFERED SALARY</span><span class="mp-col-value"><?= htmlspecialchars($offer['salary']) ?></span></div>
-                                    <div class="mp-col mp-col-status"><?= mp_status_badge($offer['status']) ?></div>
-                                </div>
-                                <?php if ($offer['status'] === 'Pending'): ?>
-                                    <div style="margin-top:12px; display:flex; gap:8px;">
-                                        <button type="button" class="mpv-btn mpv-btn-approve" onclick="alert('Contract offer actions will be available once this module is built out.')">Accept</button>
-                                        <button type="button" class="mpv-btn mpv-btn-return" onclick="alert('Contract offer actions will be available once this module is built out.')">Revise</button>
-                                        <button type="button" class="mpv-btn mpv-btn-reject" onclick="alert('Contract offer actions will be available once this module is built out.')">Deny</button>
-                                    </div>
-                                <?php endif; ?>
+                    <div class="mp-cards">
+                        <div class="mp-card mp-card-pending">
+                            <div class="mp-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 7v5l3.5 2" />
+                                </svg>
+                            </div>
+                            <div class="mp-card-text">
+                                <div class="mp-card-label">Pending Offers</div>
+                                <div class="mp-card-value">2</div>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php else: ?>
-                <div class="mp-cards">
-                    <div class="mp-card mp-card-pending">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 7v5l3.5 2" />
-                            </svg>
+                        <div class="mp-card mp-card-approved">
+                            <div class="mp-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 12l2 2 4-4" />
+                                    <circle cx="12" cy="12" r="9" />
+                                </svg>
+                            </div>
+                            <div class="mp-card-text">
+                                <div class="mp-card-label">Accepted</div>
+                                <div class="mp-card-value">5</div>
+                            </div>
                         </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Pending</div>
-                            <div class="mp-card-value"><?= $mpCounts['Pending'] ?></div>
+                        <div class="mp-card mp-card-rejected">
+                            <div class="mp-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M9.5 9.5l5 5m0-5l-5 5" />
+                                </svg>
+                            </div>
+                            <div class="mp-card-text">
+                                <div class="mp-card-label">Denied</div>
+                                <div class="mp-card-value">1</div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mp-card mp-card-approved">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 12l2 2 4-4" />
-                                <circle cx="12" cy="12" r="9" />
-                            </svg>
-                        </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Approved</div>
-                            <div class="mp-card-value"><?= $mpCounts['Approved'] ?></div>
-                        </div>
-                    </div>
-                    <div class="mp-card mp-card-rejected">
-                        <div class="mp-card-icon">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M9.5 9.5l5 5m0-5l-5 5" />
-                            </svg>
-                        </div>
-                        <div class="mp-card-text">
-                            <div class="mp-card-label">Declined</div>
-                            <div class="mp-card-value"><?= $mpCounts['Rejected'] ?></div>
-                        </div>
-                    </div>
-                    <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
-                        <div class="mp-card mp-card-total" onclick="document.querySelector('.mp-nav-item[data-target=\'change-requests\']').click();" style="cursor:pointer;">
+                        <div class="mp-card mp-card-total">
                             <div class="mp-card-icon">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" />
@@ -844,88 +674,232 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                                 </svg>
                             </div>
                             <div class="mp-card-text">
-                                <div class="mp-card-label">Requests to Edit/Cancel</div>
-                                <div class="mp-card-value"><?= count($changeRequests) ?></div>
+                                <div class="mp-card-label">Revision Requested</div>
+                                <div class="mp-card-value">1</div>
                             </div>
                         </div>
-                    <?php } else { ?>
-                        <div class="mp-card mp-card-total">
+                    </div>
+
+                    <div class="mp-panel active" id="contract-offers">
+                        <div style="padding:18px 22px 0;">
+                            <span style="display:block; font-size:11.5px; color:#B0B6C0; margin-bottom:14px;">
+                                Sample preview — Contract Offers will be fully wired up in a future phase.
+                            </span>
+                        </div>
+                        <?php
+                        $sampleOffers = [
+                            ['candidate' => 'Maria Santos', 'position' => 'Software Engineer II', 'department' => 'MIS', 'salary' => '₱45,000', 'status' => 'Pending'],
+                            ['candidate' => 'John Dela Cruz', 'position' => 'HR Generalist', 'department' => 'HR', 'salary' => '₱32,000', 'status' => 'Pending'],
+                            ['candidate' => 'Anna Reyes', 'position' => 'Accounting Associate', 'department' => 'Finance', 'salary' => '₱30,000', 'status' => 'Approved'],
+                        ];
+                        $i = 1;
+                        foreach ($sampleOffers as $offer):
+                        ?>
+                            <div class="mp-row" style="cursor:default;">
+                                <div class="mp-row-num"><?= $i++ ?></div>
+                                <div class="mp-row-body">
+                                    <div class="mp-row-top">
+                                        <span class="mp-row-title"><?= htmlspecialchars($offer['candidate']) ?> — <?= htmlspecialchars($offer['position']) ?></span>
+                                    </div>
+                                    <div class="mp-row-cols">
+                                        <div class="mp-col"><span class="mp-col-label">DEPARTMENT</span><span class="mp-col-value"><?= htmlspecialchars($offer['department']) ?></span></div>
+                                        <div class="mp-col"><span class="mp-col-label">OFFERED SALARY</span><span class="mp-col-value"><?= htmlspecialchars($offer['salary']) ?></span></div>
+                                        <div class="mp-col mp-col-status"><?= mp_status_badge($offer['status']) ?></div>
+                                    </div>
+                                    <?php if ($offer['status'] === 'Pending'): ?>
+                                        <div style="margin-top:12px; display:flex; gap:8px;">
+                                            <button type="button" class="mpv-btn mpv-btn-approve" onclick="alert('Contract offer actions will be available once this module is built out.')">Accept</button>
+                                            <button type="button" class="mpv-btn mpv-btn-return" onclick="alert('Contract offer actions will be available once this module is built out.')">Revise</button>
+                                            <button type="button" class="mpv-btn mpv-btn-reject" onclick="alert('Contract offer actions will be available once this module is built out.')">Deny</button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="mp-cards">
+                        <div class="mp-card mp-card-pending">
                             <div class="mp-card-icon">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M4 19V10M12 19V4M20 19v-7" />
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 7v5l3.5 2" />
                                 </svg>
                             </div>
                             <div class="mp-card-text">
-                                <div class="mp-card-label">Total Requests</div>
-                                <div class="mp-card-value"><?= $mpTotal ?></div>
+                                <div class="mp-card-label">Pending</div>
+                                <div class="mp-card-value"><?= $mpCounts['Pending'] ?></div>
                             </div>
                         </div>
+                        <div class="mp-card mp-card-approved">
+                            <div class="mp-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M9 12l2 2 4-4" />
+                                    <circle cx="12" cy="12" r="9" />
+                                </svg>
+                            </div>
+                            <div class="mp-card-text">
+                                <div class="mp-card-label">Approved</div>
+                                <div class="mp-card-value"><?= $mpCounts['Approved'] ?></div>
+                            </div>
+                        </div>
+                        <div class="mp-card mp-card-rejected">
+                            <div class="mp-card-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M9.5 9.5l5 5m0-5l-5 5" />
+                                </svg>
+                            </div>
+                            <div class="mp-card-text">
+                                <div class="mp-card-label">Declined</div>
+                                <div class="mp-card-value"><?= $mpCounts['Rejected'] ?></div>
+                            </div>
+                        </div>
+                        <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
+                            <div class="mp-card mp-card-total" onclick="document.querySelector('.mp-nav-item[data-target=\'change-requests\']').click();" style="cursor:pointer;">
+                                <div class="mp-card-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                    </svg>
+                                </div>
+                                <div class="mp-card-text">
+                                    <div class="mp-card-label">Requests to Edit/Cancel</div>
+                                    <div class="mp-card-value"><?= count($changeRequests) ?></div>
+                                </div>
+                            </div>
+                        <?php } else { ?>
+                            <div class="mp-card mp-card-total">
+                                <div class="mp-card-icon">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 19V10M12 19V4M20 19v-7" />
+                                    </svg>
+                                </div>
+                                <div class="mp-card-text">
+                                    <div class="mp-card-label">Total Requests</div>
+                                    <div class="mp-card-value"><?= $mpTotal ?></div>
+                                </div>
+                            </div>
                         <?php } ?>
-                </div>
+                    </div>
                 <?php endif; ?>
 
                 <?php if (!$isHrHeadOnly): ?>
-                <!-- My requests -->
-                <div class="mp-panel<?= $mpDefaultSection === 'my-requests' ? ' active' : '' ?>" id="my-requests">
-                    <div style="padding:16px 22px 0;">
-                        <div class="mp-subtabs">
-                            <?php $first = true;
-                            foreach ($myByStatus as $label => $rows): ?>
-                                <div class="mp-subtab<?= $first ? ' active' : '' ?>" data-sub="my-<?= strtolower($label) ?>">
-                                    <?= htmlspecialchars($label) ?> <span class="mp-subtab-count"><?= count($rows) ?></span>
-                                </div>
-                            <?php $first = false;
-                            endforeach; ?>
-                        </div>
-                    </div>
-
-                    <?php $first = true;
-                    foreach ($myByStatus as $label => $rows): ?>
-                        <div class="mp-subpanel<?= $first ? ' active' : '' ?>" id="my-<?= strtolower($label) ?>">
-                            <?php mp_render_rows($rows, "No requests in \"" . htmlspecialchars($label) . "\" right now."); ?>
-                        </div>
-                    <?php $first = false;
-                    endforeach; ?>
-                </div>
-
-                <!-- For my approval -->
-                <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
-                    <div class="mp-panel<?= $mpDefaultSection === 'for-approval' ? ' active' : '' ?>" id="for-approval">
-                        <?php mp_render_rows($forApproval, "No requests are currently pending your approval."); ?>
-                    </div>
-                <?php } ?>
-
-                <!-- All requests -->
-                <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
-                    <div class="mp-panel" id="all-requests">
-                        <?php mp_render_rows($allRequests, "No manpower requests found."); ?>
-                    </div>
-                <?php } ?>
-
-                <!-- Requests to edit/cancel -->
-                <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
-                    <div class="mp-panel" id="change-requests">
+                    <!-- My requests -->
+                    <div class="mp-panel<?= $mpDefaultSection === 'my-requests' ? ' active' : '' ?>" id="my-requests">
                         <div style="padding:16px 22px 0;">
                             <div class="mp-subtabs">
-                                <div class="mp-subtab active" data-sub="cr-edit">Edit <span class="mp-subtab-count"><?= count($changeRequestsEdit) ?></span></div>
-                                <div class="mp-subtab" data-sub="cr-cancel">Cancel <span class="mp-subtab-count"><?= count($changeRequestsCancel) ?></span></div>
+                                <?php $first = true;
+                                foreach ($myByStatus as $label => $rows): ?>
+                                    <div class="mp-subtab<?= $first ? ' active' : '' ?>" data-sub="my-<?= strtolower($label) ?>" data-status-label="<?= htmlspecialchars($label) ?>">
+                                        <?= htmlspecialchars($label) ?> <span class="mp-subtab-count"><?= count($rows) ?></span>
+                                    </div>
+                                <?php $first = false;
+                                endforeach; ?>
                             </div>
                         </div>
-                        <div class="mp-subpanel active" id="cr-edit">
-                            <?php mp_render_change_rows($changeRequestsEdit, "No pending edit requests."); ?>
-                        </div>
-                        <div class="mp-subpanel" id="cr-cancel">
-                            <?php mp_render_change_rows($changeRequestsCancel, "No pending cancel requests."); ?>
-                        </div>
-                    </div>
-                <?php } ?>
 
-                <!-- Job specification -->
-                <div class="mp-panel" id="job-spec">
-                    <div class="mp-empty">
-                        <span>Job specification view isn't wired up yet — link this to your Job Specification page/query.</span>
+                        <?php $first = true;
+                        foreach ($myByStatus as $label => $rows): ?>
+                            <div class="mp-subpanel<?= $first ? ' active' : '' ?>" id="my-<?= strtolower($label) ?>" data-loaded="<?= $first ? '1' : '0' ?>">
+                                <?php if ($first) {
+                                    mp_render_rows($rows, "No requests in \"" . htmlspecialchars($label) . "\" right now.");
+                                } else { ?>
+                                    <div class="mp-empty"><span>Loading…</span></div>
+                                <?php } ?>
+                            </div>
+                        <?php $first = false;
+                        endforeach; ?>
                     </div>
-                </div>
+
+                    <!-- For my approval -->
+                    <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
+                        <div class="mp-panel<?= $mpDefaultSection === 'for-approval' ? ' active' : '' ?>" id="for-approval">
+                            <?php mp_render_rows($forApproval, "No requests are currently pending your approval."); ?>
+                        </div>
+                    <?php } ?>
+
+                    <!-- All requests -->
+                    <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
+                        <div class="mp-panel" id="all-requests">
+                            <div style="padding:16px 22px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                                <input type="text" id="mp-all-search" placeholder="Search by position, department, date, status…" style="flex:1; min-width:220px; border:1px solid #E7E9EE; border-radius:8px; padding:8px 12px; font-size:12.5px;">
+                                <select id="mp-all-status-filter" style="border:1px solid #E7E9EE; border-radius:8px; padding:8px 12px; font-size:12.5px; color:#5B6474;">
+                                    <option value="">All statuses</option>
+                                    <option value="Draft">Draft</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Returned">Update</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Rejected">Declined</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div id="mp-all-rows-wrap">
+                                <?php mp_render_rows($allRequests, "No manpower requests found."); ?>
+                            </div>
+                            <div class="mp-empty" id="mp-all-no-results" style="display:none;">
+                                <span>No requests match your search/filter — showing all requests below.</span>
+                            </div>
+                        </div>
+                    <?php } ?>
+
+                    <!-- Requests to edit/cancel -->
+                    <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
+                        // If Edit has items (or both are empty), default to Edit.
+                        // Only default to Cancel if Edit is empty but Cancel has items.
+                        $crDefaultTab = (empty($changeRequestsEdit) && !empty($changeRequestsCancel)) ? 'cancel' : 'edit';
+                    ?>
+                        <div class="mp-panel" id="change-requests">
+                            <div style="padding:16px 22px 0;">
+                                <div class="mp-subtabs">
+                                    <div class="mp-subtab<?= $crDefaultTab === 'edit' ? ' active' : '' ?>" data-sub="cr-edit">Edit <span class="mp-subtab-count"><?= count($changeRequestsEdit) ?></span></div>
+                                    <div class="mp-subtab<?= $crDefaultTab === 'cancel' ? ' active' : '' ?>" data-sub="cr-cancel">Cancel <span class="mp-subtab-count"><?= count($changeRequestsCancel) ?></span></div>
+                                </div>
+                            </div>
+                            <div class="mp-subpanel<?= $crDefaultTab === 'edit' ? ' active' : '' ?>" id="cr-edit">
+                                <?php mp_render_change_rows($changeRequestsEdit, "No pending edit requests."); ?>
+                            </div>
+                            <div class="mp-subpanel<?= $crDefaultTab === 'cancel' ? ' active' : '' ?>" id="cr-cancel">
+                                <?php mp_render_change_rows($changeRequestsCancel, "No pending cancel requests."); ?>
+                            </div>
+                        </div>
+                    <?php } ?>
+
+                    <!-- Job specification -->
+                    <div class="mp-panel<?= $mpDefaultSection === 'job-spec' ? ' active' : '' ?>" id="job-spec">
+                        <div style="padding:16px 22px 0; display:flex; justify-content:flex-end;">
+                            <a href="manpower_jobspec_form" class="mp-new-btn" style="padding:8px 16px; font-size:11.5px;">
+                                <i class="fa fa-plus-circle"></i> New Job Specification
+                            </a>
+                        </div>
+                        <?php if (empty($jobSpecs)): ?>
+                            <div class="mp-empty">
+                                <span>No job specifications yet.</span>
+                            </div>
+                        <?php else: ?>
+                            <?php $i = 1; foreach ($jobSpecs as $spec): ?>
+                                <div class="mp-row" onclick="window.location='manpower_jobspec_form?id=<?= (int) $spec['id'] ?>';">
+                                    <div class="mp-row-num"><?= $i++ ?></div>
+                                    <div class="mp-row-body">
+                                        <div class="mp-row-top">
+                                            <span class="mp-row-title"><?= htmlspecialchars($spec['position']) ?></span>
+                                        </div>
+                                        <div class="mp-row-cols">
+                                            <div class="mp-col">
+                                                <span class="mp-col-label">DEPARTMENT</span>
+                                                <span class="mp-col-value"><?= htmlspecialchars($spec['department']) ?></span>
+                                            </div>
+                                            <div class="mp-col">
+                                                <span class="mp-col-label">EMPLOYMENT STATUS</span>
+                                                <span class="mp-col-value"><?= htmlspecialchars($spec['emplstat'] ?: '—') ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mp-row-view"><i class="fa fa-chevron-right"></i></div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
 
             </div>
@@ -976,6 +950,11 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
     #mpRequestModal .btn-mp-modal-close:hover {
         border-color: #2F6FE4;
         color: #2F6FE4;
+    }
+
+    .mp-row.mp-row-match {
+        background: #FAFBFF;
+        border-left: 3px solid #2F6FE4;
     }
 </style>
 
@@ -1193,6 +1172,58 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
     }
 
     $(function() {
+        // All-requests search + status filter (client-side, no reload).
+        // Matching rows are moved to the top instead of being hidden, so
+        // the full list always stays visible.
+        function mpFilterAllRequests() {
+            const query = $('#mp-all-search').val().trim().toLowerCase();
+            const statusVal = $('#mp-all-status-filter').val();
+            const $wrap = $('#mp-all-rows-wrap');
+            const $rows = $wrap.find('.mp-row').get();
+
+            if (!query && !statusVal) {
+                // No filter active — restore original order
+                $rows.sort(function(a, b) {
+                    return ($(a).data('orig-order') || 0) - ($(b).data('orig-order') || 0);
+                });
+                $.each($rows, function(i, row) {
+                    $(row).removeClass('mp-row-match').css('order', '');
+                    $wrap.append(row);
+                });
+                $('#mp-all-no-results').hide();
+                return;
+            }
+
+            let matchCount = 0;
+            $.each($rows, function(i, row) {
+                const $row = $(row);
+                const matchesStatus = !statusVal || $row.data('status') === statusVal;
+                const matchesSearch = !query || ($row.data('search') || '').toString().includes(query);
+                const isMatch = matchesStatus && matchesSearch;
+                $row.toggleClass('mp-row-match', isMatch);
+                if (isMatch) matchCount++;
+            });
+
+            $rows.sort(function(a, b) {
+                const aMatch = $(a).hasClass('mp-row-match') ? 0 : 1;
+                const bMatch = $(b).hasClass('mp-row-match') ? 0 : 1;
+                if (aMatch !== bMatch) return aMatch - bMatch;
+                return ($(a).data('orig-order') || 0) - ($(b).data('orig-order') || 0);
+            });
+            $.each($rows, function(i, row) {
+                $wrap.append(row);
+            });
+
+            $('#mp-all-no-results').toggle(matchCount === 0);
+        }
+        $('#mp-all-search').on('input', mpFilterAllRequests);
+        $('#mp-all-status-filter').on('change', mpFilterAllRequests);
+
+        // Tag each row with its original position so we can restore order
+        $('#mp-all-rows-wrap .mp-row').each(function(i) {
+            $(this).data('orig-order', i);
+        });
+
         // Sidebar section switching (replaces old top-tab switching)
         function showSection(target) {
             $('.mp-nav-item').removeClass('active');
@@ -1205,15 +1236,28 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
             showSection($(this).data('target'));
         });
 
-        // Status sub-tab switching within My requests (unchanged behavior)
-        function showSubTab(target) {
+        // Status sub-tab switching within My requests — lazy-loads each
+        // sub-tab's rows via AJAX on first click instead of all loading upfront.
+        function showSubTab(target, statusLabel) {
             $('.mp-subtab').removeClass('active');
             $('.mp-subtab[data-sub="' + target + '"]').addClass('active');
             $('.mp-subpanel').removeClass('active');
-            $('#' + target).addClass('active');
+            const $panel = $('#' + target).addClass('active');
+
+            if ($panel.data('loaded') == 0 && statusLabel) {
+                $panel.html('<div class="mp-empty"><span>Loading…</span></div>');
+                $.get('status_rows', {
+                    label: statusLabel
+                }, function(html) {
+                    $panel.html(html);
+                    $panel.data('loaded', 1);
+                }).fail(function() {
+                    $panel.html('<div class="alert alert-danger">Failed to load requests.</div>');
+                });
+            }
         }
         $('.mp-subtab').on('click', function() {
-            showSubTab($(this).data('sub'));
+            showSubTab($(this).data('sub'), $(this).data('status-label'));
         });
 
         // Manual close handling (data-bs-dismiss relies on the broken bootstrap JS)

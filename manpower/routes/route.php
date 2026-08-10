@@ -40,6 +40,9 @@ $routes = [
     '/request_action' => '/actions/manpower_request_action.php',
     '/change_view' => '/public/manpower_change_view.php',
     '/change_action' => '/actions/manpower_change_action.php',
+    '/status_rows' => '/public/manpower_status_rows.php',
+    '/manpower_jobspec_form' => '/public/manpower_jobspec_form.php',
+    '/jobspec_save' => '/public/jobspec_save.php',
 ];
 
 // ============================================================================

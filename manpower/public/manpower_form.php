@@ -474,7 +474,7 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
 
                             <div class="mp-form-footer">
                                 <a href="dashboard" class="btn-mp-outline">Cancel</a>
-                                <?php if ($request['status'] !== 'Pending'): ?>
+                                <?php if ($request['status'] === 'Draft'): ?>
                                     <button type="button" class="btn-mp-outline" data-draft="1"><i class="fa fa-save" aria-hidden="true"></i> Save as Draft</button>
                                 <?php endif; ?>
                                 <button type="submit" class="btn-mp-solid"><i class="fa fa-paper-plane" aria-hidden="true"></i> Submit for approval</button>

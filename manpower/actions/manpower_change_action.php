@@ -70,11 +70,18 @@ try {
         'id'      => $change_id,
     ]);
 
-    // On approval (either edit or cancel change_type): move the request
-    // into "Returned" (Update tab) so the Requestor can go edit/finalize it.
+    // On approval: 'edit' change requests move the request into "Returned"
+    // (Update tab) so the Requestor can go edit/finalize it. 'cancel' change
+    // requests move the request straight to "Cancelled" — no further action
+    // needed from the Requestor.
     if ($decision === 'approve') {
-        $reqStmt = $hr_db->prepare("UPDATE tbl_manpower_request SET status = 'Returned', current_approval_level = 0 WHERE id = :id");
-        $reqStmt->execute(['id' => $cr['request_id']]);
+        if ($cr['change_type'] === 'cancel') {
+            $reqStmt = $hr_db->prepare("UPDATE tbl_manpower_request SET status = 'Cancelled' WHERE id = :id");
+            $reqStmt->execute(['id' => $cr['request_id']]);
+        } else {
+            $reqStmt = $hr_db->prepare("UPDATE tbl_manpower_request SET status = 'Returned', current_approval_level = 0 WHERE id = :id");
+            $reqStmt->execute(['id' => $cr['request_id']]);
+        }
     }
     // On decline: request status is untouched (stays 'Approved'). The
     // decline remarks are already saved on tbl_manpower_change_request
