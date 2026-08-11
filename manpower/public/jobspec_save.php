@@ -92,8 +92,26 @@ $id = isset($_POST['id']) && ctype_digit($_POST['id']) ? (int) $_POST['id'] : nu
 
 try {
     $idCol = MP_JOBSPEC_COLUMNS['id'];
+    $ownerCol = MP_JOBSPEC_COLUMNS['created_by'];
 
     if ($id) {
+        // Ownership check — a spec with no recorded owner (created before
+        // ownership tracking existed) stays editable by everyone. Otherwise
+        // only the creator may update it. This mirrors the read-only check
+        // in manpower_jobspec_form.php, but is enforced here server-side
+        // since the form's "inert" state is only a UI convenience.
+        $ownerStmt = $hr_db->prepare("SELECT $ownerCol FROM " . MP_JOBSPEC_TABLE . " WHERE $idCol = :id LIMIT 1");
+        $ownerStmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $ownerStmt->execute();
+        $existing = $ownerStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$existing) {
+            jspec_fail('Job specification not found.', 404);
+        }
+        if (!empty($existing[$ownerCol]) && $existing[$ownerCol] !== $empno) {
+            jspec_fail('You do not have permission to edit this job specification.', 403);
+        }
+
         // UPDATE — build SET clause dynamically from config column map
         $setParts = [];
         foreach ($data as $key => $val) {
@@ -110,7 +128,9 @@ try {
 
         echo json_encode(['success' => true, 'id' => $id, 'mode' => 'update']);
     } else {
-        // INSERT
+        // INSERT — record the creator so future edits can be restricted to them
+        $data['created_by'] = $empno;
+
         $cols = [];
         $placeholders = [];
         foreach ($data as $key => $val) {

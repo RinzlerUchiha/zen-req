@@ -123,12 +123,15 @@ require_once dirname(__DIR__) . '/includes/manpower_render_helpers.php';
 require_once dirname(__DIR__) . '/includes/manpower_jobspec_config.php';
 
 // Job specifications — standalone list, not scoped by department/role
-$specStmt = $hr_db->query("SELECT " . MP_JOBSPEC_COLUMNS['id'] . " AS id,
-        " . MP_JOBSPEC_COLUMNS['department'] . " AS department,
-        " . MP_JOBSPEC_COLUMNS['position'] . " AS position,
-        " . MP_JOBSPEC_COLUMNS['headcount'] . " AS headcount,
-        " . MP_JOBSPEC_COLUMNS['emplstat'] . " AS emplstat
-    FROM " . MP_JOBSPEC_TABLE . " ORDER BY " . MP_JOBSPEC_COLUMNS['id'] . " DESC");
+$specStmt = $hr_db->query("SELECT js." . MP_JOBSPEC_COLUMNS['id'] . " AS id,
+        js." . MP_JOBSPEC_COLUMNS['department'] . " AS department,
+        js." . MP_JOBSPEC_COLUMNS['position'] . " AS position,
+        jd.jd_title AS position_title,
+        js." . MP_JOBSPEC_COLUMNS['headcount'] . " AS headcount,
+        js." . MP_JOBSPEC_COLUMNS['emplstat'] . " AS emplstat
+    FROM " . MP_JOBSPEC_TABLE . " js
+    LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+    ORDER BY js." . MP_JOBSPEC_COLUMNS['id'] . " DESC");
 $jobSpecs = $specStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Summary counts (derived from the data already fetched above)
@@ -172,6 +175,9 @@ if ($isHrHeadOnly) {
         $mpSections['change-requests'] = ['label' => 'Requests to edit/cancel', 'icon' => 'pencil-square-o'];
     }
     $mpSections['job-spec'] = ['label' => 'Job specification', 'icon' => 'briefcase'];
+}
+if (userHasRoleIn('Admin')) {
+    $mpSections['admin-users'] = ['label' => 'User access', 'icon' => 'users'];
 }
 $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approval' : 'my-requests');
 ?>
@@ -598,17 +604,24 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
 <div class="mp-wrap">
 
     <div class="mp-sidebar">
-        <?php foreach ($mpSections as $key => $section): ?>
-            <div class="mp-nav-item<?= $key === $mpDefaultSection ? ' active' : '' ?>" data-target="<?= $key ?>">
-                <span class="mp-nav-icon"><i class="fa fa-<?= $section['icon'] ?>"></i></span>
-                <span><?= htmlspecialchars($section['label']) ?></span>
-                <?php if ($key === 'for-approval' && !empty($forApproval)) { ?>
-                    <span class="mp-nav-dot" title="<?= count($forApproval) ?> pending your approval"></span>
-                <?php } ?>
-                <?php if ($key === 'change-requests' && !empty($changeRequests)) { ?>
-                    <span class="mp-nav-dot" title="<?= count($changeRequests) ?> pending edit/cancel requests"></span>
-                <?php } ?>
-            </div>
+    <?php foreach ($mpSections as $key => $section): ?>
+            <?php if ($key === 'admin-users'): ?>
+                <a class="mp-nav-item" href="manpower_admin_users" style="text-decoration:none;">
+                    <span class="mp-nav-icon"><i class="fa fa-<?= $section['icon'] ?>"></i></span>
+                    <span><?= htmlspecialchars($section['label']) ?></span>
+                </a>
+            <?php else: ?>
+                <div class="mp-nav-item<?= $key === $mpDefaultSection ? ' active' : '' ?>" data-target="<?= $key ?>">
+                    <span class="mp-nav-icon"><i class="fa fa-<?= $section['icon'] ?>"></i></span>
+                    <span><?= htmlspecialchars($section['label']) ?></span>
+                    <?php if ($key === 'for-approval' && !empty($forApproval)) { ?>
+                        <span class="mp-nav-dot" title="<?= count($forApproval) ?> pending your approval"></span>
+                    <?php } ?>
+                    <?php if ($key === 'change-requests' && !empty($changeRequests)) { ?>
+                        <span class="mp-nav-dot" title="<?= count($changeRequests) ?> pending edit/cancel requests"></span>
+                    <?php } ?>
+                </div>
+            <?php endif; ?>
         <?php endforeach; ?>
     </div>
 
@@ -877,12 +890,13 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                                 <span>No job specifications yet.</span>
                             </div>
                         <?php else: ?>
-                            <?php $i = 1; foreach ($jobSpecs as $spec): ?>
+                            <?php $i = 1;
+                            foreach ($jobSpecs as $spec): ?>
                                 <div class="mp-row" onclick="window.location='manpower_jobspec_form?id=<?= (int) $spec['id'] ?>';">
                                     <div class="mp-row-num"><?= $i++ ?></div>
                                     <div class="mp-row-body">
                                         <div class="mp-row-top">
-                                            <span class="mp-row-title"><?= htmlspecialchars($spec['position']) ?></span>
+                                            <span class="mp-row-title"><?= htmlspecialchars($spec['position_title'] ?: $spec['position']) ?></span>
                                         </div>
                                         <div class="mp-row-cols">
                                             <div class="mp-col">

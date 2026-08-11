@@ -43,6 +43,8 @@ $routes = [
     '/status_rows' => '/public/manpower_status_rows.php',
     '/manpower_jobspec_form' => '/public/manpower_jobspec_form.php',
     '/jobspec_save' => '/public/jobspec_save.php',
+    '/manpower_admin_users' => '/public/manpower_admin_users.php',
+    '/manpower_admin_user_save' => '/public/manpower_admin_user_save.php',
 ];
 
 // ============================================================================

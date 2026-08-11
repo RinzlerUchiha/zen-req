@@ -22,6 +22,7 @@ const MP_JOBSPEC_DELIM = '%#';
 // Keeping this indirection means renaming a column later is a one-line change.
 const MP_JOBSPEC_COLUMNS = [
     'id'               => 'jspec_id',
+    'created_by'       => 'jspec_created_by',
     'department'       => 'jspec_department',
     'section'          => 'jspec_section',
     'position'         => 'jspec_position',

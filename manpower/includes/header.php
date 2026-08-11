@@ -165,7 +165,7 @@ function mpSwitchRole(newRole) {
 <?php endif; ?>
 
 <nav class="navbar navbar-expand-lg mp-navbar">
-    <a class="navbar-brand" href="<?= $manpower_root ?>/dashboard">Hire<span>Flow</span></a>
+<a class="navbar-brand" href="/zen/manpower/dashboard">Hire<span>Flow</span></a>
     <a class="mp-return-btn ms-3" href="/zen/dashboard">Return to ZenHub</a>
 
     <div class="ms-auto d-flex align-items-center gap-3">
