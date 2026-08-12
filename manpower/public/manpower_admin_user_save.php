@@ -32,11 +32,6 @@ if (!in_array($role, $allowedRoles, true)) {
     mpadmin_fail('Invalid role.');
 }
 
-$deptId = trim($_POST['department_id'] ?? '');
-$deptId = $deptId !== '' ? $deptId : null;
-
-$isActive = !empty($_POST['is_active']) ? 1 : 0;
-
 // Prevent an Admin from locking themselves out by accident
 if ($id && $role !== 'Admin') {
     $selfCheck = $hr_db->prepare("SELECT employee_id FROM tbl_manpower_users WHERE id = :id LIMIT 1");
@@ -52,14 +47,10 @@ try {
     $stmt = $hr_db->prepare("
         UPDATE tbl_manpower_users
         SET manpower_role = :role,
-            department_id = :deptId,
-            is_active = :isActive,
             updated_at = NOW()
         WHERE id = :id
     ");
     $stmt->bindValue(':role', $role);
-    $stmt->bindValue(':deptId', $deptId);
-    $stmt->bindValue(':isActive', $isActive, PDO::PARAM_INT);
     $stmt->bindValue(':id', $id, PDO::PARAM_INT);
     $stmt->execute();
 

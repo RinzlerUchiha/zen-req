@@ -84,6 +84,13 @@ SELECT
         AND u.reqhub_role = 'Reviewer'
     ) AS reviewer_count,
 
+    (
+        SELECT COUNT(*) FROM user_approver_assignments uaa
+        JOIN users u ON uaa.user_id = u.id
+        WHERE uaa.system_id = r.system_id
+        AND u.reqhub_role = 'Approver'
+    ) AS approver_count,
+
     0 AS human_chat_count
 
 FROM requests r
@@ -377,7 +384,7 @@ try {
 <?php foreach (['pending', 'approved', 'denied', 'served'] as $tab): ?>
 <li class="nav-item">
     <a class="nav-link <?= $status === $tab ? 'active' : '' ?>" href="?status=<?= $tab ?>">
-        <?= $tab === 'served' ? 'Fulfilled' : ucfirst($tab) ?>
+        <?= $tab === 'served' ? 'Served' : ucfirst($tab) ?>
         <?php if ($tab === 'pending' && $role === 'Reviewer'): ?>
             <small class="text-muted">(to sign)</small>
         <?php endif; ?>
@@ -468,6 +475,7 @@ try {
     data-denied-by="<?= htmlspecialchars($req['denied_by_name'] ?? '') ?>"
     data-denied-at="<?= htmlspecialchars($req['denied_at'] ?? '') ?>"
     data-reviewer-count="<?= (int)($req['reviewer_count'] ?? 0) ?>"
+    data-approver-count="<?= (int)($req['approver_count'] ?? 0) ?>"
 >
     <td>
         <div class="d-flex align-items-center gap-2">
@@ -487,7 +495,7 @@ try {
         <?php elseif ($req['status'] === 'reviewed'): ?>
             <span class="badge bg-info text-dark">Reviewed</span>
         <?php elseif (($req['admin_status'] ?? '') === 'served'): ?>
-            Fulfilled
+            Served
         <?php else: ?>
             <?= ucfirst($req['status'] ?? '') ?>
         <?php endif; ?>
@@ -861,6 +869,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (role === 'Admin' && data.status === 'approved' && data.adminStatus !== 'served') {
             container.innerHTML = `
+                <form method="post" action="/zen/reqHub/served" class="d-inline">
+                    <input type="hidden" name="id" value="${data.id}">
+                    <button type="submit" class="btn btn-primary btn-sm">Mark as Served</button>
+                </form>`;
+        }
+
+        const noReviewerNoApprover = parseInt(data.reviewerCount ?? 0) === 0 && parseInt(data.approverCount ?? 0) === 0;
+        if (role === 'Admin' && data.status === 'pending' && noReviewerNoApprover) {
+            container.innerHTML = `
+                <div class="alert alert-warning py-2 px-3 mb-2" style="font-size:0.85rem;">
+                    No Reviewer or Approver is assigned to this request. You may serve it directly.
+                </div>
                 <form method="post" action="/zen/reqHub/served" class="d-inline">
                     <input type="hidden" name="id" value="${data.id}">
                     <button type="submit" class="btn btn-primary btn-sm">Mark as Served</button>

@@ -166,20 +166,22 @@ $mpSections = [];
 if ($isHrHeadOnly) {
     $mpSections['contract-offers'] = ['label' => 'Contract offers', 'icon' => 'handshake-o'];
 } else {
-    if (!userHasRoleIn('Approver')) {
+    if (!userHasRoleIn('Approver', 'Admin')) {
         $mpSections['my-requests'] = ['label' => 'My requests', 'icon' => 'file-text'];
     }
-    if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
+    if (userHasRoleIn('Approver', 'HR Head')) {
         $mpSections['all-requests'] = ['label' => 'All requests', 'icon' => 'list'];
         $mpSections['for-approval'] = ['label' => 'For my approval', 'icon' => 'check-circle'];
         $mpSections['change-requests'] = ['label' => 'Requests to edit/cancel', 'icon' => 'pencil-square-o'];
+    } elseif (userHasRoleIn('Admin')) {
+        $mpSections['all-requests'] = ['label' => 'All requests', 'icon' => 'list'];
     }
     $mpSections['job-spec'] = ['label' => 'Job specification', 'icon' => 'briefcase'];
 }
 if (userHasRoleIn('Admin')) {
     $mpSections['admin-users'] = ['label' => 'User access', 'icon' => 'users'];
 }
-$mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver', 'HR Head', 'Admin') ? 'for-approval' : 'my-requests');
+$mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver', 'HR Head') ? 'for-approval' : (userHasRoleIn('Admin') ? 'all-requests' : 'my-requests'));
 ?>
 <style>
     .mp-wrap {
@@ -826,7 +828,7 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                     </div>
 
                     <!-- For my approval -->
-                    <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
+                    <?php if (userHasRoleIn('Approver', 'HR Head')) { ?>
                         <div class="mp-panel<?= $mpDefaultSection === 'for-approval' ? ' active' : '' ?>" id="for-approval">
                             <?php mp_render_rows($forApproval, "No requests are currently pending your approval."); ?>
                         </div>
@@ -834,7 +836,7 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
 
                     <!-- All requests -->
                     <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) { ?>
-                        <div class="mp-panel" id="all-requests">
+                        <div class="mp-panel<?= $mpDefaultSection === 'all-requests' ? ' active' : '' ?>" id="all-requests" data-loaded="0">
                             <div style="padding:16px 22px 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                                 <input type="text" id="mp-all-search" placeholder="Search by position, department, date, status…" style="flex:1; min-width:220px; border:1px solid #E7E9EE; border-radius:8px; padding:8px 12px; font-size:12.5px;">
                                 <select id="mp-all-status-filter" style="border:1px solid #E7E9EE; border-radius:8px; padding:8px 12px; font-size:12.5px; color:#5B6474;">
@@ -848,7 +850,7 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                                 </select>
                             </div>
                             <div id="mp-all-rows-wrap">
-                                <?php mp_render_rows($allRequests, "No manpower requests found."); ?>
+                                <div class="mp-empty"><span>Loading…</span></div>
                             </div>
                             <div class="mp-empty" id="mp-all-no-results" style="display:none;">
                                 <span>No requests match your search/filter — showing all requests below.</span>
@@ -857,7 +859,7 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                     <?php } ?>
 
                     <!-- Requests to edit/cancel -->
-                    <?php if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
+                    <?php if (userHasRoleIn('Approver', 'HR Head')) {
                         // If Edit has items (or both are empty), default to Edit.
                         // Only default to Cancel if Edit is empty but Cancel has items.
                         $crDefaultTab = (empty($changeRequestsEdit) && !empty($changeRequestsCancel)) ? 'cancel' : 'edit';
@@ -1233,18 +1235,38 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
         $('#mp-all-search').on('input', mpFilterAllRequests);
         $('#mp-all-status-filter').on('change', mpFilterAllRequests);
 
-        // Tag each row with its original position so we can restore order
-        $('#mp-all-rows-wrap .mp-row').each(function(i) {
-            $(this).data('orig-order', i);
-        });
+        <?php if ($mpDefaultSection === 'all-requests'): ?>
+        loadAllRequestsIfNeeded();
+        <?php endif; ?>
 
         // Sidebar section switching (replaces old top-tab switching)
+        function loadAllRequestsIfNeeded() {
+            const $panel = $('#all-requests');
+            if (!$panel.length || $panel.data('loaded') != 0) {
+                return;
+            }
+            const $wrap = $('#mp-all-rows-wrap');
+            $wrap.html('<div class="mp-empty"><span>Loading…</span></div>');
+            $.get('all_rows', function(html) {
+                $wrap.html(html);
+                $panel.data('loaded', 1);
+                $wrap.find('.mp-row').each(function(i) {
+                    $(this).data('orig-order', i);
+                });
+            }).fail(function() {
+                $wrap.html('<div class="alert alert-danger">Failed to load requests.</div>');
+            });
+        }
+
         function showSection(target) {
             $('.mp-nav-item').removeClass('active');
             $('.mp-nav-item[data-target="' + target + '"]').addClass('active');
             $('.mp-panel').removeClass('active');
             $('#' + target).addClass('active');
             window.location.hash = target;
+            if (target === 'all-requests') {
+                loadAllRequestsIfNeeded();
+            }
         }
         $('.mp-nav-item').on('click', function() {
             showSection($(this).data('target'));

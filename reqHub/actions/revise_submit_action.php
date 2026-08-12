@@ -114,7 +114,24 @@ try {
     $stmtReviewerCheck->execute([$department_id]);
     $hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
 
-    $newStatus = (strpos($revisionMsg, 'BY Approver') !== false) ? 'reviewed' : 'pending';
+    $stmtApproverCheck = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM users u
+        INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+        WHERE u.reqhub_role = 'Approver'
+        AND u.is_active = 1
+        AND uaa.system_id = ?
+    ");
+    $stmtApproverCheck->execute([$system_id]);
+    $hasApprover = (int)$stmtApproverCheck->fetchColumn() > 0;
+
+    if (strpos($revisionMsg, 'BY Approver') !== false) {
+        $newStatus = 'reviewed';
+    } elseif (!$hasReviewer && $hasApprover) {
+        $newStatus = 'reviewed'; // no Reviewer, but Approver exists — skip straight to Approver
+    } else {
+        $newStatus = 'pending'; // either has a Reviewer, or has neither Reviewer nor Approver
+    }
 
     $sql = "UPDATE requests SET 
         system_id = ?, 
@@ -167,8 +184,14 @@ try {
     $systemName    = resolveSystemName($pdo, (int)$system_id);
 
     if ($newStatus === 'pending') {
-        notifyReviewers($pdo, (int)$request_id, $requestorName, $systemName);
-        smsReviewers($pdo, (int)$request_id, $requestorName, $systemName);
+        if ($hasReviewer) {
+            notifyReviewers($pdo, (int)$request_id, $requestorName, $systemName);
+            smsReviewers($pdo, (int)$request_id, $requestorName, $systemName);
+        } else {
+            $noAssigneeMsg = "{$requestorName} resubmitted a [{$systemName}] request with no Reviewer or Approver assigned. It requires Admin action.";
+            notifyAdmins($pdo, (int)$request_id, $noAssigneeMsg);
+            smsAdmins($pdo, $noAssigneeMsg);
+        }
     } elseif ($newStatus === 'reviewed') {
         notifyApproversForSystem($pdo, (int)$system_id, (int)$request_id, $requestorName, $systemName);
         smsApproversForSystem($pdo, (int)$system_id, (int)$request_id, $requestorName, $systemName);

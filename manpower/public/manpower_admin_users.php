@@ -35,12 +35,79 @@ $stmt = $hr_db->query("
 ");
 $manpowerUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Departments for the scope dropdown (Approver role uses this to scope "For My Approval")
-$departments = $hr_db->query("SELECT Dept_Code, Dept_Name FROM tbl_department WHERE Dept_Stat = 'active' ORDER BY Dept_Name ASC")->fetchAll(PDO::FETCH_ASSOC);
-
 const MP_ROLE_OPTIONS = ['No Access', 'Requestor', 'Approver', 'HR Head', 'Admin'];
+
+// Mirror dashboard.php's sidebar sections so nav stays consistent here too.
+$isHrHeadOnly = userHasRoleIn('HR Head') && !userHasRoleIn('Approver', 'Admin');
+$mpSections = [];
+if ($isHrHeadOnly) {
+    $mpSections['contract-offers'] = ['label' => 'Contract offers', 'icon' => 'handshake-o'];
+} else {
+    if (!userHasRoleIn('Approver', 'Admin')) {
+        $mpSections['my-requests'] = ['label' => 'My requests', 'icon' => 'file-text'];
+    }
+    if (userHasRoleIn('Approver', 'HR Head')) {
+        $mpSections['all-requests'] = ['label' => 'All requests', 'icon' => 'list'];
+        $mpSections['for-approval'] = ['label' => 'For my approval', 'icon' => 'check-circle'];
+        $mpSections['change-requests'] = ['label' => 'Requests to edit/cancel', 'icon' => 'pencil-square-o'];
+    } elseif (userHasRoleIn('Admin')) {
+        $mpSections['all-requests'] = ['label' => 'All requests', 'icon' => 'list'];
+    }
+    $mpSections['job-spec'] = ['label' => 'Job specification', 'icon' => 'briefcase'];
+}
+if (userHasRoleIn('Admin')) {
+    $mpSections['admin-users'] = ['label' => 'User access', 'icon' => 'users'];
+}
 ?>
 <style>
+    .mp-wrap {
+        background: #F5F6F9;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        align-items: stretch;
+        min-height: calc(100vh - 60px);
+        margin: -28px -24px -40px;
+    }
+    @media (max-width: 768px) {
+        .mp-wrap { margin: -18px -16px -32px; }
+    }
+    main { max-width: none !important; margin: 0 !important; }
+    .mp-wrap * { font-family: inherit; }
+    .mp-sidebar {
+        width: 220px;
+        flex: 0 0 auto;
+        background: #FFFFFF;
+        border-right: 1px solid #E7E9EE;
+        padding: 20px 12px;
+    }
+    .mp-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #5B6474;
+        cursor: pointer;
+        margin-bottom: 2px;
+        text-decoration: none;
+    }
+    .mp-nav-item:hover { background: #F5F6F9; }
+    .mp-nav-item.active { background: #E8F0FE; color: #1B4FB0; }
+    .mp-nav-icon { width: 18px; text-align: center; flex: 0 0 auto; }
+    .mp-main { flex: 1; min-width: 0; padding: 32px 40px; }
+    @media (max-width: 900px) {
+        .mp-wrap { flex-direction: column; }
+        .mp-sidebar {
+            width: 100%;
+            display: flex;
+            overflow-x: auto;
+            border-right: none;
+            border-bottom: 1px solid #E7E9EE;
+        }
+        .mp-nav-item { white-space: nowrap; }
+    }
     #mp-admin-app {
         --mp-page-bg: #F5F6F9;
         --mp-border: #E7E9EE;
@@ -127,12 +194,26 @@ const MP_ROLE_OPTIONS = ['No Access', 'Requestor', 'Approver', 'HR Head', 'Admin
     #mp-admin-app input[type="checkbox"] { width: 16px; height: 16px; }
 </style>
 
+<div class="mp-wrap">
+<div class="mp-sidebar">
+    <?php foreach ($mpSections as $key => $section): ?>
+        <?php if ($key === 'admin-users'): ?>
+            <div class="mp-nav-item active">
+                <span class="mp-nav-icon"><i class="fa fa-<?= $section['icon'] ?>"></i></span>
+                <span><?= htmlspecialchars($section['label']) ?></span>
+            </div>
+        <?php else: ?>
+            <a class="mp-nav-item" href="dashboard#<?= $key ?>">
+                <span class="mp-nav-icon"><i class="fa fa-<?= $section['icon'] ?>"></i></span>
+                <span><?= htmlspecialchars($section['label']) ?></span>
+            </a>
+        <?php endif; ?>
+    <?php endforeach; ?>
+</div>
+<div class="mp-main">
 <div id="mp-admin-app">
     <div class="mp-admin-header">
         <h4>Manpower — User Access</h4>
-        <a href="dashboard" class="btn-mp-outline" style="border:1px solid var(--mp-border); border-radius:8px; padding:8px 16px; text-decoration:none; color:var(--mp-text-muted);">
-            <i class="fa fa-arrow-left"></i> Back to dashboard
-        </a>
     </div>
 
     <table>
@@ -142,8 +223,6 @@ const MP_ROLE_OPTIONS = ['No Access', 'Requestor', 'Approver', 'HR Head', 'Admin
                 <th>Emp No</th>
                 <th>HR Department</th>
                 <th>Manpower Role</th>
-                <th>Scoped Department</th>
-                <th>Active</th>
                 <th></th>
             </tr>
         </thead>
@@ -161,28 +240,15 @@ const MP_ROLE_OPTIONS = ['No Access', 'Requestor', 'Approver', 'HR Head', 'Admin
                         </select>
                     </td>
                     <td>
-                        <?php
-                        $deptName = '—';
-                        foreach ($departments as $d) {
-                            if ($d['Dept_Code'] === $u['department_id']) {
-                                $deptName = $d['Dept_Name'];
-                                break;
-                            }
-                        }
-                        ?>
-                        <span style="color: var(--mp-text-muted);"><?= htmlspecialchars($deptName) ?></span>
-                    </td>
-                    <td style="text-align:center;">
-                        <input type="checkbox" class="mp-active-checkbox" <?= $u['is_active'] ? 'checked' : '' ?>>
-                    </td>
-                    <td>
                         <button type="button" class="mp-admin-save-btn">Save</button>
                         <span class="mp-admin-status"></span>
                     </td>
                 </tr>
             <?php endforeach; ?>
-        </tbody>
+            </tbody>
     </table>
+    </div>
+    </div>
 </div>
 
 <script>
@@ -197,8 +263,7 @@ $(function() {
 
         $.post('manpower_admin_user_save', {
             id: $row.data('id'),
-            manpower_role: $row.find('.mp-role-select').val(),
-            is_active: $row.find('.mp-active-checkbox').is(':checked') ? 1 : 0
+            manpower_role: $row.find('.mp-role-select').val()
         }, function(res) {
             const data = typeof res === 'string' ? JSON.parse(res) : res;
             if (data.success) {

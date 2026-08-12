@@ -168,8 +168,30 @@ function smsChatParticipants(PDO $pdo, $requestId, $senderUserId)
                   AND uaa.department_id = ?
             ");
             $stmt->execute([$request['department_id']]);
-            foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
-                if ((int)$id !== $senderUserId) $recipientIds[] = (int)$id;
+            $reviewerIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            $stmtApprover = $pdo->prepare("
+                SELECT DISTINCT u.id
+                FROM users u
+                INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+                WHERE u.reqhub_role = 'Approver'
+                  AND u.is_active = 1
+                  AND uaa.system_id = ?
+            ");
+            $stmtApprover->execute([$request['system_id']]);
+            $approverIds = $stmtApprover->fetchAll(PDO::FETCH_COLUMN);
+
+            if (empty($reviewerIds) && empty($approverIds)) {
+                // No Reviewer and no Approver — fall back to Admins
+                $stmtAdmin = $pdo->prepare("SELECT id FROM users WHERE reqhub_role = 'Admin' AND is_active = 1");
+                $stmtAdmin->execute();
+                foreach ($stmtAdmin->fetchAll(PDO::FETCH_COLUMN) as $id) {
+                    if ((int)$id !== $senderUserId) $recipientIds[] = (int)$id;
+                }
+            } else {
+                foreach ($reviewerIds as $id) {
+                    if ((int)$id !== $senderUserId) $recipientIds[] = (int)$id;
+                }
             }
 
         } elseif (in_array($status, ['reviewed', 'needs_revision'])) {

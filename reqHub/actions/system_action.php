@@ -311,6 +311,21 @@ try {
             ]);
             break;
 
+        case 'toggleLock':
+            $systemId = intval($_POST['system_id'] ?? 0);
+            $isLocked = intval($_POST['is_locked'] ?? 0);
+
+            if (!$systemId) {
+                echo json_encode(['success' => false, 'message' => 'Invalid system ID']);
+                exit;
+            }
+
+            $stmt = $pdo->prepare("UPDATE systems SET is_locked = ? WHERE id = ?");
+            $stmt->execute([$isLocked, $systemId]);
+
+            echo json_encode(['success' => true, 'id' => $systemId, 'is_locked' => $isLocked]);
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Unknown action']);
     }

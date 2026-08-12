@@ -28,6 +28,16 @@ if (!isset($currentUser)) {
 requireRoleIn('Requestor', 'Admin');
 
 require_once dirname(__DIR__) . '/includes/header.php';
+require_once dirname(__DIR__) . '/includes/manpower_jobspec_config.php';
+
+// Positions available for selection are those with a created Job Specification.
+$specPosStmt = $hr_db->query("SELECT js." . MP_JOBSPEC_COLUMNS['position'] . " AS position_code,
+        jd.jd_title AS position_title
+    FROM " . MP_JOBSPEC_TABLE . " js
+    LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+    GROUP BY js." . MP_JOBSPEC_COLUMNS['position'] . ", jd.jd_title
+    ORDER BY jd.jd_title ASC");
+$jobSpecPositions = $specPosStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ============================================================================
 // Load existing request if editing/revising
@@ -441,7 +451,7 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
                                     <tbody></tbody>
                                 </table>
                                 <button type="button" class="btn-add-row-full" data-add="replacement">
-                                    <i class="fa fa-plus" aria-hidden="true"></i> Add replacement position
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add replacement position
                                 </button>
                             </div>
 
@@ -461,7 +471,7 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
                                     <tbody></tbody>
                                 </table>
                                 <button type="button" class="btn-add-row-full" data-add="additional">
-                                    <i class="fa fa-plus" aria-hidden="true"></i> Add additional position
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add replacement position
                                 </button>
                             </div>
 
@@ -490,6 +500,10 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
 
 <script>
     $(function() {
+        const mpJobSpecPositions = <?= json_encode(array_map(function ($p) {
+                                        return ['code' => $p['position_code'], 'title' => $p['position_title'] ?: $p['position_code']];
+                                    }, $jobSpecPositions)) ?>;
+
         const replacementSeed = <?= json_encode(array_map(function ($r) {
                                     return [$r['position'], $r['headcount'], $r['reason'], $r['date_needed']];
                                 }, $replacementRows)) ?>;
@@ -497,15 +511,26 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
                                     return [$r['position'], $r['headcount'], $r['reason'], $r['date_needed']];
                                 }, $additionalRows)) ?>;
 
+function buildPositionSelect(type, selectedCode) {
+            const $select = $('<select>').addClass('mp-pos-' + type);
+            $select.append($('<option value="">Select position…</option>'));
+            mpJobSpecPositions.forEach(function(p) {
+                const $opt = $('<option>').val(p.code).text(p.title);
+                if (p.code === selectedCode) $opt.prop('selected', true);
+                $select.append($opt);
+            });
+            return $select;
+        }
+
         function addRow(type, values) {
             values = values || ['', 1, '', ''];
             const $tbody = $('#mp-' + type + '-table tbody');
             const $row = $('<tr>');
-            $row.append($('<td>').append($('<input type="text" placeholder="Insert Position">').val(values[0]).addClass('mp-pos-' + type)));
+            $row.append($('<td>').append(buildPositionSelect(type, values[0])));
             $row.append($('<td>').append($('<input type="number" min="1">').val(values[1] || 1).addClass('mp-count-' + type)));
             $row.append($('<td>').append($('<input type="text" placeholder="Reason">').val(values[2]).addClass('mp-reason-' + type)));
             $row.append($('<td>').append($('<input type="date">').val(values[3]).addClass('mp-date-' + type)));
-            $row.append($('<td>').append($('<button type="button" class="btn-del"><i class="fa fa-times"></i></button>').on('click', function() {
+            $row.append($('<td>').append($('<button type="button" class="btn-del"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path></svg></button>').on('click', function() {
                 $row.remove();
             })));
             $tbody.append($row);

@@ -10,13 +10,16 @@ if (!isAuthenticated()) {
     die('Not authenticated');
 }
 
-$request_id = $_POST['request_id'] ?? null;
-$message    = trim($_POST['message'] ?? '');
+if (!userHasRoleIn('Approver', 'Reviewer')) {
+    http_response_code(403);
+    die('Access denied');
+}
 
-if (!$request_id || !$message) {
+$request_id = $_POST['id'] ?? $_GET['id'] ?? null;
+
+if (!$request_id) {
     http_response_code(400);
-    echo "Missing request or message.";
-    exit;
+    die("Invalid Request");
 }
 
 $pdo         = Database::getConnection('reqhub');
@@ -28,29 +31,73 @@ $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$userRow) {
     http_response_code(400);
-    echo "User not found in database";
-    exit;
+    die("User not found in database");
 }
+
+$denier_id = $userRow['id'];
 
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO request_chats (request_id, sender_id, message, created_at)
-        VALUES (:rid, :uid, :msg, NOW())
+        SELECT user_id, system_id, department_id
+        FROM requests
+        WHERE id = :id
+        AND status IN ('pending', 'reviewed', 'needs_revision')
     ");
+    $stmt->execute([':id' => $request_id]);
+    $request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$request) {
+        http_response_code(404);
+        die("Request not found or already processed");
+    }
+
+    $requestorId  = $request['user_id'];
+    $systemId     = $request['system_id'];
+    $departmentId = $request['department_id'];
+
+    $stmt = $pdo->prepare("
+        UPDATE requests
+        SET
+            status = 'denied',
+            denied_by = :denied_by,
+            denied_at = NOW(),
+            updated_at = NOW()
+        WHERE id = :id
+          AND status IN ('pending', 'reviewed', 'needs_revision')
+          AND system_id = :system_id
+          AND department_id = :department_id
+    ");
+
     $stmt->execute([
-        ':rid' => $request_id,
-        ':uid' => $userRow['id'],
-        ':msg' => $message
+        ':id'            => $request_id,
+        ':denied_by'     => $denier_id,
+        ':system_id'     => $systemId,
+        ':department_id' => $departmentId
     ]);
 
-    // Notify other participants
-    notifyChatParticipants($pdo, (int)$request_id, (int)$userRow['id']);
-    smsChatParticipants($pdo, (int)$request_id, (int)$userRow['id']);
+    error_log("Request $request_id denied by " . $currentUser['emp_no']);
 
-    echo "Message sent.";
+    // Resolve names for notification
+    $requestorName = resolveEmployeeNameByUserId($pdo, (int)$requestorId);
+    $denierName    = resolveEmployeeName($pdo, $currentUser['emp_no']);
+    $systemName    = resolveSystemName($pdo, (int)$systemId);
+    $denyMsg       = "Your [{$systemName}] request has been denied by {$denierName}.";
+
+    createNotification(
+        $pdo,
+        (int)$requestorId,
+        'status_change',
+        (int)$request_id,
+        $denyMsg
+    );
+    smsUserById($pdo, (int)$requestorId, $denyMsg);
+
+    header('Location: /zen/reqHub/dashboard?status=pending');
+    exit;
+
 } catch (Exception $e) {
-    error_log("Error sending message: " . $e->getMessage());
+    error_log("Error denying request: " . $e->getMessage());
     http_response_code(500);
-    echo "Error: " . htmlspecialchars($e->getMessage());
+    die("Error: " . htmlspecialchars($e->getMessage()));
 }
 ?>

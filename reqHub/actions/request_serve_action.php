@@ -37,9 +37,9 @@ $admin_id = $userRow['id'];
 
 try {
     $stmt = $pdo->prepare("
-        SELECT user_id, system_id
+        SELECT user_id, system_id, department_id, status
         FROM requests
-        WHERE id = :id AND status = 'approved'
+        WHERE id = :id AND status IN ('approved', 'pending')
     ");
     $stmt->execute([':id' => $request_id]);
     $request = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -49,20 +49,55 @@ try {
         die("Request not found or not approved");
     }
 
+    // If the request is still 'pending', Admin may only serve it when the
+    // system/department genuinely has no Reviewer and no Approver assigned.
+    if ($request['status'] === 'pending') {
+        $stmtReviewerCheck = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM users u
+            INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+            WHERE u.reqhub_role = 'Reviewer'
+              AND u.is_active = 1
+              AND uaa.department_id = ?
+        ");
+        $stmtReviewerCheck->execute([$request['department_id']]);
+        $hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
+
+        $stmtApproverCheck = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM users u
+            INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+            WHERE u.reqhub_role = 'Approver'
+              AND u.is_active = 1
+              AND uaa.system_id = ?
+        ");
+        $stmtApproverCheck->execute([$request['system_id']]);
+        $hasApprover = (int)$stmtApproverCheck->fetchColumn() > 0;
+
+        if ($hasReviewer || $hasApprover) {
+            http_response_code(403);
+            die("This request has an assigned Reviewer or Approver and cannot be served directly");
+        }
+    }
+
     $requestorId = $request['user_id'];
 
     $stmt = $pdo->prepare("
         UPDATE requests
         SET
+            status = 'approved',
             admin_status = 'served',
+            approved_by = :approved_by,
+            approved_at = NOW(),
             served_at = NOW(),
             served_by = :served_by,
             updated_at = NOW()
-        WHERE id = :id AND status = 'approved'
+        WHERE id = :id AND status IN ('approved', 'pending')
     ");
     $stmt->execute([
-        ':id'        => $request_id,
-        ':served_by' => $admin_id
+        ':id'          => $request_id,
+        ':approved_by' => $admin_id,
+        ':served_by'   => $admin_id
     ]);
 
     $pdo->prepare("DELETE FROM request_chat_views WHERE request_id = ?")->execute([$request_id]);

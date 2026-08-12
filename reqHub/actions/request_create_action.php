@@ -89,9 +89,26 @@ try {
     $stmtReviewerCheck->execute([$department_id]);
     $hasReviewer = (int)$stmtReviewerCheck->fetchColumn() > 0;
 
-    $status = ($userRole === 'Approver') ? 'approved'
-            : (($userRole === 'Reviewer') ? 'reviewed'
-            : 'pending');
+    $stmtApproverCheck = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM users u
+        INNER JOIN user_approver_assignments uaa ON uaa.user_id = u.id
+        WHERE u.reqhub_role = 'Approver'
+          AND u.is_active = 1
+          AND uaa.system_id = ?
+    ");
+    $stmtApproverCheck->execute([$system_id]);
+    $hasApprover = (int)$stmtApproverCheck->fetchColumn() > 0;
+
+    if ($userRole === 'Approver') {
+        $status = 'approved';
+    } elseif ($userRole === 'Reviewer') {
+        $status = 'reviewed';
+    } elseif (!$hasReviewer && $hasApprover) {
+        $status = 'reviewed'; // no Reviewer, but Approver exists — skip straight to Approver
+    } else {
+        $status = 'pending'; // either has a Reviewer, or has neither Reviewer nor Approver
+    }
     $admin_status = 'pending';
     $approved_by  = ($userRole === 'Approver') ? $user_id : null;
     $approved_at  = ($userRole === 'Approver') ? date('Y-m-d H:i:s') : null;
@@ -136,10 +153,10 @@ try {
             notifyReviewers($pdo, $request_id, $requestorName, $systemName);
             smsReviewers($pdo, $request_id, $requestorName, $systemName);
         } else {
-            // No Reviewer in dept — skip straight to Approver
-            $noReviewerMsg = "{$requestorName} submitted a new [{$systemName}] request pending your approval.";
-            notifyApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName, $noReviewerMsg);
-            smsApproversForSystem($pdo, (int)$system_id, $request_id, $requestorName, $systemName, $noReviewerMsg);
+            // No Reviewer AND no Approver — notify Admins directly
+            $noAssigneeMsg = "{$requestorName} submitted a new [{$systemName}] request with no Reviewer or Approver assigned. It requires Admin action.";
+            notifyAdmins($pdo, $request_id, $noAssigneeMsg);
+            smsAdmins($pdo, $noAssigneeMsg);
         }
     } elseif ($status === 'reviewed') {
         // Reviewer-created request — go straight to Approver
