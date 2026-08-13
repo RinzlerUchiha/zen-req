@@ -131,8 +131,15 @@ $specStmt = $hr_db->query("SELECT js." . MP_JOBSPEC_COLUMNS['id'] . " AS id,
         js." . MP_JOBSPEC_COLUMNS['emplstat'] . " AS emplstat
     FROM " . MP_JOBSPEC_TABLE . " js
     LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
-    ORDER BY js." . MP_JOBSPEC_COLUMNS['id'] . " DESC");
+    ORDER BY js." . MP_JOBSPEC_COLUMNS['department'] . " ASC, js." . MP_JOBSPEC_COLUMNS['id'] . " DESC");
 $jobSpecs = $specStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Group specs by department for the capsule/card grid display
+$jobSpecsByDept = [];
+foreach ($jobSpecs as $spec) {
+    $deptKey = $spec['department'] ?: '—';
+    $jobSpecsByDept[$deptKey][] = $spec;
+}
 
 // Summary counts (derived from the data already fetched above)
 $countSource = userHasRoleIn('HR Head', 'Admin') ? $allRequests : $myRequests;
@@ -567,6 +574,76 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
         color: #D8DBE0;
     }
 
+    .mp-jobspec-group {
+        margin-bottom: 20px;
+    }
+
+    .mp-jobspec-group-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #B0B6C0;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin: 0 0 8px;
+        padding: 0 22px;
+    }
+
+    .mp-jobspec-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+        padding: 0 22px;
+    }
+
+    .mp-jobspec-card {
+        background: #FFFFFF;
+        border: 1px solid #E7E9EE;
+        border-radius: 12px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .mp-jobspec-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(31, 36, 48, .08);
+    }
+
+    .mp-jobspec-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: #E8F0FE;
+        color: #2F6FE4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+    }
+
+    .mp-jobspec-text {
+        min-width: 0;
+    }
+
+    .mp-jobspec-title {
+        font-size: 13px;
+        font-weight: 700;
+        margin: 0;
+        color: #1F2430;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mp-jobspec-sub {
+        font-size: 12px;
+        margin: 2px 0 0;
+        color: #8A93A3;
+    }
+
     @media (max-width: 900px) {
         .mp-wrap {
             flex-direction: column;
@@ -887,33 +964,31 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                                 <i class="fa fa-plus-circle"></i> New Job Specification
                             </a>
                         </div>
-                        <?php if (empty($jobSpecs)): ?>
+                        <?php if (empty($jobSpecsByDept)): ?>
                             <div class="mp-empty">
                                 <span>No job specifications yet.</span>
                             </div>
                         <?php else: ?>
-                            <?php $i = 1;
-                            foreach ($jobSpecs as $spec): ?>
-                                <div class="mp-row" onclick="window.location='manpower_jobspec_form?id=<?= (int) $spec['id'] ?>';">
-                                    <div class="mp-row-num"><?= $i++ ?></div>
-                                    <div class="mp-row-body">
-                                        <div class="mp-row-top">
-                                            <span class="mp-row-title"><?= htmlspecialchars($spec['position_title'] ?: $spec['position']) ?></span>
-                                        </div>
-                                        <div class="mp-row-cols">
-                                            <div class="mp-col">
-                                                <span class="mp-col-label">DEPARTMENT</span>
-                                                <span class="mp-col-value"><?= htmlspecialchars($spec['department']) ?></span>
-                                            </div>
-                                            <div class="mp-col">
-                                                <span class="mp-col-label">EMPLOYMENT STATUS</span>
-                                                <span class="mp-col-value"><?= htmlspecialchars($spec['emplstat'] ?: '—') ?></span>
-                                            </div>
+                            <div style="padding-top: 16px;">
+                                <?php foreach ($jobSpecsByDept as $deptLabel => $specs): ?>
+                                    <div class="mp-jobspec-group">
+                                        <p class="mp-jobspec-group-label"><?= htmlspecialchars($deptLabel) ?></p>
+                                        <div class="mp-jobspec-grid">
+                                            <?php foreach ($specs as $spec): ?>
+                                                <div class="mp-jobspec-card" onclick="window.location='manpower_jobspec_form?id=<?= (int) $spec['id'] ?>';">
+                                                    <div class="mp-jobspec-icon">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"></path></svg>
+                                                    </div>
+                                                    <div class="mp-jobspec-text">
+                                                        <p class="mp-jobspec-title"><?= htmlspecialchars($spec['position_title'] ?: $spec['position']) ?></p>
+                                                        <p class="mp-jobspec-sub"><?= htmlspecialchars($spec['emplstat'] ?: '—') ?></p>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
                                         </div>
                                     </div>
-                                    <div class="mp-row-view"><i class="fa fa-chevron-right"></i></div>
-                                </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>

@@ -140,7 +140,8 @@ $jsPositions = $hr_db->query("SELECT jd_code, jd_title FROM tbl_jobdescription W
         justify-content: flex-end;
         gap: 8px;
         margin: 24px -26px -24px;
-        border-radius: 0 0 var(--mp-radius) var(--mp-radius);
+        border-radius: 0 0 20px 20px;
+        overflow: hidden;
         box-shadow: 0 -4px 12px rgba(31, 36, 48, .05);
         z-index: 5;
     }
@@ -221,6 +222,7 @@ $jsPositions = $hr_db->query("SELECT jd_code, jd_title FROM tbl_jobdescription W
         border-radius: var(--mp-radius);
         padding: 24px 26px;
         box-shadow: 0 2px 8px rgba(31, 36, 48, .04);
+        overflow: hidden;
     }
 
     #mp-form-app .mp-sec-title {
