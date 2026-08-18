@@ -17,6 +17,7 @@
 if (!isset($currentUser)) {
     require_once dirname(__DIR__) . '/includes/auth.php';
 }
+require_once dirname(__DIR__) . '/includes/manpower_jobspec_config.php';
 
 const MP_LEVEL_APPROVER = 1;
 const MP_LEVEL_HR_HEAD  = 2;
@@ -82,8 +83,13 @@ if (!$isOwner && !$canReview) {
 // used on the request form itself)
 // ============================================================================
 
-$posStmt = $hr_db->prepare("SELECT * FROM tbl_manpower_request_position
-    WHERE request_id = :id ORDER BY id ASC");
+$posStmt = $hr_db->prepare("SELECT p.*,
+        jd.jd_title AS jobspec_title,
+        js." . MP_JOBSPEC_COLUMNS['emplstat'] . " AS jobspec_emplstat
+    FROM tbl_manpower_request_position p
+    LEFT JOIN " . MP_JOBSPEC_TABLE . " js ON js." . MP_JOBSPEC_COLUMNS['id'] . " = p.jobspec_id
+    LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+    WHERE p.request_id = :id ORDER BY p.id ASC");
 $posStmt->bindParam(':id', $id);
 $posStmt->execute();
 
@@ -158,21 +164,28 @@ function mp_view_action_badge($action)
         . htmlspecialchars($action) . '</span>';
 }
 
-function mp_view_render_table($rows)
+function mp_view_render_table($rows, $isAdmin = false)
 {
     if (empty($rows)) {
         echo '<div class="mpv-table-empty">No positions added.</div>';
         return;
     }
     echo '<div class="mpv-table-wrap"><table class="mpv-table"><thead><tr>';
-    echo '<th>Subject/Position</th><th>Number Needed</th><th>Reason</th><th>Date Needed</th>';
+    echo '<th>Subject/Position</th><th>Number Needed</th><th>Reason</th><th>Date Needed</th><th>Fill</th>';
     echo '</tr></thead><tbody>';
     foreach ($rows as $r) {
+        $title = $r['jobspec_title'] ?: $r['position']; // fallback if spec no longer exists
+        $filled = (int) ($r['filled'] ?? 0);
         echo '<tr>';
-        echo '<td>' . htmlspecialchars($r['position']) . '</td>';
+        echo '<td>' . htmlspecialchars($title) . '</td>';
         echo '<td>' . htmlspecialchars($r['headcount']) . '</td>';
         echo '<td>' . htmlspecialchars($r['reason'] ?: '—') . '</td>';
         echo '<td>' . ($r['date_needed'] ? date("Y-m-d", strtotime($r['date_needed'])) : '—') . '</td>';
+        if ($isAdmin) {
+            echo '<td><input type="number" min="0" max="' . (int) $r['headcount'] . '" value="' . $filled . '" class="mpv-fill-input" data-position-id="' . (int) $r['id'] . '" style="width:60px; border:1px solid var(--mpv-border); border-radius:6px; padding:4px 6px;"></td>';
+        } else {
+            echo '<td>' . $filled . '</td>';
+        }
         echo '</tr>';
     }
     echo '</tbody></table></div>';
@@ -473,13 +486,13 @@ function mp_view_render_table($rows)
                 <span class="mpv-section-caption">Vacated roles</span>
             </div>
 
-            <?php mp_view_render_table($replacementRows); ?>
+            <?php mp_view_render_table($replacementRows, userHasRoleIn('Admin')); ?>
 
             <div class="mpv-section-divider additional">
                 <span class="dot"></span> Additional positions
                 <span class="mpv-section-caption">New or expanded roles</span>
             </div>
-            <?php mp_view_render_table($additionalRows); ?>
+            <?php mp_view_render_table($additionalRows, userHasRoleIn('Admin')); ?>
 
             <span class="mpv-field-label">NON-NEGOTIABLE</span>
             <div class="mpv-field-value"><?= $req['nonnegotiable'] !== '' && $req['nonnegotiable'] !== null ? nl2br(htmlspecialchars($req['nonnegotiable'])) : '<span class="mpv-empty-muted">None specified.</span>' ?></div>
@@ -516,6 +529,12 @@ function mp_view_render_table($rows)
                     <button type="button" class="mpv-btn mpv-btn-reject" onclick="mpRequestAction('cancel', <?= (int) $req['id'] ?>)">Request to Cancel</button>
                 </div>
             <?php } ?>
+
+            <?php if (userHasRoleIn('Admin')): ?>
+                <div style="margin-top:18px;">
+                    <button type="button" class="mpv-btn mpv-btn-approve" onclick="mpSaveFillCounts(<?= (int) $req['id'] ?>)">Save Fill Counts</button>
+                </div>
+            <?php endif; ?>
 
             <?php if ($canAct) { ?>
                 <div class="mpv-actions">

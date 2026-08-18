@@ -23,6 +23,7 @@ if (!isset($currentUser)) {
     // Safety net in case this file is ever reached without auth.php running first
     require_once dirname(__DIR__) . '/includes/auth.php';
 }
+require_once dirname(__DIR__) . '/includes/manpower_jobspec_config.php';
 
 require_once dirname(__DIR__) . '/includes/header.php';
 
@@ -34,7 +35,11 @@ $userRole = $currentUser['manpower_role'];
 
 // My Requests — requests this employee submitted
 $stmt = $hr_db->prepare("SELECT r.*,
-        (SELECT GROUP_CONCAT(p.position SEPARATOR ', ') FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_list,
+        (SELECT GROUP_CONCAT(COALESCE(jd.jd_title, p.position) SEPARATOR ', ')
+            FROM tbl_manpower_request_position p
+            LEFT JOIN " . MP_JOBSPEC_TABLE . " js ON js." . MP_JOBSPEC_COLUMNS['id'] . " = p.jobspec_id
+            LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+            WHERE p.request_id = r.id) AS position_list,
         (SELECT COALESCE(SUM(p.headcount), 0) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS total_headcount,
         (SELECT COUNT(*) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_count
     FROM tbl_manpower_request r
@@ -51,7 +56,11 @@ if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
     $scopeToDept = ($userRole === 'Approver');
 
     $sql = "SELECT r.*,
-            (SELECT GROUP_CONCAT(p.position SEPARATOR ', ') FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_list,
+            (SELECT GROUP_CONCAT(COALESCE(jd.jd_title, p.position) SEPARATOR ', ')
+                FROM tbl_manpower_request_position p
+                LEFT JOIN " . MP_JOBSPEC_TABLE . " js ON js." . MP_JOBSPEC_COLUMNS['id'] . " = p.jobspec_id
+                LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+                WHERE p.request_id = r.id) AS position_list,
             (SELECT COALESCE(SUM(p.headcount), 0) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS total_headcount,
             (SELECT COUNT(*) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_count
         FROM tbl_manpower_request r
@@ -74,7 +83,11 @@ if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
     $scopeAllToDept = ($userRole === 'Approver');
 
     $sql = "SELECT r.*,
-            (SELECT GROUP_CONCAT(p.position SEPARATOR ', ') FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_list,
+            (SELECT GROUP_CONCAT(COALESCE(jd.jd_title, p.position) SEPARATOR ', ')
+                FROM tbl_manpower_request_position p
+                LEFT JOIN " . MP_JOBSPEC_TABLE . " js ON js." . MP_JOBSPEC_COLUMNS['id'] . " = p.jobspec_id
+                LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+                WHERE p.request_id = r.id) AS position_list,
             (SELECT COALESCE(SUM(p.headcount), 0) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS total_headcount,
             (SELECT COUNT(*) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_count
         FROM tbl_manpower_request r"
@@ -97,7 +110,11 @@ if (userHasRoleIn('Approver', 'HR Head', 'Admin')) {
     $scopeChangeToDept = ($userRole === 'Approver');
 
     $sql = "SELECT c.*, r.department_id, r.mr_no,
-            (SELECT GROUP_CONCAT(p.position SEPARATOR ', ') FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_list
+            (SELECT GROUP_CONCAT(COALESCE(jd.jd_title, p.position) SEPARATOR ', ')
+                FROM tbl_manpower_request_position p
+                LEFT JOIN " . MP_JOBSPEC_TABLE . " js ON js." . MP_JOBSPEC_COLUMNS['id'] . " = p.jobspec_id
+                LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+                WHERE p.request_id = r.id) AS position_list
         FROM tbl_manpower_change_request c
         JOIN tbl_manpower_request r ON r.id = c.request_id
         WHERE c.status = 'Pending'"
@@ -1207,6 +1224,29 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                 location.reload();
             } else {
                 alert(data.error || 'Failed to record decision.');
+            }
+        }).fail(function() {
+            alert('An error occurred. Please try again.');
+        });
+    }
+
+    function mpSaveFillCounts(requestId) {
+        const updates = [];
+        $('.mpv-fill-input').each(function() {
+            updates.push({
+                position_id: $(this).data('position-id'),
+                filled: $(this).val()
+            });
+        });
+        $.post('update_fill', {
+            request_id: requestId,
+            updates: JSON.stringify(updates)
+        }, function(res) {
+            let data = typeof res === 'string' ? JSON.parse(res) : res;
+            if (data.success) {
+                alert('Fill counts saved.');
+            } else {
+                alert(data.error || 'Failed to save fill counts.');
             }
         }).fail(function() {
             alert('An error occurred. Please try again.');

@@ -61,11 +61,13 @@ function mp_clean_rows(array $rawRows): array
 {
     $clean = [];
     foreach ($rawRows as $row) {
-        $position = trim($row['position'] ?? '');
-        if ($position === '') {
+        $jobspecId = isset($row['jobspec_id']) && ctype_digit((string) $row['jobspec_id']) ? (int) $row['jobspec_id'] : null;
+        $position  = trim($row['position'] ?? '');
+        if (!$jobspecId) {
             continue; // untouched row — ignore, not an error
         }
         $clean[] = [
+            'jobspec_id'  => $jobspecId,
             'position'    => $position,
             'headcount'   => isset($row['headcount']) ? (int) $row['headcount'] : 0,
             'reason'      => trim($row['reason'] ?? ''),
@@ -97,6 +99,9 @@ if ($action === 'submit' && empty($replacement) && empty($additional)) {
 // Drafts can be saved with incomplete rows.
 if ($action === 'submit') {
     foreach (array_merge($replacement, $additional) as $row) {
+        if (empty($row['jobspec_id'])) {
+            $errors[] = 'A Job Specification must be selected for "' . $row['position'] . '".';
+        }
         if ($row['headcount'] < 1) {
             $errors[] = 'Headcount must be at least 1 for "' . $row['position'] . '".';
         }
@@ -180,14 +185,15 @@ try {
         $delStmt->execute(['id' => $id]);
 
         $posStmt = $hr_db->prepare("INSERT INTO tbl_manpower_request_position
-            (request_id, type, position, headcount, reason, date_needed)
-            VALUES (:request_id, :type, :position, :headcount, :reason, :date_needed)");
+            (request_id, type, position, jobspec_id, headcount, reason, date_needed)
+            VALUES (:request_id, :type, :position, :jobspec_id, :headcount, :reason, :date_needed)");
 
         foreach ($replacement as $row) {
             $posStmt->execute([
                 'request_id'  => $id,
                 'type'        => 'replacement',
                 'position'    => $row['position'],
+                'jobspec_id'  => $row['jobspec_id'],
                 'headcount'   => $row['headcount'] ?: 1,
                 'reason'      => $row['reason'],
                 'date_needed' => $row['date_needed'] ?: null,
@@ -198,6 +204,7 @@ try {
                 'request_id'  => $id,
                 'type'        => 'additional',
                 'position'    => $row['position'],
+                'jobspec_id'  => $row['jobspec_id'],
                 'headcount'   => $row['headcount'] ?: 1,
                 'reason'      => $row['reason'],
                 'date_needed' => $row['date_needed'] ?: null,
@@ -259,14 +266,15 @@ try {
     $newId = $hr_db->lastInsertId();
 
     $posStmt = $hr_db->prepare("INSERT INTO tbl_manpower_request_position
-        (request_id, type, position, headcount, reason, date_needed)
-        VALUES (:request_id, :type, :position, :headcount, :reason, :date_needed)");
+        (request_id, type, position, jobspec_id, headcount, reason, date_needed)
+        VALUES (:request_id, :type, :position, :jobspec_id, :headcount, :reason, :date_needed)");
 
     foreach ($replacement as $row) {
         $posStmt->execute([
             'request_id'  => $newId,
             'type'        => 'replacement',
             'position'    => $row['position'],
+            'jobspec_id'  => $row['jobspec_id'],
             'headcount'   => $row['headcount'] ?: 1,
             'reason'      => $row['reason'],
             'date_needed' => $row['date_needed'] ?: null,
@@ -277,6 +285,7 @@ try {
             'request_id'  => $newId,
             'type'        => 'additional',
             'position'    => $row['position'],
+            'jobspec_id'  => $row['jobspec_id'],
             'headcount'   => $row['headcount'] ?: 1,
             'reason'      => $row['reason'],
             'date_needed' => $row['date_needed'] ?: null,

@@ -31,11 +31,13 @@ require_once dirname(__DIR__) . '/includes/header.php';
 require_once dirname(__DIR__) . '/includes/manpower_jobspec_config.php';
 
 // Positions available for selection are those with a created Job Specification.
-$specPosStmt = $hr_db->query("SELECT js." . MP_JOBSPEC_COLUMNS['position'] . " AS position_code,
+// Each row is now one specific jobspec record (not grouped by position code),
+// since a request line must point to one exact Job Spec.
+$specPosStmt = $hr_db->query("SELECT js." . MP_JOBSPEC_COLUMNS['id'] . " AS jobspec_id,
+        js." . MP_JOBSPEC_COLUMNS['position'] . " AS position_code,
         jd.jd_title AS position_title
     FROM " . MP_JOBSPEC_TABLE . " js
     LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
-    GROUP BY js." . MP_JOBSPEC_COLUMNS['position'] . ", jd.jd_title
     ORDER BY jd.jd_title ASC");
 $jobSpecPositions = $specPosStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -501,22 +503,22 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
 <script>
     $(function() {
         const mpJobSpecPositions = <?= json_encode(array_map(function ($p) {
-                                        return ['code' => $p['position_code'], 'title' => $p['position_title'] ?: $p['position_code']];
+                                        return ['id' => $p['jobspec_id'], 'code' => $p['position_code'], 'title' => $p['position_title'] ?: $p['position_code']];
                                     }, $jobSpecPositions)) ?>;
 
         const replacementSeed = <?= json_encode(array_map(function ($r) {
-                                    return [$r['position'], $r['headcount'], $r['reason'], $r['date_needed']];
+                                    return [$r['jobspec_id'], $r['headcount'], $r['reason'], $r['date_needed']];
                                 }, $replacementRows)) ?>;
         const additionalSeed = <?= json_encode(array_map(function ($r) {
-                                    return [$r['position'], $r['headcount'], $r['reason'], $r['date_needed']];
+                                    return [$r['jobspec_id'], $r['headcount'], $r['reason'], $r['date_needed']];
                                 }, $additionalRows)) ?>;
 
-function buildPositionSelect(type, selectedCode) {
+function buildPositionSelect(type, selectedId) {
             const $select = $('<select>').addClass('mp-pos-' + type);
             $select.append($('<option value="">Select position…</option>'));
             mpJobSpecPositions.forEach(function(p) {
-                const $opt = $('<option>').val(p.code).text(p.title);
-                if (p.code === selectedCode) $opt.prop('selected', true);
+                const $opt = $('<option>').val(p.id).text(p.title).attr('data-code', p.code);
+                if (String(p.id) === String(selectedId)) $opt.prop('selected', true);
                 $select.append($opt);
             });
             return $select;
@@ -554,10 +556,13 @@ function buildPositionSelect(type, selectedCode) {
         function collectRows(type) {
             const rows = [];
             $('#mp-' + type + '-table tbody tr').each(function() {
-                const position = $(this).find('.mp-pos-' + type).val();
-                if (!position) return;
+                const $posSelect = $(this).find('.mp-pos-' + type);
+                const jobspecId = $posSelect.val();
+                if (!jobspecId) return;
+                const positionCode = $posSelect.find('option:selected').attr('data-code') || '';
                 rows.push({
-                    position: position,
+                    jobspec_id: jobspecId,
+                    position: positionCode,
                     headcount: $(this).find('.mp-count-' + type).val() || 1,
                     reason: $(this).find('.mp-reason-' + type).val() || '',
                     date_needed: $(this).find('.mp-date-' + type).val() || ''

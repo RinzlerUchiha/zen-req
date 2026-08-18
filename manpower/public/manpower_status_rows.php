@@ -14,6 +14,7 @@ if (!isset($currentUser)) {
 }
 
 require_once dirname(__DIR__) . '/includes/manpower_render_helpers.php';
+require_once dirname(__DIR__) . '/includes/manpower_jobspec_config.php';
 
 $label = trim($_GET['label'] ?? '');
 $validLabels = ['Draft', 'Pending', 'Approved', 'Update', 'Cancelled', 'Declined'];
@@ -34,7 +35,11 @@ $dbStatuses = $statusMap[$label];
 
 $placeholders = implode(',', array_fill(0, count($dbStatuses), '?'));
 $stmt = $hr_db->prepare("SELECT r.*,
-        (SELECT GROUP_CONCAT(p.position SEPARATOR ', ') FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_list,
+        (SELECT GROUP_CONCAT(COALESCE(jd.jd_title, p.position) SEPARATOR ', ')
+            FROM tbl_manpower_request_position p
+            LEFT JOIN " . MP_JOBSPEC_TABLE . " js ON js." . MP_JOBSPEC_COLUMNS['id'] . " = p.jobspec_id
+            LEFT JOIN tbl_jobdescription jd ON jd.jd_code = js." . MP_JOBSPEC_COLUMNS['position'] . "
+            WHERE p.request_id = r.id) AS position_list,
         (SELECT COALESCE(SUM(p.headcount), 0) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS total_headcount,
         (SELECT COUNT(*) FROM tbl_manpower_request_position p WHERE p.request_id = r.id) AS position_count
     FROM tbl_manpower_request r
