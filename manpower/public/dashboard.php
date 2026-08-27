@@ -700,7 +700,7 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
 <div class="mp-wrap">
 
     <div class="mp-sidebar">
-    <?php foreach ($mpSections as $key => $section): ?>
+        <?php foreach ($mpSections as $key => $section): ?>
             <?php if ($key === 'admin-users'): ?>
                 <a class="mp-nav-item" href="manpower_admin_users" style="text-decoration:none;">
                     <span class="mp-nav-icon"><i class="fa fa-<?= $section['icon'] ?>"></i></span>
@@ -994,7 +994,10 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
                                             <?php foreach ($specs as $spec): ?>
                                                 <div class="mp-jobspec-card" onclick="window.location='manpower_jobspec_form?id=<?= (int) $spec['id'] ?>';">
                                                     <div class="mp-jobspec-icon">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"></path></svg>
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                            <rect x="2" y="7" width="20" height="14" rx="2"></rect>
+                                                            <path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"></path>
+                                                        </svg>
                                                     </div>
                                                     <div class="mp-jobspec-text">
                                                         <p class="mp-jobspec-title"><?= htmlspecialchars($spec['position_title'] ?: $spec['position']) ?></p>
@@ -1020,6 +1023,82 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
         border-radius: 16px;
         border: none;
         overflow: hidden;
+    }
+
+    #mpConfirmModal .modal-content {
+        border-radius: 16px;
+        border: none;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(31, 36, 48, .18);
+    }
+
+    #mpConfirmModal .modal-header {
+        border-bottom: none;
+        padding: 22px 24px 4px;
+        align-items: flex-start;
+    }
+
+    #mpConfirmModal .modal-title {
+        font-size: 17px;
+        font-weight: 800;
+        color: #1F2430;
+        letter-spacing: -.3px;
+    }
+
+    #mpConfirmModal .modal-body {
+        padding: 14px 24px 20px;
+    }
+
+    #mpConfirmModal .modal-footer {
+        border-top: 1px solid #E7E9EE;
+        background: #FAFBFC;
+        padding: 14px 24px;
+    }
+
+    #mpModalBackdrop.modal-backdrop {
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        background-color: rgba(31, 36, 48, .45);
+    }
+
+    #mpConfirmModal .mp-confirm-btn-cancel {
+        border: 1px solid #E7E9EE;
+        background: #FFFFFF;
+        color: #5B6474;
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .15s ease;
+    }
+
+    #mpConfirmModal .mp-confirm-btn-cancel:hover {
+        border-color: #2F6FE4;
+        color: #2F6FE4;
+    }
+
+    #mpConfirmModal .mp-confirm-btn-ok {
+        border: none;
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        color: #FFFFFF;
+        background: linear-gradient(135deg, #2F6FE4, #1B4FB0);
+        box-shadow: 0 6px 16px rgba(47, 111, 228, .28);
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    #mpConfirmModal .mp-confirm-btn-ok:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(47, 111, 228, .36);
+    }
+
+    #mpConfirmModal .mp-confirm-btn-ok.mp-confirm-danger {
+        background: linear-gradient(135deg, #E14848, #B92E2E);
+        box-shadow: 0 6px 16px rgba(225, 72, 72, .28);
     }
 
     #mpRequestModal .modal-header {
@@ -1064,10 +1143,31 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
         background: #FAFBFF;
         border-left: 3px solid #2F6FE4;
     }
+
+    #mpConfirmModal {
+        z-index: 1060;
+    }
+
+    #mpRequestModal .modal-content.mp-behind-blur,
+    #mpChangeRequestModal .modal-content.mp-behind-blur {
+        filter: blur(1.5px);
+        transition: filter .15s ease;
+        pointer-events: none;
+        position: relative;
+    }
+
+    #mpRequestModal .modal-content.mp-behind-blur::after,
+    #mpChangeRequestModal .modal-content.mp-behind-blur::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(31, 36, 48, .12);
+        pointer-events: none;
+    }
 </style>
 
 <div class="modal fade" id="mpRequestModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document" style="max-width:800px;">
+    <div class="modal-dialog modal-xl" role="document" style="max-width:1200px;">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Request Details</h5>
@@ -1079,6 +1179,26 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
             <div class="modal-footer">
                 <button type="button" class="btn-mp-modal-close" data-bs-dismiss="modal">Close</button>
             </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="modal fade" id="mpConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width:420px;">
+        <div class="modal-content" id="mpConfirmContent">
+            <div class="modal-header" id="mpConfirmHeader">
+                <h5 class="modal-title" id="mpConfirmTitle">Confirm</h5>
+                <button type="button" class="btn-close" aria-label="Close" onclick="mpCloseConfirmModal()"></button>
+            </div>
+            <div class="modal-body" id="mpConfirmBody">
+                <p id="mpConfirmMessage" style="margin:0; font-size:13.5px; color:#1F2430; line-height:1.6;"></p>
+            </div>
+            <div class="modal-footer" id="mpConfirmFooter">
+            <button type="button" class="mp-confirm-btn-cancel" onclick="mpCloseConfirmModal()">Cancel</button>
+            <button type="button" class="mp-confirm-btn-ok" id="mpConfirmOkBtn">Confirm</button>
+        </div>
         </div>
     </div>
 </div>
@@ -1193,6 +1313,58 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
         };
     }
 
+    function mpShowConfirm(message, onConfirm, okLabel, isDanger) {
+        const modalEl = document.getElementById('mpConfirmModal');
+        document.getElementById('mpConfirmMessage').textContent = message;
+        const $okBtn = $('#mpConfirmOkBtn');
+        $okBtn.text(okLabel || 'Confirm');
+        $okBtn.toggleClass('mp-confirm-danger', !!isDanger);
+        $('.mp-confirm-btn-cancel', '#mpConfirmModal').show();
+
+        $('#mpRequestModal .modal-content, #mpChangeRequestModal .modal-content').addClass('mp-behind-blur');
+
+        modalEl.style.display = 'block';
+        modalEl.offsetHeight;
+        modalEl.classList.add('show');
+        document.body.classList.add('modal-open');
+        if (!document.getElementById('mpModalBackdrop')) {
+            const backdrop = document.createElement('div');
+            backdrop.id = 'mpModalBackdrop';
+            backdrop.className = 'modal-backdrop fade show';
+            document.body.appendChild(backdrop);
+        }
+
+        $okBtn.off('click').on('click', function() {
+            mpCloseConfirmModal();
+            onConfirm();
+        });
+    }
+
+    function mpCloseConfirmModal() {
+        const modalEl = document.getElementById('mpConfirmModal');
+        modalEl.classList.remove('show');
+        setTimeout(function() {
+            modalEl.style.display = 'none';
+        }, 150);
+
+        $('#mpRequestModal .modal-content, #mpChangeRequestModal .modal-content').removeClass('mp-behind-blur');
+
+        // Only tear down the shared backdrop/body state if no other modal is still open behind it
+        const stillOpen = ['mpRequestModal', 'mpChangeRequestModal'].some(function(id) {
+            const el = document.getElementById(id);
+            return el && el.classList.contains('show');
+        });
+        if (!stillOpen) {
+            document.body.classList.remove('modal-open');
+            $('#mpModalBackdrop').remove();
+        }
+    }
+
+    function mpShowAlert(message) {
+        mpShowConfirm(message, function() {}, 'OK');
+        $('.mp-confirm-btn-cancel', '#mpConfirmModal').hide();
+    }
+
     function mpCloseChangeRequestModal() {
         const modalEl = document.getElementById('mpChangeRequestModal');
         modalEl.classList.remove('show');
@@ -1206,28 +1378,27 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
     function mpDecide(decision, requestId) {
         const $panel = $('#mpRequestModalBody');
         if (decision === 'reject' && $panel.find('#mp-remarks').val().trim() === '') {
-            alert('Remarks are required when rejecting a request.');
+            mpShowAlert('Remarks are required when rejecting a request.');
             return;
         }
-        if (!confirm('Are you sure you want to ' + decision + ' this request?')) {
-            return;
-        }
-        $.post('approve', {
-            request_id: requestId,
-            decision: decision,
-            remarks: $panel.find('#mp-remarks').val()
-        }, function(res) {
-            let data = typeof res === 'string' ? JSON.parse(res) : res;
-            if (data.success) {
-                alert('Decision recorded.');
-                mpOpenRequestModal(requestId);
-                location.reload();
-            } else {
-                alert(data.error || 'Failed to record decision.');
-            }
-        }).fail(function() {
-            alert('An error occurred. Please try again.');
-        });
+        mpShowConfirm('Are you sure you want to ' + decision + ' this request?', function() {
+            $.post('approve', {
+                request_id: requestId,
+                decision: decision,
+                remarks: $panel.find('#mp-remarks').val()
+            }, function(res) {
+                let data = typeof res === 'string' ? JSON.parse(res) : res;
+                if (data.success) {
+                    mpShowAlert('Decision recorded.');
+                    mpOpenRequestModal(requestId);
+                    location.reload();
+                } else {
+                    mpShowAlert(data.error || 'Failed to record decision.');
+                }
+            }).fail(function() {
+                mpShowAlert('An error occurred. Please try again.');
+            });
+        }, decision === 'approve' ? 'Approve' : 'Reject', decision === 'reject');
     }
 
     function mpSaveFillCounts(requestId) {
@@ -1351,7 +1522,7 @@ $mpDefaultSection = $isHrHeadOnly ? 'contract-offers' : (userHasRoleIn('Approver
         $('#mp-all-status-filter').on('change', mpFilterAllRequests);
 
         <?php if ($mpDefaultSection === 'all-requests'): ?>
-        loadAllRequestsIfNeeded();
+            loadAllRequestsIfNeeded();
         <?php endif; ?>
 
         // Sidebar section switching (replaces old top-tab switching)

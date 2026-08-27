@@ -44,13 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $id             = isset($_POST['id']) && ctype_digit($_POST['id']) ? (int) $_POST['id'] : null;
 $department_id  = trim($_POST['department_id'] ?? '');
 $company_id     = trim($_POST['company_id'] ?? '');
-$nonnegotiable  = trim($_POST['nonnegotiable'] ?? '');
 $action         = trim($_POST['action'] ?? 'submit'); // 'draft' or 'submit'
 
-$replacementRaw = json_decode($_POST['replacement'] ?? '[]', true);
-$additionalRaw  = json_decode($_POST['additional'] ?? '[]', true);
-if (!is_array($replacementRaw)) $replacementRaw = [];
-if (!is_array($additionalRaw))  $additionalRaw  = [];
+$positionsRaw = json_decode($_POST['positions'] ?? '[]', true);
+if (!is_array($positionsRaw)) $positionsRaw = [];
+
+$reasonPresets = $hr_db->query("SELECT reason FROM tbl_manpower_reason_preset WHERE is_active = 1")->fetchAll(PDO::FETCH_COLUMN);
 
 // ============================================================================
 // Validate — only rows with a position are considered "submitted";
@@ -66,19 +65,24 @@ function mp_clean_rows(array $rawRows): array
         if (!$jobspecId) {
             continue; // untouched row — ignore, not an error
         }
+        $type = trim($row['type'] ?? '');
+        if (!in_array($type, ['replacement', 'additional'])) {
+            $type = 'replacement';
+        }
         $clean[] = [
-            'jobspec_id'  => $jobspecId,
-            'position'    => $position,
-            'headcount'   => isset($row['headcount']) ? (int) $row['headcount'] : 0,
-            'reason'      => trim($row['reason'] ?? ''),
-            'date_needed' => trim($row['date_needed'] ?? ''),
+            'type'          => $type,
+            'jobspec_id'    => $jobspecId,
+            'position'      => $position,
+            'headcount'     => isset($row['headcount']) ? (int) $row['headcount'] : 0,
+            'reason'        => trim($row['reason'] ?? ''),
+            'date_needed'   => trim($row['date_needed'] ?? ''),
+            'nonnegotiable' => trim($row['nonnegotiable'] ?? ''),
         ];
     }
     return $clean;
 }
 
-$replacement = mp_clean_rows($replacementRaw);
-$additional  = mp_clean_rows($additionalRaw);
+$positions = mp_clean_rows($positionsRaw);
 
 $errors = [];
 
@@ -91,14 +95,14 @@ if ($department_id === '') {
 
 // For a submitted request, require at least one row total.
 // For a draft, allow saving with nothing filled in yet.
-if ($action === 'submit' && empty($replacement) && empty($additional)) {
+if ($action === 'submit' && empty($positions)) {
     $errors[] = 'Add at least one position before submitting.';
 }
 
 // Only validate the fields of rows that were actually filled in on submit.
 // Drafts can be saved with incomplete rows.
 if ($action === 'submit') {
-    foreach (array_merge($replacement, $additional) as $row) {
+    foreach ($positions as $row) {
         if (empty($row['jobspec_id'])) {
             $errors[] = 'A Job Specification must be selected for "' . $row['position'] . '".';
         }
@@ -107,6 +111,9 @@ if ($action === 'submit') {
         }
         if ($row['date_needed'] === '' || !DateTime::createFromFormat('Y-m-d', $row['date_needed'])) {
             $errors[] = 'A valid date needed is required for "' . $row['position'] . '".';
+        }
+        if ($row['reason'] === '' || !in_array($row['reason'], $reasonPresets)) {
+            $errors[] = 'A valid Reason must be selected for "' . $row['position'] . '".';
         }
     }
 }
@@ -166,7 +173,6 @@ try {
         $stmt = $hr_db->prepare("UPDATE tbl_manpower_request SET
                 department_id = :department_id,
                 company_id = :company_id,
-                nonnegotiable = :nonnegotiable,
                 status = :status,
                 update_pending_review = :update_pending_review,
                 current_approval_level = 0
@@ -174,7 +180,6 @@ try {
         $stmt->execute([
             'department_id'          => $department_id,
             'company_id'             => $company_id ?: null,
-            'nonnegotiable'          => $nonnegotiable,
             'status'                 => $finalStatus,
             'update_pending_review'  => $updatePendingReview,
             'id'                     => $id,
@@ -185,29 +190,19 @@ try {
         $delStmt->execute(['id' => $id]);
 
         $posStmt = $hr_db->prepare("INSERT INTO tbl_manpower_request_position
-            (request_id, type, position, jobspec_id, headcount, reason, date_needed)
-            VALUES (:request_id, :type, :position, :jobspec_id, :headcount, :reason, :date_needed)");
+            (request_id, type, position, jobspec_id, headcount, reason, date_needed, nonnegotiable)
+            VALUES (:request_id, :type, :position, :jobspec_id, :headcount, :reason, :date_needed, :nonnegotiable)");
 
-        foreach ($replacement as $row) {
+        foreach ($positions as $row) {
             $posStmt->execute([
-                'request_id'  => $id,
-                'type'        => 'replacement',
-                'position'    => $row['position'],
-                'jobspec_id'  => $row['jobspec_id'],
-                'headcount'   => $row['headcount'] ?: 1,
-                'reason'      => $row['reason'],
-                'date_needed' => $row['date_needed'] ?: null,
-            ]);
-        }
-        foreach ($additional as $row) {
-            $posStmt->execute([
-                'request_id'  => $id,
-                'type'        => 'additional',
-                'position'    => $row['position'],
-                'jobspec_id'  => $row['jobspec_id'],
-                'headcount'   => $row['headcount'] ?: 1,
-                'reason'      => $row['reason'],
-                'date_needed' => $row['date_needed'] ?: null,
+                'request_id'    => $id,
+                'type'          => $row['type'],
+                'position'      => $row['position'],
+                'jobspec_id'    => $row['jobspec_id'],
+                'headcount'     => $row['headcount'] ?: 1,
+                'reason'        => $row['reason'],
+                'date_needed'   => $row['date_needed'] ?: null,
+                'nonnegotiable' => $row['nonnegotiable'] ?: null,
             ]);
         }
 
@@ -251,44 +246,33 @@ try {
     $mr_no = "MR-$year-$month-$nextSeq";
 
     $stmt = $hr_db->prepare("INSERT INTO tbl_manpower_request
-        (mr_no, requestor_employee_id, department_id, company_id, nonnegotiable, status, current_approval_level)
+        (mr_no, requestor_employee_id, department_id, company_id, status, current_approval_level)
         VALUES
-        (:mr_no, :requestor_employee_id, :department_id, :company_id, :nonnegotiable, :status, 0)");
+        (:mr_no, :requestor_employee_id, :department_id, :company_id, :status, 0)");
     $stmt->execute([
         'mr_no'                  => $mr_no,
         'requestor_employee_id'  => $empno,
         'department_id'          => $department_id,
         'company_id'             => $company_id ?: null,
-        'nonnegotiable'          => $nonnegotiable,
         'status'                 => $status,
     ]);
 
     $newId = $hr_db->lastInsertId();
 
     $posStmt = $hr_db->prepare("INSERT INTO tbl_manpower_request_position
-        (request_id, type, position, jobspec_id, headcount, reason, date_needed)
-        VALUES (:request_id, :type, :position, :jobspec_id, :headcount, :reason, :date_needed)");
+        (request_id, type, position, jobspec_id, headcount, reason, date_needed, nonnegotiable)
+        VALUES (:request_id, :type, :position, :jobspec_id, :headcount, :reason, :date_needed, :nonnegotiable)");
 
-    foreach ($replacement as $row) {
+    foreach ($positions as $row) {
         $posStmt->execute([
-            'request_id'  => $newId,
-            'type'        => 'replacement',
-            'position'    => $row['position'],
-            'jobspec_id'  => $row['jobspec_id'],
-            'headcount'   => $row['headcount'] ?: 1,
-            'reason'      => $row['reason'],
-            'date_needed' => $row['date_needed'] ?: null,
-        ]);
-    }
-    foreach ($additional as $row) {
-        $posStmt->execute([
-            'request_id'  => $newId,
-            'type'        => 'additional',
-            'position'    => $row['position'],
-            'jobspec_id'  => $row['jobspec_id'],
-            'headcount'   => $row['headcount'] ?: 1,
-            'reason'      => $row['reason'],
-            'date_needed' => $row['date_needed'] ?: null,
+            'request_id'    => $newId,
+            'type'          => $row['type'],
+            'position'      => $row['position'],
+            'jobspec_id'    => $row['jobspec_id'],
+            'headcount'     => $row['headcount'] ?: 1,
+            'reason'        => $row['reason'],
+            'date_needed'   => $row['date_needed'] ?: null,
+            'nonnegotiable' => $row['nonnegotiable'] ?: null,
         ]);
     }
 

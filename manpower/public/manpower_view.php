@@ -93,14 +93,9 @@ $posStmt = $hr_db->prepare("SELECT p.*,
 $posStmt->bindParam(':id', $id);
 $posStmt->execute();
 
-$replacementRows = [];
-$additionalRows  = [];
-foreach ($posStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    if ($row['type'] === 'replacement') $replacementRows[] = $row;
-    else $additionalRows[] = $row;
-}
+$positionRows = $posStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$allPositionNames = array_column(array_merge($replacementRows, $additionalRows), 'position');
+$allPositionNames = array_column($positionRows, 'position');
 $positionSummary  = $allPositionNames ? implode(', ', $allPositionNames) : null;
 
 // ============================================================================
@@ -137,6 +132,8 @@ if ($req['status'] === 'Pending' || $isFlaggedUpdate) {
     // HR Head has no action rights on manpower requests in Phase 1
 }
 
+$mpShowFill = !userHasRoleIn('Requestor');
+
 function mp_view_status_badge($status)
 {
     $map = [
@@ -164,27 +161,46 @@ function mp_view_action_badge($action)
         . htmlspecialchars($action) . '</span>';
 }
 
-function mp_view_render_table($rows, $isAdmin = false)
+function mp_view_type_badge($type)
+{
+    $map = [
+        'replacement' => ['#F1EEFE', '#6A4FE0'],
+        'additional'  => ['#E8F0FE', '#1B4FB0'],
+    ];
+    [$bg, $fg] = $map[$type] ?? ['#EEF0F3', '#5B6474'];
+    $label = $type === 'replacement' ? 'Replacement' : 'Additional';
+    return '<span class="mpv-chip" style="background:' . $bg . ';color:' . $fg . ';">'
+        . htmlspecialchars($label) . '</span>';
+}
+
+function mp_view_render_table($rows, $isAdmin = false, $showFill = true)
 {
     if (empty($rows)) {
         echo '<div class="mpv-table-empty">No positions added.</div>';
         return;
     }
     echo '<div class="mpv-table-wrap"><table class="mpv-table"><thead><tr>';
-    echo '<th>Subject/Position</th><th>Number Needed</th><th>Reason</th><th>Date Needed</th><th>Fill</th>';
+    echo '<th>Type</th><th>Subject/Position</th><th>Number Needed</th><th>Reason</th><th>Date Needed</th><th>Non-Negotiable</th>';
+    if ($showFill) {
+        echo '<th>Fill</th>';
+    }
     echo '</tr></thead><tbody>';
     foreach ($rows as $r) {
         $title = $r['jobspec_title'] ?: $r['position']; // fallback if spec no longer exists
         $filled = (int) ($r['filled'] ?? 0);
         echo '<tr>';
+        echo '<td>' . mp_view_type_badge($r['type']) . '</td>';
         echo '<td>' . htmlspecialchars($title) . '</td>';
         echo '<td>' . htmlspecialchars($r['headcount']) . '</td>';
         echo '<td>' . htmlspecialchars($r['reason'] ?: '—') . '</td>';
         echo '<td>' . ($r['date_needed'] ? date("Y-m-d", strtotime($r['date_needed'])) : '—') . '</td>';
-        if ($isAdmin) {
-            echo '<td><input type="number" min="0" max="' . (int) $r['headcount'] . '" value="' . $filled . '" class="mpv-fill-input" data-position-id="' . (int) $r['id'] . '" style="width:60px; border:1px solid var(--mpv-border); border-radius:6px; padding:4px 6px;"></td>';
-        } else {
-            echo '<td>' . $filled . '</td>';
+        echo '<td>' . htmlspecialchars($r['nonnegotiable'] ?: '—') . '</td>';
+        if ($showFill) {
+            if ($isAdmin) {
+                echo '<td><input type="number" min="0" max="' . (int) $r['headcount'] . '" value="' . $filled . '" class="mpv-fill-input" data-position-id="' . (int) $r['id'] . '" style="width:60px; border:1px solid var(--mpv-border); border-radius:6px; padding:4px 6px;"></td>';
+            } else {
+                echo '<td>' . $filled . '</td>';
+            }
         }
         echo '</tr>';
     }
@@ -294,10 +310,30 @@ function mp_view_render_table($rows, $isAdmin = false)
         table-layout: fixed;
     }
 
-    #mpv-fragment .mpv-table th:first-child,
-    #mpv-fragment .mpv-table td:first-child {
-        width: 40%;
+    #mpv-fragment .mpv-table th:nth-child(2),
+    #mpv-fragment .mpv-table td:nth-child(2) {
+        width: 26%;
     }
+
+    #mpv-fragment .mpv-table th:first-child,
+    #mpv-fragment .mpv-table td:first-child,
+    #mpv-fragment .mpv-table th:nth-child(5),
+    #mpv-fragment .mpv-table td:nth-child(5) {
+        white-space: nowrap;
+    }
+
+    #mpv-fragment .mpv-table th:nth-child(4),
+    #mpv-fragment .mpv-table td:nth-child(4) {
+        min-width: 130px;
+    }
+
+    <?php if (!$mpShowFill): ?>
+        /* Fill column hidden (Requestor view) — let Non-Negotiable (6th column) claim the freed space */
+        #mpv-fragment .mpv-table th:nth-child(6),
+        #mpv-fragment .mpv-table td:nth-child(6) {
+            width: 22%;
+        }
+        <?php endif; ?>
 
     #mpv-fragment .mpv-table th {
         font-size: 11.5px;
@@ -481,21 +517,11 @@ function mp_view_render_table($rows, $isAdmin = false)
                 </tr>
             </table>
 
-            <div class="mpv-section-divider replacement">
-                <span class="dot"></span> Replacement positions
-                <span class="mpv-section-caption">Vacated roles</span>
-            </div>
-
-            <?php mp_view_render_table($replacementRows, userHasRoleIn('Admin')); ?>
-
             <div class="mpv-section-divider additional">
-                <span class="dot"></span> Additional positions
-                <span class="mpv-section-caption">New or expanded roles</span>
-            </div>
-            <?php mp_view_render_table($additionalRows, userHasRoleIn('Admin')); ?>
+            <span class="dot"></span> Positions
+        </div>
 
-            <span class="mpv-field-label">NON-NEGOTIABLE</span>
-            <div class="mpv-field-value"><?= $req['nonnegotiable'] !== '' && $req['nonnegotiable'] !== null ? nl2br(htmlspecialchars($req['nonnegotiable'])) : '<span class="mpv-empty-muted">None specified.</span>' ?></div>
+        <?php mp_view_render_table($positionRows, userHasRoleIn('Admin'), $mpShowFill); ?>
 
             <?php if ($declinedChangeRequest): ?>
                 <div style="background:#FFF1EC; border:1px solid #F0D3C6; border-radius:8px; padding:12px 16px; margin-top:18px;">

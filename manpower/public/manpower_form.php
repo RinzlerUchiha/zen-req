@@ -41,6 +41,8 @@ $specPosStmt = $hr_db->query("SELECT js." . MP_JOBSPEC_COLUMNS['id'] . " AS jobs
     ORDER BY jd.jd_title ASC");
 $jobSpecPositions = $specPosStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$reasonPresets = $hr_db->query("SELECT reason FROM tbl_manpower_reason_preset WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_COLUMN);
+
 // ============================================================================
 // Load existing request if editing/revising
 // ============================================================================
@@ -52,8 +54,7 @@ $request = [
     'nonnegotiable'  => '',
     'status'         => 'Draft',
 ];
-$replacementRows = [];
-$additionalRows  = [];
+$positionRows = [];
 
 if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
     $stmt = $hr_db->prepare("SELECT * FROM tbl_manpower_request WHERE id = :id AND requestor_employee_id = :empno LIMIT 1");
@@ -70,10 +71,7 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
             $posStmt = $hr_db->prepare("SELECT * FROM tbl_manpower_request_position WHERE request_id = :id ORDER BY id ASC");
             $posStmt->bindParam(':id', $request['id']);
             $posStmt->execute();
-            foreach ($posStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                if ($row['type'] === 'replacement') $replacementRows[] = $row;
-                else $additionalRows[] = $row;
-            }
+            $positionRows = $posStmt->fetchAll(PDO::FETCH_ASSOC);
 
             // If this request was returned, pull the most recent "Returned"
             // remarks so the Requestor sees what needs fixing.
@@ -437,49 +435,26 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
                                 </div>
                             <?php endif; ?> -->
 
-                            <!-- REPLACEMENT positions -->
-                            <div class="mp-section-divider replacement"><span class="dot"></span> Replacement</div>
+                            <!-- POSITIONS (consolidated) -->
+                            <div class="mp-section-divider additional"><span class="dot"></span> Positions</div>
                             <div class="mp-card-table">
-                                <table id="mp-replacement-table">
+                                <table id="mp-positions-table">
                                     <thead>
                                         <tr>
-                                            <th width="26%">Position</th>
-                                            <th width="12%">Headcount</th>
-                                            <th>Reason</th>
-                                            <th width="16%">Date Needed</th>
+                                            <th width="12%">Type</th>
+                                            <th width="22%">Position</th>
+                                            <th width="9%">Headcount</th>
+                                            <th width="17%">Reason</th>
+                                            <th width="13%">Date Needed</th>
+                                            <th>Non-Negotiable</th>
                                             <th width="30px"></th>
                                         </tr>
                                     </thead>
                                     <tbody></tbody>
                                 </table>
-                                <button type="button" class="btn-add-row-full" data-add="replacement">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add replacement position
+                                <button type="button" class="btn-add-row-full" data-add="position">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add position
                                 </button>
-                            </div>
-
-                            <!-- ADDITIONAL positions -->
-                            <div class="mp-section-divider additional"><span class="dot"></span> Additional</div>
-                            <div class="mp-card-table">
-                                <table id="mp-additional-table">
-                                    <thead>
-                                        <tr>
-                                            <th width="26%">Position</th>
-                                            <th width="12%">Headcount</th>
-                                            <th>Reason</th>
-                                            <th width="16%">Date Needed</th>
-                                            <th width="30px"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody></tbody>
-                                </table>
-                                <button type="button" class="btn-add-row-full" data-add="additional">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add replacement position
-                                </button>
-                            </div>
-
-                            <div class="mp-field-block">
-                                <span class="mp-field-label">NON-NEGOTIABLE</span>
-                                <textarea name="nonnegotiable" rows="3"><?= htmlspecialchars($request['nonnegotiable']) ?></textarea>
                             </div>
 
                             <div id="mp-form-err"></div>
@@ -506,15 +481,14 @@ if (isset($_GET['id']) && ctype_digit($_GET['id'])) {
                                         return ['id' => $p['jobspec_id'], 'code' => $p['position_code'], 'title' => $p['position_title'] ?: $p['position_code']];
                                     }, $jobSpecPositions)) ?>;
 
-        const replacementSeed = <?= json_encode(array_map(function ($r) {
-                                    return [$r['jobspec_id'], $r['headcount'], $r['reason'], $r['date_needed']];
-                                }, $replacementRows)) ?>;
-        const additionalSeed = <?= json_encode(array_map(function ($r) {
-                                    return [$r['jobspec_id'], $r['headcount'], $r['reason'], $r['date_needed']];
-                                }, $additionalRows)) ?>;
+        const mpReasonPresets = <?= json_encode($reasonPresets) ?>;
 
-function buildPositionSelect(type, selectedId) {
-            const $select = $('<select>').addClass('mp-pos-' + type);
+        const positionSeed = <?= json_encode(array_map(function ($r) {
+                                    return [$r['type'], $r['jobspec_id'], $r['headcount'], $r['reason'], $r['date_needed'], $r['nonnegotiable'] ?? ''];
+                                }, $positionRows)) ?>;
+
+        function buildPositionSelect(selectedId) {
+            const $select = $('<select>').addClass('mp-pos');
             $select.append($('<option value="">Select position…</option>'));
             mpJobSpecPositions.forEach(function(p) {
                 const $opt = $('<option>').val(p.id).text(p.title).attr('data-code', p.code);
@@ -524,14 +498,37 @@ function buildPositionSelect(type, selectedId) {
             return $select;
         }
 
-        function addRow(type, values) {
-            values = values || ['', 1, '', ''];
-            const $tbody = $('#mp-' + type + '-table tbody');
+        function buildTypeSelect(selectedType) {
+            const $select = $('<select>').addClass('mp-type');
+            ['replacement', 'additional'].forEach(function(t) {
+                const $opt = $('<option>').val(t).text(t.charAt(0).toUpperCase() + t.slice(1));
+                if (t === selectedType) $opt.prop('selected', true);
+                $select.append($opt);
+            });
+            return $select;
+        }
+
+        function buildReasonSelect(selectedReason) {
+            const $select = $('<select>').addClass('mp-reason');
+            $select.append($('<option value="">Select reason…</option>'));
+            mpReasonPresets.forEach(function(r) {
+                const $opt = $('<option>').val(r).text(r);
+                if (r === selectedReason) $opt.prop('selected', true);
+                $select.append($opt);
+            });
+            return $select;
+        }
+
+        function addRow(values) {
+            values = values || ['replacement', '', 1, '', '', ''];
+            const $tbody = $('#mp-positions-table tbody');
             const $row = $('<tr>');
-            $row.append($('<td>').append(buildPositionSelect(type, values[0])));
-            $row.append($('<td>').append($('<input type="number" min="1">').val(values[1] || 1).addClass('mp-count-' + type)));
-            $row.append($('<td>').append($('<input type="text" placeholder="Reason">').val(values[2]).addClass('mp-reason-' + type)));
-            $row.append($('<td>').append($('<input type="date">').val(values[3]).addClass('mp-date-' + type)));
+            $row.append($('<td>').append(buildTypeSelect(values[0])));
+            $row.append($('<td>').append(buildPositionSelect(values[1])));
+            $row.append($('<td>').append($('<input type="number" min="1">').val(values[2] || 1).addClass('mp-count')));
+            $row.append($('<td>').append(buildReasonSelect(values[3])));
+            $row.append($('<td>').append($('<input type="date">').val(values[4]).addClass('mp-date')));
+            $row.append($('<td>').append($('<input type="text" placeholder="Non-negotiable">').val(values[5]).addClass('mp-nonneg')));
             $row.append($('<td>').append($('<button type="button" class="btn-del"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"></path></svg></button>').on('click', function() {
                 $row.remove();
             })));
@@ -539,51 +536,46 @@ function buildPositionSelect(type, selectedId) {
         }
 
         $('[data-add]').on('click', function() {
-            addRow($(this).data('add'));
+            addRow();
         });
 
-        if (replacementSeed.length) {
-            replacementSeed.forEach(v => addRow('replacement', v));
+        if (positionSeed.length) {
+            positionSeed.forEach(v => addRow(v));
         } else {
-            addRow('replacement');
-        }
-        if (additionalSeed.length) {
-            additionalSeed.forEach(v => addRow('additional', v));
-        } else {
-            addRow('additional');
+            addRow();
         }
 
-        function collectRows(type) {
+        function collectRows() {
             const rows = [];
-            $('#mp-' + type + '-table tbody tr').each(function() {
-                const $posSelect = $(this).find('.mp-pos-' + type);
+            $('#mp-positions-table tbody tr').each(function() {
+                const $posSelect = $(this).find('.mp-pos');
                 const jobspecId = $posSelect.val();
                 if (!jobspecId) return;
                 const positionCode = $posSelect.find('option:selected').attr('data-code') || '';
                 rows.push({
+                    type: $(this).find('.mp-type').val() || 'replacement',
                     jobspec_id: jobspecId,
                     position: positionCode,
-                    headcount: $(this).find('.mp-count-' + type).val() || 1,
-                    reason: $(this).find('.mp-reason-' + type).val() || '',
-                    date_needed: $(this).find('.mp-date-' + type).val() || ''
+                    headcount: $(this).find('.mp-count').val() || 1,
+                    reason: $(this).find('.mp-reason').val() || '',
+                    date_needed: $(this).find('.mp-date').val() || '',
+                    nonnegotiable: $(this).find('.mp-nonneg').val() || ''
                 });
             });
             return rows;
         }
 
         function submitForm(action) {
-            const replacement = collectRows('replacement');
-            const additional = collectRows('additional');
+            const positions = collectRows();
 
-            if (action === 'submit' && replacement.length === 0 && additional.length === 0) {
+            if (action === 'submit' && positions.length === 0) {
                 $('#mp-form-err').html('<p style="color:#E14848;">Add at least one position before submitting.</p>');
                 return;
             }
 
             const formData = new FormData($('#manpower-form')[0]);
             formData.set('action', action);
-            formData.append('replacement', JSON.stringify(replacement));
-            formData.append('additional', JSON.stringify(additional));
+            formData.append('positions', JSON.stringify(positions));
 
             $.ajax({
                 url: 'save',
